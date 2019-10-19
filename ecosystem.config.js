@@ -39,7 +39,8 @@ module.exports = {
     watch: ['out'],
     max_memory_restart: '100M',
     env: {
-      NODE_ENV: 'development'
+      NODE_ENV: 'development',
+      DEBUG: 'koa*'
     },
     source_map_support: true,
 
