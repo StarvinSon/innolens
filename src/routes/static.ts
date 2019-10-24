@@ -5,12 +5,12 @@ import Router from 'koa-router';
 import { AppRouter, AppMiddleware } from './common';
 
 
-export interface CreateStaticRoutesOptions {
+export interface StaticRoutesOptions {
   readonly logger: Logger;
   readonly root: string;
 }
 
-export const createStaticRoutes = (options: CreateStaticRoutesOptions) => {
+export const createStaticRoutes = (options: StaticRoutesOptions) => {
   const { root } = options;
 
   const router: AppRouter = new Router();

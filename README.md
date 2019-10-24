@@ -5,30 +5,39 @@
 1.  [Git](https://www.git-scm.com)
 1.  [Node.js](https://nodejs.org) (version >= 12.12.0)
 2.  [Yarn](https://yarnpkg.com)
+3.  [MongoDB](https://www.mongodb.com)
 3.  [Visual Studio Code](https://code.visualstudio.com) for easier development
 
 ## 2. Run the server
 
-1.  Open a terminal
-    ```shell
-    # Clone the repository
-    git clone https://github.com/StarvinSon/innolens-server.git
+```shell
+# Open a terminal
 
-    cd innolens-server
+# Clone the repository
+git clone https://github.com/StarvinSon/innolens-server.git
 
-    # Install the dependencies
-    yarn install
+cd innolens-server
 
-    # Compile the source code
-    yarn run build
+# Install the dependencies
+yarn install
 
-    # Install the process manager
-    yarn global add pm2
+# Compile the source code
+yarn run build
 
-    # Start the server
-    yarn run start
-    ```
-2.  Go to <http://localhost:3000/api> to see if it is working
+# Install the process manager
+yarn global add pm2
+
+# Create a server configuration file
+cp app.config.sample.js app.config.js
+
+# Edit the configuration file if needed
+# Make sure the MongoDB database is online now
+
+# Start the server
+yarn run start
+
+# Go to http://localhost:3000/api to see if it is working
+```
 
 ## 3. Explainer
 
@@ -51,10 +60,14 @@ This explainer lists some important technologies being used and the repository s
 - `node_modules` folder for dependencies
 - `out` compiled code
 - `src` source code
+- `.eslintignore` files to exclude from ESLint linting
 - `.eslintrc.js` ESLint config
 - `.gitignore` paths to exclude from git tracking
+- `app.config.js` configs for the server
+- `app.config.sample.js` sample configs from the server
 - `app.log` server log
 - `ecosystem.config.js` PM2 config
+- `nodemon.json` configs for nodemon
 - `package.json` list of dependency of the server
 - `README.md` this file
 - `tsconfig.json` TypeScript config
@@ -64,9 +77,11 @@ This explainer lists some important technologies being used and the repository s
 
 ## 4.1. Commands
 
-Open a terminal
 ```shell
+# Open a terminal
+
 cd path/to/innolens-server
+
 yarn run [Command]
 ```
 
@@ -76,7 +91,6 @@ yarn run [Command]
 | build       | Compile the code into the `out` folder |
 | build:watch | Same as build, but auto recompile when the source code is changed |
 | start       | Start the server in PM2 |
-| start:debug | Start the server in debug mode in PM2 |
 
 ### 4.2. Consistent code style
 

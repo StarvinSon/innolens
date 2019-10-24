@@ -1,22 +1,24 @@
 import Router from 'koa-router';
 import { Logger } from 'winston';
 
+import { AppDbClient } from '../db';
+
 import { AppRouter } from './common';
+import { createMembersRoutes } from './members';
 
 
-export interface CreateApiRoutesOptions {
+export interface ApiRoutesOptions {
   readonly logger: Logger;
+  readonly appDbClient: AppDbClient;
 }
 
-export const createApiRoutes = (options: CreateApiRoutesOptions) => {
-  const { logger } = options;
+export const createApiRoutes = (options: ApiRoutesOptions) => {
+  const { logger, appDbClient } = options;
 
   const router: AppRouter = new Router();
 
-  router.get('/', async (ctx) => {
-    logger.info(`Responsing to ${ctx.path}`);
-    ctx.body = 'InnoLens Api';
-  });
+  const messagesRoutes = createMembersRoutes({ logger, appDbClient });
+  router.use('/members', ...messagesRoutes);
 
   return [router.routes(), router.allowedMethods()];
 };

@@ -12,17 +12,16 @@
     "node": ">=12.12.0"
   },
   "scripts": {
-    "lint": "eslint --config .eslintrc.js --ext .ts src",
+    "lint": "eslint --config .eslintrc.js --ignore-path .eslintignore --ext .ts .",
     "build": "tsc --project tsconfig.json",
     "build:watch": "tsc --project tsconfig.json --watch",
-    "start": "pm2 start ecosystem.config.js --only innolens-server",
-    "start:debug": "pm2 kill && pm2 start ecosystem.config.js --no-daemon --only innolens-server-debug",
-    "restart": "pm2 restart ecosystem.config.js --only innolens-server"
+    "start": "pm2 start ecosystem.config.js --only innolens-server"
   },
   "dependencies": {
     "koa": "^2.10.0",
     "koa-router": "^7.4.0",
     "koa-static": "^5.0.0",
+    "mongodb": "^3.3.3",
     "winston": "^3.2.1",
     "yargs": "^14.2.0"
   },
@@ -30,6 +29,7 @@
     "@types/koa": "^2.0.50",
     "@types/koa-router": "^7.0.42",
     "@types/koa-static": "^4.0.1",
+    "@types/mongodb": "^3.3.6",
     "@types/node": "^12.7.12",
     "@types/yargs": "^13.0.3",
     "@typescript-eslint/eslint-plugin": "^2.4.0",
@@ -37,6 +37,7 @@
     "eslint": "^6.5.1",
     "eslint-config-airbnb-base": "^14.0.0",
     "eslint-plugin-import": "^2.18.2",
+    "nodemon": "^1.19.4",
     "typescript": "^3.6.4"
   }
 }

@@ -5,14 +5,24 @@
       "type": "node",
       "request": "launch",
       "name": "Launch Server",
-      "runtimeExecutable": "yarn",
+      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/nodemon",
+      "program": "${workspaceFolder}/out/cli.js",
+      "env": {
+        "NODE_ENV": "development",
+        "DEBUG": "koa*"
+      },
       "runtimeArgs": [
-        "run",
-        "start:debug"
+        "--config",
+        "nodemon.json"
       ],
-      "port": 9229,
+      "args": [
+        "--",
+        "--config",
+        "app.config.js"
+      ],
       "restart": true,
-      "autoAttachChildProcesses": true
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
     },
     {
       "type": "node",

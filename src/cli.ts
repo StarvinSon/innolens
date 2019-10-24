@@ -1,29 +1,26 @@
 import { createLogger, format, transports } from 'winston';
 import yargs from 'yargs';
 
-import { createApp } from './app';
+import { createApp, AppOptions } from './app';
 
 
-interface ServeOptions {
+interface ServeOptions extends Omit<AppOptions, 'logger'> {
   readonly port: number;
-  readonly staticRoot: string;
 }
 
 const serve = async (options: ServeOptions) => {
-  const { port } = options;
+  const { port, staticRoot, dbConnectionUri } = options;
 
   const logger = createLogger({
     format: format.combine(
       format.timestamp(),
-      format.splat()
+      format.splat(),
+      format.colorize(),
+      format.printf(({ timestamp, level, message }) => `${timestamp} [${level}] ${message}`)
     ),
     transports: [
       new transports.Console({
-        handleExceptions: true,
-        format: format.combine(
-          format.colorize(),
-          format.printf(({ level, message }) => `[${level}] ${message}`)
-        )
+        handleExceptions: true
       }),
       new transports.File({
         filename: 'app.log',
@@ -31,15 +28,16 @@ const serve = async (options: ServeOptions) => {
         maxFiles: 3,
         tailable: true,
         handleExceptions: true,
-        format: format.printf(({ timestamp, level, message }) => `${timestamp} [${level}] ${message}`)
+        format: format.uncolorize()
       })
     ]
   });
   logger.info('Starting server using options: %O', options);
 
-  const app = createApp({
+  const app = await createApp({
     logger,
-    staticRoot: options.staticRoot
+    staticRoot,
+    dbConnectionUri
   });
 
   const server = app.listen(port, () => {
@@ -65,12 +63,19 @@ const createParser = () => yargs
           requiresArg: true,
           normalize: true,
           default: 'public'
+        },
+        dbConnectionUri: {
+          type: 'string',
+          requiresArg: true,
+          default: 'mongodb://localhost:27017/innolens',
+          description: 'The MongoDB connection string URI, must contains db name'
         }
       })
       .config(),
     (argv) => serve({
       port: argv.port,
-      staticRoot: argv.staticRoot
+      staticRoot: argv.staticRoot,
+      dbConnectionUri: argv.dbConnectionUri
     })
   )
   .alias({
