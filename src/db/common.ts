@@ -1,4 +1,4 @@
-import { Db, CollectionCreateOptions } from 'mongodb';
+import { Db, CollectionCreateOptions, Collection } from 'mongodb';
 import { Logger } from 'winston';
 
 
@@ -8,10 +8,10 @@ interface CollModOptions {
   readonly validator?: NonNullable<CollectionCreateOptions['validator']>;
 }
 
-const collMod = async (db: Db, name: string, options: CollModOptions) => {
+const collMod = async (db: Db, name: string, options: CollModOptions): Promise<void> => {
   const { validationLevel, validationAction, validator } = options;
 
-  return db.command(Object.fromEntries(Object
+  const result = await db.command(Object.fromEntries(Object
     .entries({
       collMod: name,
       validationLevel,
@@ -19,14 +19,24 @@ const collMod = async (db: Db, name: string, options: CollModOptions) => {
       validator
     })
     .filter(([, val]) => val !== undefined)));
+
+  if (result.ok !== 1) {
+    throw new Error(`Failed to execute collMod: ${JSON.stringify(result, undefined, 2)}`);
+  }
 };
+
+
+export interface CommonCollectionOptions {
+  readonly logger: Logger;
+  readonly db: Db;
+}
 
 
 export const createCollection = async <T extends object>(
   db: Db,
   name: string,
   options: CollectionCreateOptions & { logger: Logger }
-) => {
+): Promise<Collection<T>> => {
   const { logger, ...createCollOpts } = options;
 
   const coll = await db.createCollection<T>(name, createCollOpts);
@@ -38,14 +48,11 @@ export const createCollection = async <T extends object>(
     || JSON.stringify(currCollOpts.validator) !== JSON.stringify(createCollOpts.validator)
   ) {
     logger.info('Updating %s schema from %O to %O', name, currCollOpts, createCollOpts);
-    const result = await collMod(db, name, {
+    await collMod(db, name, {
       validationLevel: createCollOpts.validationLevel,
       validationAction: createCollOpts.validationAction,
       validator: createCollOpts.validator
     });
-    if (result.ok !== 1) {
-      throw new Error(`Failed to execute collMod: ${JSON.stringify(result, undefined, 2)}`);
-    }
   }
 
   return coll;

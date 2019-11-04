@@ -1,7 +1,6 @@
-import { Db, ObjectId } from 'mongodb';
-import { Logger } from 'winston';
+import { ObjectId, Collection } from 'mongodb';
 
-import { createCollection } from './common';
+import { createCollection, CommonCollectionOptions } from './common';
 
 
 export interface Member {
@@ -10,12 +9,9 @@ export interface Member {
 }
 
 
-export interface MembersCollectionOptions {
-  readonly logger: Logger;
-  readonly db: Db;
-}
-
-export const createMembersCollection = async (options: MembersCollectionOptions) => {
+export const createMembersCollection = async (
+  options: CommonCollectionOptions
+): Promise<Collection<Member>> => {
   const { logger, db } = options;
 
   return createCollection<Member>(db, 'members', {

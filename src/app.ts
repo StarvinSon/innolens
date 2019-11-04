@@ -3,6 +3,7 @@ import { Logger } from 'winston';
 
 import { createRoutes } from './routes';
 import { createAppDbClient } from './db';
+import { createAppService } from './services';
 
 
 export interface AppOptions {
@@ -19,12 +20,14 @@ export const createApp = async (options: AppOptions) => {
     connectionUri: dbConnectionUri
   });
 
+  const appService = createAppService({ logger, appDbClient });
+
   const app = new Koa();
 
   const routes = createRoutes({
     logger,
     staticRoot,
-    appDbClient
+    appService
   });
   routes.forEach((mw) => app.use(mw));
 

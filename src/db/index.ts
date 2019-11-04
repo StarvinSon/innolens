@@ -7,17 +7,19 @@ import { Writable } from '../utils/object';
 
 import { Member, createMembersCollection } from './members';
 
+export { Member } from './members';
 
-export interface AppDbClient {
+
+export interface AppDbClient<T> {
   readonly client: MongoClient;
-  readonly db: AppDb;
+  readonly db: AppDb<T>;
 }
 
-export interface AppDb {
+export type AppDb<T> = {
   readonly db: Db;
-  readonly members: Collection<Member>;
-  // Other collections...
-}
+} & {
+  readonly [K in keyof T]: Collection<T[K]>;
+};
 
 
 export interface AppDbClientOptions {
@@ -25,7 +27,13 @@ export interface AppDbClientOptions {
   readonly connectionUri: string;
 }
 
-export const createAppDbClient = async (options: AppDbClientOptions) => {
+export interface DefaultDbCollectionMap {
+  readonly members: Member;
+}
+
+export const createAppDbClient = async (
+  options: AppDbClientOptions
+): Promise<AppDbClient<DefaultDbCollectionMap>> => {
   const { logger, connectionUri } = options;
 
   const client = await connect(connectionUri, {
@@ -34,7 +42,7 @@ export const createAppDbClient = async (options: AppDbClientOptions) => {
   });
   const db = client.db();
 
-  const appDbClient: AppDbClient = await Object
+  const appDbClient: AppDbClient<DefaultDbCollectionMap> = await Object
     .entries({
       members: createMembersCollection({ logger, db })
     })
@@ -49,7 +57,7 @@ export const createAppDbClient = async (options: AppDbClientOptions) => {
         db: {
           db
         }
-      } as Omit<AppDbClient, 'db'> & { db: Writable<AppDb> })
+      } as Omit<AppDbClient<DefaultDbCollectionMap>, 'db'> & { db: Writable<AppDb<DefaultDbCollectionMap>> })
     );
 
   return appDbClient;
