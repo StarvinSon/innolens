@@ -1,5 +1,5 @@
 import { createLogger, format, transports } from 'winston';
-import yargs from 'yargs';
+import yargs, { Argv } from 'yargs';
 
 import { createApp, AppOptions } from './app';
 
@@ -8,7 +8,7 @@ interface ServeOptions extends Omit<AppOptions, 'logger'> {
   readonly port: number;
 }
 
-const serve = async (options: ServeOptions) => {
+const serve = async (options: ServeOptions): Promise<void> => {
   const { port, staticRoot, dbConnectionUri } = options;
 
   const logger = createLogger({
@@ -46,7 +46,7 @@ const serve = async (options: ServeOptions) => {
 };
 
 
-const createParser = () => yargs
+const createParser = (): Argv<{}> => yargs
   .command(
     '$0',
     'start a server',

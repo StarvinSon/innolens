@@ -3,7 +3,7 @@ import { Logger } from 'winston';
 
 import { AppService } from '../services';
 
-import { AppRouter } from './common';
+import { AppRouter, AppRouterMiddleware } from './common';
 import { createMembersRoutes, MembersRoutesServiceMap } from './members';
 
 
@@ -14,7 +14,7 @@ export interface ApiRoutesOptions {
 
 export type ApiRoutesServiceMap = MembersRoutesServiceMap;
 
-export const createApiRoutes = (options: ApiRoutesOptions) => {
+export const createApiRoutes = (options: ApiRoutesOptions): Array<AppRouterMiddleware> => {
   const { logger, appService } = options;
 
   const router: AppRouter = new Router();

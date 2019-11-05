@@ -1,13 +1,7 @@
 module.exports = {
-  plugins: [
-    '@typescript-eslint'
-  ],
   extends: [
-    'eslint:recommended',
-    'airbnb-base',
-    'plugin:@typescript-eslint/recommended'
+    'airbnb-typescript/base'
   ],
-  parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: '2019',
     sourceType: 'module'
@@ -18,16 +12,6 @@ module.exports = {
   },
   reportUnusedDisableDirectives: true,
   root: true,
-  settings: {
-    'import/resolver': {
-      node: {
-        extensions: ['.ts']
-      }
-    },
-    'import/parsers': {
-      '@typescript-eslint/parser': ['.ts']
-    }
-  },
   rules: {
     'comma-dangle': ['error', 'never'],
     'linebreak-style': 'off',
@@ -51,7 +35,6 @@ module.exports = {
       'newlines-between': 'always'
     }],
     'import/prefer-default-export': 'off',
-    'import/no-default-export': 'error',
-    '@typescript-eslint/explicit-function-return-type': 'off'
+    'import/no-default-export': 'error'
   }
 };

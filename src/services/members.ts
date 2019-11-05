@@ -10,7 +10,7 @@ export { Member };
 
 export type MembersServiceCollectionMap = {
   members: Member;
-}
+};
 
 export interface MembersService {
   findAll(): AsyncIterable<Member>;
@@ -25,15 +25,15 @@ export const createMembersService = (
 
   return {
 
-    async* findAll() {
+    async* findAll(): AsyncIterable<Member> {
       yield* appDbClient.db.members.find({}, { limit: 10 });
     },
 
-    async findOne(id) {
+    async findOne(id): Promise<Member | null> {
       return appDbClient.db.members.findOne({ id });
     },
 
-    async insertOne(member) {
+    async insertOne(member): Promise<void> {
       await appDbClient.db.members.insertOne(member);
     }
 

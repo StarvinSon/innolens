@@ -5,7 +5,7 @@ import { AppService } from '../services';
 import { MembersService } from '../services/members';
 import { fromAsync } from '../utils/array';
 
-import { AppRouter } from './common';
+import { AppRouter, AppRouterMiddleware } from './common';
 
 
 export interface MembersRoutesOptions {
@@ -17,7 +17,7 @@ export interface MembersRoutesServiceMap {
   readonly members: MembersService;
 }
 
-export const createMembersRoutes = (options: MembersRoutesOptions) => {
+export const createMembersRoutes = (options: MembersRoutesOptions): Array<AppRouterMiddleware> => {
   const { logger, appService } = options;
 
   const router: AppRouter = new Router();

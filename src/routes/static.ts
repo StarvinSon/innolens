@@ -2,7 +2,7 @@ import koaStatic from 'koa-static';
 import { Logger } from 'winston';
 import Router from 'koa-router';
 
-import { AppRouter, AppMiddleware } from './common';
+import { AppRouter, AppMiddleware, AppRouterMiddleware } from './common';
 
 
 export interface StaticRoutesOptions {
@@ -10,7 +10,7 @@ export interface StaticRoutesOptions {
   readonly root: string;
 }
 
-export const createStaticRoutes = (options: StaticRoutesOptions) => {
+export const createStaticRoutes = (options: StaticRoutesOptions): Array<AppRouterMiddleware> => {
   const { root } = options;
 
   const router: AppRouter = new Router();

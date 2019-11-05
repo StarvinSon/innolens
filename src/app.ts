@@ -1,4 +1,4 @@
-import Koa from 'koa';
+import Koa, { DefaultContext, DefaultState } from 'koa';
 import { Logger } from 'winston';
 
 import { createRoutes } from './routes';
@@ -12,7 +12,9 @@ export interface AppOptions {
   readonly dbConnectionUri: string;
 }
 
-export const createApp = async (options: AppOptions) => {
+export type App = Koa<DefaultState, DefaultContext>;
+
+export const createApp = async (options: AppOptions): Promise<App> => {
   const { logger, staticRoot, dbConnectionUri } = options;
 
   const appDbClient = await createAppDbClient({
@@ -22,7 +24,7 @@ export const createApp = async (options: AppOptions) => {
 
   const appService = createAppService({ logger, appDbClient });
 
-  const app = new Koa();
+  const app: App = new Koa();
 
   const routes = createRoutes({
     logger,
