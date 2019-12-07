@@ -1,48 +1,38 @@
-import { createLogger, format, transports } from 'winston';
+import 'reflect-metadata';
+
 import yargs, { Argv } from 'yargs';
 
-import { createApp, AppOptions } from './app';
+import { App } from './app';
+import { createAppContext } from './app-context-impl';
+import { Logger } from './log';
 
 
-interface ServeOptions extends Omit<AppOptions, 'logger'> {
+interface ServeOptions {
   readonly port: number;
+  readonly staticRoot: string;
+  readonly dbConnectionUri: string;
 }
 
 const serve = async (options: ServeOptions): Promise<void> => {
-  const { port, staticRoot, dbConnectionUri } = options;
+  try {
+    const appCtx = createAppContext({
+      staticRoot: options.staticRoot,
+      dbConnectionUri: options.dbConnectionUri
+    });
 
-  const logger = createLogger({
-    format: format.combine(
-      format.timestamp(),
-      format.splat(),
-      format.colorize(),
-      format.printf(({ timestamp, level, message }) => `${timestamp} [${level}] ${message}`)
-    ),
-    transports: [
-      new transports.Console({
-        handleExceptions: true
-      }),
-      new transports.File({
-        filename: 'app.log',
-        maxsize: 10 * 1024 * 1024, // 10MB
-        maxFiles: 3,
-        tailable: true,
-        handleExceptions: true,
-        format: format.uncolorize()
-      })
-    ]
-  });
-  logger.info('Starting server using options: %O', options);
+    const logger = appCtx.resolve(Logger);
+    logger.info('Starting server using options: %O', options);
 
-  const app = await createApp({
-    logger,
-    staticRoot,
-    dbConnectionUri
-  });
+    const app = await appCtx.resolve(App);
 
-  const server = app.listen(port, () => {
-    logger.info('Server is listening: %O', server.address());
-  });
+    const server = app.listen(options.port, () => {
+      logger.info('Server is listening: %O', server.address());
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(err);
+    process.exit(1);
+  }
 };
 
 

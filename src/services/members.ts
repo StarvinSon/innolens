@@ -1,41 +1,39 @@
 import { ObjectId } from 'mongodb';
 
-import { Member } from '../db';
-
-import { CommonServiceOptions } from './common';
+import { Member, MembersCollection } from '../db/members';
+import { createToken, createSingletonDependencyRegistrant, DependencyCreator } from '../app-context';
 
 
 export { Member };
 
-
-export type MembersServiceCollectionMap = {
-  members: Member;
-};
-
 export interface MembersService {
-  findAll(): AsyncIterable<Member>;
-  findOne(id: ObjectId): Promise<Member | null>;
-  insertOne(member: Member): Promise<void>;
+  find(): AsyncIterable<Member>;
+  findById(id: ObjectId): Promise<Member | null>;
+  insert(member: Member): Promise<void>;
 }
 
-export const createMembersService = (
-  options: CommonServiceOptions<MembersServiceCollectionMap>
-): MembersService => {
-  const { appDbClient } = options;
+export const MembersService = createToken<Promise<MembersService>>(module, 'MembersService');
+
+export const createMembersService: DependencyCreator<Promise<MembersService>> = async (appCtx) => {
+  const membersCollection = await appCtx.resolve(MembersCollection);
+
+  const find: MembersService['find'] = async function* () {
+    yield* membersCollection.find({}, { limit: 10 });
+  };
+
+  const findById: MembersService['findById'] = async (id) =>
+    membersCollection.findOne({ _id: id });
+
+  const insert: MembersService['insert'] = async (member) => {
+    await membersCollection.insertOne(member);
+  };
 
   return {
-
-    async* findAll(): AsyncIterable<Member> {
-      yield* appDbClient.db.members.find({}, { limit: 10 });
-    },
-
-    async findOne(id): Promise<Member | null> {
-      return appDbClient.db.members.findOne({ id });
-    },
-
-    async insertOne(member): Promise<void> {
-      await appDbClient.db.members.insertOne(member);
-    }
-
+    find,
+    findById,
+    insert
   };
 };
+
+// eslint-disable-next-line max-len
+export const registerMembersService = createSingletonDependencyRegistrant(MembersService, createMembersService);

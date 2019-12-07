@@ -1,37 +1,49 @@
 import Koa, { DefaultContext, DefaultState } from 'koa';
-import { Logger } from 'winston';
+import { INTERNAL_SERVER_ERROR, getStatusText } from 'http-status-codes';
+import compress from 'koa-compress';
 
 import { createRoutes } from './routes';
-import { createAppDbClient } from './db';
-import { createAppService } from './services';
+import { Logger } from './log';
+import { createToken, DependencyCreator, createSingletonDependencyRegistrant } from './app-context';
 
-
-export interface AppOptions {
-  readonly logger: Logger;
-  readonly staticRoot: string;
-  readonly dbConnectionUri: string;
-}
 
 export type App = Koa<DefaultState, DefaultContext>;
 
-export const createApp = async (options: AppOptions): Promise<App> => {
-  const { logger, staticRoot, dbConnectionUri } = options;
+export const App = createToken<Promise<App>>(module, 'App');
 
-  const appDbClient = await createAppDbClient({
-    logger,
-    connectionUri: dbConnectionUri
-  });
-
-  const appService = createAppService({ logger, appDbClient });
+export const createApp: DependencyCreator<Promise<App>> = async (appCtx) => {
+  const logger = appCtx.resolve(Logger);
 
   const app: App = new Koa();
 
-  const routes = createRoutes({
-    logger,
-    staticRoot,
-    appService
+  app.use(compress());
+
+  app.use(async (ctx, next) => {
+    try {
+      await next();
+    } catch (err) {
+      const statusCode: number = err.statusCode ?? err.status ?? INTERNAL_SERVER_ERROR;
+      const headers: { readonly [key: string]: string } = err.headers ?? {};
+      const errorCode: string = err.errorCode ?? getStatusText(statusCode);
+      const description: string | null = err.description ?? null;
+
+      ctx.status = statusCode;
+      ctx.set(headers);
+      ctx.body = {
+        errorCode,
+        ...description === null ? null : { description }
+      };
+
+      if (statusCode >= INTERNAL_SERVER_ERROR) {
+        logger.error(err);
+      }
+    }
   });
+
+  const routes = await createRoutes(appCtx);
   routes.forEach((mw) => app.use(mw));
 
   return app;
 };
+
+export const registerApp = createSingletonDependencyRegistrant(App, createApp);

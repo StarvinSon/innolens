@@ -1,18 +1,14 @@
-import { MembersService, createMembersService, MembersServiceCollectionMap } from './members';
-import { CommonServiceOptions } from './common';
+import { DependencyRegistrant } from '../app-context';
+
+import { registerClientsService } from './client';
+import { registerMembersService } from './members';
+import { registerOAuth2Service } from './oauth2';
+import { registerUsersService } from './users';
 
 
-export type AppService<T> = T;
-
-
-export type AppServiceCollectionMap = MembersServiceCollectionMap;
-
-export interface DefaultAppServiceMap {
-  members: MembersService;
-}
-
-export const createAppService = (
-  options: CommonServiceOptions<AppServiceCollectionMap>
-): AppService<DefaultAppServiceMap> => ({
-  members: createMembersService(options)
-});
+export const registerServices: DependencyRegistrant = (appCtx) => {
+  registerClientsService(appCtx);
+  registerMembersService(appCtx);
+  registerOAuth2Service(appCtx);
+  registerUsersService(appCtx);
+};

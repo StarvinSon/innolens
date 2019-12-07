@@ -1,6 +1,8 @@
 import { ObjectId, Collection } from 'mongodb';
 
-import { createCollection, CommonCollectionOptions } from './common';
+import { createToken, DependencyCreator, createSingletonDependencyRegistrant } from '../app-context';
+
+import { createCollection } from './db';
 
 
 export interface Member {
@@ -8,20 +10,20 @@ export interface Member {
   readonly groupName: string;
 }
 
+export type MembersCollection = Collection<Member>;
 
-export const createMembersCollection = async (
-  options: CommonCollectionOptions
-): Promise<Collection<Member>> => {
-  const { logger, db } = options;
+export const MembersCollection = createToken<Promise<MembersCollection>>(module, 'MembersCollection');
 
-  return createCollection<Member>(db, 'members', {
-    logger,
+// eslint-disable-next-line max-len
+export const createMembersCollection: DependencyCreator<Promise<MembersCollection>> = async (appCtx) =>
+  createCollection<Member>(appCtx, 'members', {
     validationLevel: 'strict',
     validationAction: 'error',
     validator: {
       $jsonSchema: {
         bsonType: 'object',
         required: ['_id', 'groupName'],
+        additionalProperties: false,
         properties: {
           _id: {
             bsonType: 'objectId'
@@ -33,4 +35,6 @@ export const createMembersCollection = async (
       }
     }
   });
-};
+
+// eslint-disable-next-line max-len
+export const registerMembersCollection = createSingletonDependencyRegistrant(MembersCollection, createMembersCollection);

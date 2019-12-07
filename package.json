@@ -9,7 +9,7 @@
     "url": "https://github.com/StarvinSon/innolens-server.git"
   },
   "engines": {
-    "node": ">=12.12.0"
+    "node": ">=13.2.0"
   },
   "scripts": {
     "lint": "eslint --config .eslintrc.js --ignore-path .eslintignore --ext .ts .",
@@ -18,25 +18,38 @@
     "start": "pm2 start ecosystem.config.js --only innolens-server"
   },
   "dependencies": {
-    "koa": "^2.10.0",
+    "ajv": "^6.10.2",
+    "bcrypt": "^3.0.7",
+    "co-body": "^6.0.0",
+    "http-errors": "^1.7.3",
+    "http-status-codes": "^1.4.0",
+    "koa": "^2.11.0",
+    "koa-compress": "^3.0.0",
     "koa-router": "^7.4.0",
     "koa-static": "^5.0.0",
-    "mongodb": "^3.3.3",
+    "mongodb": "^3.3.5",
+    "reflect-metadata": "^0.1.13",
+    "tslib": "^1.10.0",
+    "tsyringe": "^4.0.1",
     "winston": "^3.2.1",
-    "yargs": "^14.2.0"
+    "yargs": "^15.0.2"
   },
   "devDependencies": {
-    "@types/koa": "^2.0.50",
+    "@types/bcrypt": "^3.0.0",
+    "@types/co-body": "^0.0.3",
+    "@types/http-errors": "^1.6.3",
+    "@types/koa": "^2.11.0",
+    "@types/koa-compress": "^2.0.9",
     "@types/koa-router": "^7.0.42",
     "@types/koa-static": "^4.0.1",
-    "@types/mongodb": "^3.3.6",
-    "@types/node": "^12.7.12",
+    "@types/mongodb": "^3.3.12",
+    "@types/node": "^12.12.14",
     "@types/yargs": "^13.0.3",
-    "@typescript-eslint/eslint-plugin": "^2.4.0",
-    "eslint": "^6.5.1",
-    "eslint-config-airbnb-typescript": "^6.0.0",
+    "@typescript-eslint/eslint-plugin": "^2.10.0",
+    "eslint": "^6.7.2",
+    "eslint-config-airbnb-typescript": "^6.3.1",
     "eslint-plugin-import": "^2.18.2",
-    "nodemon": "^1.19.4",
-    "typescript": "^3.6.4"
+    "nodemon": "^2.0.1",
+    "typescript": "^3.7.3"
   }
 }
