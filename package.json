@@ -9,7 +9,7 @@
     "url": "https://github.com/StarvinSon/innolens-server.git"
   },
   "engines": {
-    "node": ">=13.2.0"
+    "node": ">=13.5.0"
   },
   "scripts": {
     "lint": "eslint --config .eslintrc.js --ignore-path .eslintignore --ext .ts .",
@@ -27,7 +27,7 @@
     "koa-compress": "^3.0.0",
     "koa-router": "^7.4.0",
     "koa-static": "^5.0.0",
-    "mongodb": "^3.3.5",
+    "mongodb": "^3.4.1",
     "reflect-metadata": "^0.1.13",
     "tslib": "^1.10.0",
     "tsyringe": "^4.0.1",
@@ -42,14 +42,14 @@
     "@types/koa-compress": "^2.0.9",
     "@types/koa-router": "^7.0.42",
     "@types/koa-static": "^4.0.1",
-    "@types/mongodb": "^3.3.12",
-    "@types/node": "^12.12.14",
+    "@types/mongodb": "^3.3.13",
+    "@types/node": "^12.12.21",
     "@types/yargs": "^13.0.3",
-    "@typescript-eslint/eslint-plugin": "^2.10.0",
-    "eslint": "^6.7.2",
+    "@typescript-eslint/eslint-plugin": "^2.12.0",
+    "eslint": "^6.8.0",
     "eslint-config-airbnb-typescript": "^6.3.1",
-    "eslint-plugin-import": "^2.18.2",
-    "nodemon": "^2.0.1",
-    "typescript": "^3.7.3"
+    "eslint-plugin-import": "^2.19.1",
+    "nodemon": "^2.0.2",
+    "typescript": "^3.7.4"
   }
 }
