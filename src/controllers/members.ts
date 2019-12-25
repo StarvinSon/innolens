@@ -1,8 +1,7 @@
 import { MembersService } from '../services/members';
 import { fromAsync } from '../utils/array';
 import { createToken, DependencyCreator, createSingletonDependencyRegistrant } from '../app-context';
-
-import { Middleware } from './common';
+import { Middleware } from '../middlewares';
 
 
 export interface MembersController {

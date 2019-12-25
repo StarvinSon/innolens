@@ -5,10 +5,11 @@ import { OAuth2Service } from '../services/oauth2';
 import { createToken, createSingletonDependencyRegistrant, DependencyCreator } from '../app-context';
 import { UsersService } from '../services/users';
 import { createError } from '../utils/error';
+import { Middleware } from '../middlewares';
 
 import {
   createClientAuthenticator, ERR_UNSUPPORTED_CONTENT_TYPE, parseBody,
-  Validator, createValidator, ERR_VALIDATION_FAILED, Middleware, ERR_EMPTY_BODY,
+  Validator, createValidator, ERR_VALIDATION_FAILED, ERR_EMPTY_BODY,
   ERR_CLIENT_AUTHENTICATION_FAILED
 } from './common';
 

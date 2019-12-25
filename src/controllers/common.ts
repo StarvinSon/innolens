@@ -1,8 +1,5 @@
 import Ajv from 'ajv';
-import {
-  Context as KoaContext, Middleware as KoaMiddleware,
-  DefaultState, DefaultContext
-} from 'koa';
+import { Context as KoaContext } from 'koa';
 import { UNAUTHORIZED, BAD_REQUEST, UNSUPPORTED_MEDIA_TYPE } from 'http-status-codes';
 import { json as parseJson, form as parseForm } from 'co-body';
 
@@ -15,9 +12,6 @@ export const ERR_CLIENT_AUTHENTICATION_FAILED = 'Client authentication failed';
 export const ERR_EMPTY_BODY = 'Empty body';
 export const ERR_UNSUPPORTED_CONTENT_TYPE = 'Unsupported content type';
 export const ERR_VALIDATION_FAILED = 'Validation failed';
-
-
-export type Middleware = KoaMiddleware<DefaultState, DefaultContext>;
 
 
 export interface BodyParserOptions {

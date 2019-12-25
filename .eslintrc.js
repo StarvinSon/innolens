@@ -28,6 +28,7 @@ module.exports = {
     ],
     'implicit-arrow-linebreak': 'off',
     'linebreak-style': 'off',
+    'no-nested-ternary': 'off',
     'no-restricted-syntax': ['error',
       // Override eslint-config-airbnb-base to enable ForOfStatement
       // https://github.com/airbnb/javascript/blob/master/packages/eslint-config-airbnb-base/rules/style.js#L332

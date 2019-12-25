@@ -2,8 +2,7 @@ import { NOT_IMPLEMENTED } from 'http-status-codes';
 
 import { UsersService } from '../services/users';
 import { createToken, createSingletonDependencyRegistrant, DependencyCreator } from '../app-context';
-
-import { Middleware } from './common';
+import { Middleware } from '../middlewares';
 
 
 export interface UsersController {

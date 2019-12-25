@@ -1,8 +1,7 @@
 import koaStatic from 'koa-static';
 
 import { createToken, DependencyCreator, createSingletonDependencyRegistrant } from '../app-context';
-
-import { Middleware } from './common';
+import { Middleware } from '../middlewares';
 
 
 export interface StaticControllerOptions {
@@ -43,7 +42,8 @@ export const createStaticController: DependencyCreator<StaticController, [Static
 
   const getFile: Middleware = async (ctx, next) => {
     const oriPath = ctx.path;
-    const { subPath }: { subPath: string } = ctx.params;
+
+    const subPath = /^\/static($|\/.*)/.exec(ctx.params.subPath)?.[1] ?? '/';
 
     ctx.path = subPath; // modify ctx.path
     await staticMw(ctx, async () => {

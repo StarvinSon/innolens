@@ -1,14 +1,11 @@
-import KoaRouter, { IMiddleware as KoaRouterMiddleware } from 'koa-router';
-import { DefaultState, DefaultContext, Middleware as KoaMiddleware } from 'koa';
+import KoaRouter from 'koa-router';
+import { DefaultState, DefaultContext } from 'koa';
 
 import { AppContext } from '../app-context';
+import { RouterMiddleware } from '../middlewares';
 
-
-export type Middleware = KoaMiddleware<DefaultState, DefaultContext>;
 
 export type Router = KoaRouter<DefaultState, DefaultContext>;
-export type RouterMiddleware = KoaRouterMiddleware<DefaultState, DefaultContext>;
-
 
 export interface RoutesCreator<T extends ReadonlyArray<any> = []> {
   (appCtx: AppContext, ...args: T): Array<RouterMiddleware>;
@@ -55,13 +52,14 @@ export const useRoutes = (
 export const useRoutesAsync = async (
   appCtx: AppContext,
   router: Router,
-  creators: ReadonlyArray<readonly [string, RoutesCreator | RoutesCreatorAsync]>
+  // eslint-disable-next-line max-len
+  creators: ReadonlyArray<readonly [string | ReadonlyArray<string> | RegExp, RoutesCreator | RoutesCreatorAsync]>
 ): Promise<void> => {
   await creators.reduce(async (prev, [path, creator]) => {
     const [rs] = await Promise.all([
       creator(appCtx),
       prev
     ]);
-    router.use(path, ...rs);
+    router.use(path as any, ...rs);
   }, Promise.resolve());
 };
