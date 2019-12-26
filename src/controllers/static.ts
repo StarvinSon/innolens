@@ -43,7 +43,7 @@ export const createStaticController: DependencyCreator<StaticController, [Static
   const getFile: Middleware = async (ctx, next) => {
     const oriPath = ctx.path;
 
-    const subPath = /^\/static($|\/.*)/.exec(ctx.params.subPath)?.[1] ?? '/';
+    const subPath = /^\/static(\/.*)$/.exec(ctx.params.subPath)?.[1] ?? '/';
 
     ctx.path = subPath; // modify ctx.path
     await staticMw(ctx, async () => {
