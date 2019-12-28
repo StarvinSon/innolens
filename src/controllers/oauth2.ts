@@ -200,7 +200,10 @@ export const createOAuth2Controller: DependencyCreator<Promise<OAuth2Controller>
         ctx.body = {
           access_token: token.accessToken,
           token_type: 'Bearer',
-          expires_in: Math.max(0, token.accessTokenExpireDate.getTime() - Date.now()),
+          expires_in: Math.max(
+            0,
+            Math.floor((token.accessTokenExpireDate.getTime() - Date.now()) / 1000)
+          ),
           scope: token.scopes.join(' '),
           refresh_token: token.refreshToken
         };
@@ -266,7 +269,10 @@ export const createOAuth2Controller: DependencyCreator<Promise<OAuth2Controller>
         ctx.body = {
           access_token: newToken.accessToken,
           token_type: 'Bearer',
-          expires_in: Math.max(0, newToken.accessTokenExpireDate.getTime() - Date.now()),
+          expires_in: Math.max(
+            0,
+            Math.floor((newToken.accessTokenExpireDate.getTime() - Date.now()) / 1000)
+          ),
           scope: newToken.scopes.join(' '),
           refresh_token: newToken.refreshToken
         };
