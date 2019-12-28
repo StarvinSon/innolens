@@ -1,14 +1,17 @@
-import { makeRoutesCreatorAsync, useRoutesAsync } from '../common';
+import { makeRoutesCreatorAsync } from '../utils/routes-creator';
+import { useRoutesAsync } from '../utils/routes-user';
 
+import { createMemberGroupsRoutes } from './member-groups';
 import { createMembersRoutes } from './members';
-import { createUsersRoutes } from './users';
 import { createOAuth2Routes } from './oauth2';
+import { createUsersRoutes } from './users';
 
 
 export const createApiRoutes = makeRoutesCreatorAsync(async (appCtx, router) => {
   await useRoutesAsync(appCtx, router, [
     ['/users', createUsersRoutes],
     ['/oauth2', createOAuth2Routes],
-    ['/members', createMembersRoutes]
+    ['/members', createMembersRoutes],
+    ['/member-groups', createMemberGroupsRoutes]
   ]);
 });

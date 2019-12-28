@@ -1,8 +1,8 @@
-import { ObjectId } from 'mongodb';
 import { compare, hash } from 'bcrypt';
+import { ObjectId } from 'mongodb';
 
-import { User, UsersCollection } from '../db/users';
 import { createToken, DependencyCreator, createSingletonDependencyRegistrant } from '../app-context';
+import { User, UsersCollection } from '../db/users';
 
 
 export { User };
@@ -58,7 +58,7 @@ export const createUsersService: DependencyCreator<Promise<UsersService>> = asyn
     await insert({
       _id: new ObjectId(),
       username: 'root',
-      password: 'root123',
+      password: 'innoroot',
       name: 'Root Administrator'
     });
   }

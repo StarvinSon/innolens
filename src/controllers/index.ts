@@ -1,9 +1,10 @@
 import { DependencyRegistrant } from '../app-context';
 
-import { registerOAuth2Controller } from './oauth2';
+import { registerMemberGroupsController } from './member-groups';
 import { registerMembersController } from './members';
-import { registerUsersController } from './users';
+import { registerOAuth2Controller } from './oauth2';
 import { registerStaticController } from './static';
+import { registerUsersController } from './users';
 
 
 export interface ControllersOptions {
@@ -12,10 +13,16 @@ export interface ControllersOptions {
 
 // eslint-disable-next-line max-len
 export const registerControllers: DependencyRegistrant<[ControllersOptions]> = (appCtx, options) => {
-  registerMembersController(appCtx);
-  registerOAuth2Controller(appCtx);
-  registerStaticController(appCtx, {
-    root: options.staticRoot
+  const registrants: ReadonlyArray<DependencyRegistrant> = [
+    registerMemberGroupsController,
+    registerMembersController,
+    registerOAuth2Controller,
+    (c) => registerStaticController(c, {
+      root: options.staticRoot
+    }),
+    registerUsersController
+  ];
+  registrants.forEach((register) => {
+    register(appCtx);
   });
-  registerUsersController(appCtx);
 };

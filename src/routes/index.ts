@@ -1,7 +1,8 @@
 import { StaticController } from '../controllers/static';
 
-import { makeRoutesCreatorAsync, useRoutesAsync } from './common';
 import { createApiRoutes } from './api';
+import { makeRoutesCreatorAsync } from './utils/routes-creator';
+import { useRoutesAsync } from './utils/routes-user';
 
 
 export const createRoutes = makeRoutesCreatorAsync(async (appCtx, router) => {

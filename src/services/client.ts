@@ -1,13 +1,14 @@
 import { compare, hash } from 'bcrypt';
 import { ObjectId } from 'mongodb';
 
-import { Client, ClientType, ClientsCollection } from '../db/clients';
 import { createToken, createSingletonDependencyRegistrant, DependencyCreator } from '../app-context';
+import { Client, ClientType, ClientsCollection } from '../db/clients';
 
 
 export { Client, ClientType };
 
 export interface ClientsService {
+  findById(id: ObjectId): Promise<Client | null>;
   findByPublicId(publicId: string): Promise<Client | null>;
   findByCredentials(credentials: ClientCredentials): Promise<Client | null>;
   insert(client: ClientWithSecret): Promise<Client>;
@@ -29,6 +30,9 @@ const SECRET_SALT_ROUNDS: number = 10;
 export const createClientsService: DependencyCreator<Promise<ClientsService>> = async (appCtx) => {
   const clientsCollection = await appCtx.resolve(ClientsCollection);
 
+  const findById: ClientsService['findById'] = async (id) =>
+    clientsCollection.findOne({ _id: id });
+
   const findByPublicId: ClientsService['findByPublicId'] = async (publicId) =>
     clientsCollection.findOne({ publicId });
 
@@ -49,7 +53,8 @@ export const createClientsService: DependencyCreator<Promise<ClientsService>> = 
     const client: Client = {
       ...clientWithoutSecret,
       secretHash: clientWithoutSecret.type === ClientType.PUBLIC
-        ? '' : await hash(secret, SECRET_SALT_ROUNDS)
+        ? ''
+        : await hash(secret, SECRET_SALT_ROUNDS)
     };
     await clientsCollection.insertOne(client);
     return client;
@@ -67,6 +72,7 @@ export const createClientsService: DependencyCreator<Promise<ClientsService>> = 
   }
 
   return {
+    findById,
     findByPublicId,
     findByCredentials,
     insert

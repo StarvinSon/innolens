@@ -1,5 +1,5 @@
 import { OAuth2Controller } from '../../controllers/oauth2';
-import { makeRoutesCreatorAsync } from '../common';
+import { makeRoutesCreatorAsync } from '../utils/routes-creator';
 
 
 export const createOAuth2Routes = makeRoutesCreatorAsync(async (appCtx, router) => {

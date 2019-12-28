@@ -1,5 +1,5 @@
 import { MembersController } from '../../controllers/members';
-import { makeRoutesCreatorAsync } from '../common';
+import { makeRoutesCreatorAsync } from '../utils/routes-creator';
 
 
 export const createMembersRoutes = makeRoutesCreatorAsync(async (appCtx, router) => {

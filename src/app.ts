@@ -1,10 +1,10 @@
-import Koa, { DefaultContext, DefaultState } from 'koa';
 import { INTERNAL_SERVER_ERROR, getStatusText } from 'http-status-codes';
+import Koa, { DefaultContext, DefaultState } from 'koa';
 import compress from 'koa-compress';
 
-import { createRoutes } from './routes';
-import { Logger } from './log';
 import { createToken, DependencyCreator, createSingletonDependencyRegistrant } from './app-context';
+import { Logger } from './log';
+import { createRoutes } from './routes';
 
 
 export type App = Koa<DefaultState, DefaultContext>;

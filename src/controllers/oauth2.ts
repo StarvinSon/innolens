@@ -1,17 +1,16 @@
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR, getStatusText } from 'http-status-codes';
 
-import { Logger } from '../log';
-import { OAuth2Service } from '../services/oauth2';
 import { createToken, createSingletonDependencyRegistrant, DependencyCreator } from '../app-context';
+import { Logger } from '../log';
+import { Middleware } from '../middlewares';
+import { OAuth2Service } from '../services/oauth2';
 import { UsersService } from '../services/users';
 import { createError } from '../utils/error';
-import { Middleware } from '../middlewares';
 
-import {
-  createClientAuthenticator, ERR_UNSUPPORTED_CONTENT_TYPE, parseBody,
-  Validator, createValidator, ERR_VALIDATION_FAILED, ERR_EMPTY_BODY,
-  ERR_CLIENT_AUTHENTICATION_FAILED
-} from './common';
+
+import { ERR_EMPTY_BODY, ERR_UNSUPPORTED_CONTENT_TYPE, parseBody } from './utils/body-parser';
+import { createClientAuthenticator, ERR_CLIENT_AUTHENTICATION_FAILED } from './utils/client-authenticator';
+import { createValidator, Validator, ERR_VALIDATION_FAILED } from './utils/validator';
 
 
 export const ERR_INVALID_REQUEST = 'invalid_request';
@@ -30,20 +29,16 @@ export const OAuth2Controller = createToken<Promise<OAuth2Controller>>(module, '
 // eslint-disable-next-line max-len
 export const createOAuth2Controller: DependencyCreator<Promise<OAuth2Controller>> = async (appCtx) => {
   const [
-    [
-      logger,
-      usersService,
-      oauth2Service
-    ],
+    logger,
+    usersService,
+    oauth2Service,
     authenticateClient
-  ] = await Promise.all([
-    appCtx.resolveAllAsync(
-      Logger,
-      UsersService,
-      OAuth2Service
-    ),
-    createClientAuthenticator(appCtx)
-  ]);
+  ] = await appCtx.resolveAllAsync(
+    Logger,
+    UsersService,
+    OAuth2Service,
+    createClientAuthenticator
+  );
 
   const validateGrantType: Validator<{
     readonly grant_type: string;
@@ -143,14 +138,15 @@ export const createOAuth2Controller: DependencyCreator<Promise<OAuth2Controller>
         throw err;
       });
 
-    const body = await parseBody(ctx, { json: true, form: true })
+    const body = await parseBody(ctx, { json: false, form: true })
       .catch((err) => {
-        if ([
-          ERR_EMPTY_BODY,
-          ERR_UNSUPPORTED_CONTENT_TYPE
-        ].includes(err.errorCode)) {
-          // eslint-disable-next-line no-param-reassign
-          err.errorCode = ERR_INVALID_REQUEST;
+        switch (err.errorCode) {
+          case ERR_EMPTY_BODY:
+          case ERR_UNSUPPORTED_CONTENT_TYPE: {
+            // eslint-disable-next-line no-param-reassign
+            err.errorCode = ERR_INVALID_REQUEST;
+          }
+          // no default
         }
         throw err;
       });
@@ -279,7 +275,8 @@ export const createOAuth2Controller: DependencyCreator<Promise<OAuth2Controller>
       default: {
         throw createError({
           statusCode: BAD_REQUEST,
-          errorCode: ERR_UNSUPPORTED_GRANT_TYPE
+          errorCode: ERR_UNSUPPORTED_GRANT_TYPE,
+          description: 'only support password and refresh_token grant type'
         });
       }
     }

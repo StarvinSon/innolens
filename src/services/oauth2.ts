@@ -3,8 +3,8 @@ import { promisify } from 'util';
 
 import { ObjectId } from 'mongodb';
 
-import { OAuth2Token, OAuth2Collection } from '../db/oauth2';
 import { createToken, DependencyCreator, createSingletonDependencyRegistrant } from '../app-context';
+import { OAuth2Token, OAuth2Collection } from '../db/oauth2';
 
 
 const randomBytesAsync = promisify(randomBytes);
@@ -13,6 +13,7 @@ const randomBytesAsync = promisify(randomBytes);
 export { OAuth2Token };
 
 export interface OAuth2Service {
+  findByAccessToken(accessToken: string, currDate?: Date): Promise<OAuth2Token | null>;
   verifyScopes(scopes: ReadonlyArray<string>): boolean;
   isScopeFullfilled(grantScopes: ReadonlyArray<string>, requiredScope: string): boolean;
   findByRefreshToken(refreshToken: string, date: Date): Promise<OAuth2Token | null>;
@@ -36,6 +37,14 @@ export const createOAuth2Service: DependencyCreator<Promise<OAuth2Service>> = as
   ]);
 
   const generateToken = async (): Promise<string> => (await randomBytesAsync(16)).toString('hex');
+
+
+  const findByAccessToken: OAuth2Service['findByAccessToken'] = async (accessToken, currDate = new Date()) =>
+    oauth2Collection.tokens.findOne({
+      accessToken,
+      accessTokenExpireDate: { $gt: currDate },
+      revoked: false
+    });
 
   const verifyScopes: OAuth2Service['verifyScopes'] = (scopes) =>
     scopes.every((s) => validScopes.has(s));
@@ -92,6 +101,7 @@ export const createOAuth2Service: DependencyCreator<Promise<OAuth2Service>> = as
   };
 
   return {
+    findByAccessToken,
     verifyScopes,
     isScopeFullfilled,
     findByRefreshToken,

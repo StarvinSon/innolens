@@ -1,7 +1,7 @@
 import { ObjectId } from 'mongodb';
 
-import { Member, MembersCollection } from '../db/members';
 import { createToken, createSingletonDependencyRegistrant, DependencyCreator } from '../app-context';
+import { Member, MembersCollection } from '../db/members';
 
 
 export { Member };
