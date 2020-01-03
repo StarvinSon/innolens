@@ -1,0 +1,34 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Launch Server",
+      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/nodemon",
+      "program": "${workspaceFolder}/out/cli.js",
+      "env": {
+        "NODE_ENV": "development",
+        "DEBUG": "koa*"
+      },
+      "runtimeArgs": [
+        "--config",
+        "nodemon.json"
+      ],
+      "args": [
+        "--",
+        "--config",
+        "app.config.js"
+      ],
+      "restart": true,
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "type": "node",
+      "request": "attach",
+      "name": "Attach Server",
+      "processId": "${command:PickProcess}"
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "name": "innolens-server",
+  "version": "0.1.0",
+  "homepage": "https://i.cs.hku.hk/fyp/2019/fyp19027/",
+  "license": "UNLICENSED",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/StarvinSon/innolens-server.git"
+  },
+  "engines": {
+    "node": ">=13.5.0"
+  },
+  "scripts": {
+    "lint": "eslint --config .eslintrc.js --ignore-path .eslintignore --ext .ts .",
+    "build": "tsc --project tsconfig.json",
+    "build:watch": "tsc --project tsconfig.json --watch",
+    "start": "pm2 start ecosystem.config.js --only innolens-server"
+  },
+  "dependencies": {
+    "ajv": "^6.10.2",
+    "bcrypt": "^3.0.7",
+    "co-body": "^6.0.0",
+    "http-errors": "^1.7.3",
+    "http-status-codes": "^1.4.0",
+    "koa": "^2.11.0",
+    "koa-compress": "^3.0.0",
+    "koa-router": "^7.4.0",
+    "koa-static": "^5.0.0",
+    "mongodb": "^3.4.1",
+    "reflect-metadata": "^0.1.13",
+    "tslib": "^1.10.0",
+    "tsyringe": "^4.0.1",
+    "winston": "^3.2.1",
+    "yargs": "^15.0.2"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^3.0.0",
+    "@types/co-body": "^0.0.3",
+    "@types/http-errors": "^1.6.3",
+    "@types/koa": "^2.11.0",
+    "@types/koa-compress": "^2.0.9",
+    "@types/koa-router": "^7.0.42",
+    "@types/koa-static": "^4.0.1",
+    "@types/mongodb": "^3.3.14",
+    "@types/node": "^13.1.2",
+    "@types/yargs": "^13.0.4",
+    "@typescript-eslint/eslint-plugin": "^2.14.0",
+    "eslint": "^6.8.0",
+    "eslint-config-airbnb-typescript": "^6.3.1",
+    "eslint-plugin-import": "^2.19.1",
+    "nodemon": "^2.0.2",
+    "typescript": "^3.7.4"
+  }
+}
