@@ -1,8 +1,12 @@
+// @ts-check
+const { join } = require('path');
+
 module.exports = {
   apps: [{
     // General
     name: 'innolens-server',
-    script: 'out/cli.js',
+    script: join(__dirname, 'out/cli.js'),
+    cwd: __dirname,
     args: [
       '--config',
       'app.config.js'

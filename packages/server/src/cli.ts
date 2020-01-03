@@ -29,7 +29,6 @@ const serve = async (options: ServeOptions): Promise<void> => {
       logger.info('Server is listening: %O', server.address());
     });
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error(err);
     process.exit(1);
   }
