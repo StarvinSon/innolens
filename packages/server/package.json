@@ -39,7 +39,7 @@
     "@types/koa-router": "^7.0.42",
     "@types/koa-static": "^4.0.1",
     "@types/mongodb": "^3.3.14",
-    "@types/node": "^13.1.2",
+    "@types/node": "^13.1.4",
     "@types/yargs": "^13.0.4",
     "eslint": "^6.8.0",
     "nodemon": "^2.0.2",
