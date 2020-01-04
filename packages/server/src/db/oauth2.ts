@@ -2,7 +2,7 @@ import { ObjectId, Collection } from 'mongodb';
 
 import { createToken, DependencyCreator, createSingletonDependencyRegistrant } from '../app-context';
 
-import { createCollection } from './db';
+import { Db } from './db';
 
 
 export interface OAuth2Token {
@@ -27,7 +27,9 @@ export const OAuth2Collection = createToken<Promise<OAuth2Collection>>(module, '
 
 // eslint-disable-next-line max-len
 export const createOAuth2Collection: DependencyCreator<Promise<OAuth2Collection>> = async (appCtx) => {
-  const tokensColl = await createCollection<OAuth2Token>(appCtx, 'oauth2.tokens', {
+  const db = await appCtx.resolve(Db);
+
+  const tokenColl = await db.defineCollection<OAuth2Token>('oauth2.tokens', {
     validationLevel: 'strict',
     validationAction: 'error',
     validator: {
@@ -93,12 +95,18 @@ export const createOAuth2Collection: DependencyCreator<Promise<OAuth2Collection>
     },
 
     indexes: [
-      [{ accessToken: 1 }, { unique: true }],
-      [{ refreshToken: 1 }, { unique: true }]
+      {
+        key: { accessToken: 1 },
+        unique: true
+      },
+      {
+        key: { refreshToken: 1 },
+        unique: true
+      }
     ]
   });
 
-  return { tokens: tokensColl };
+  return { tokens: tokenColl };
 };
 
 // eslint-disable-next-line max-len

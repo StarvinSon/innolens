@@ -2,7 +2,7 @@ import { ObjectId, Collection } from 'mongodb';
 
 import { createToken, DependencyCreator, createSingletonDependencyRegistrant } from '../app-context';
 
-import { createCollection } from './db';
+import { Db } from './db';
 
 
 export interface Client {
@@ -19,13 +19,15 @@ export enum ClientType {
 }
 
 
-export type ClientsCollection = Collection<Client>;
+export interface ClientCollection extends Collection<Client> {}
 
-export const ClientsCollection = createToken<Promise<ClientsCollection>>(module, 'ClientsCollection');
+export const ClientCollection = createToken<Promise<ClientCollection>>(module, 'ClientCollection');
 
 // eslint-disable-next-line max-len
-export const createClientsCollection: DependencyCreator<Promise<ClientsCollection>> = async (appCtx) =>
-  createCollection<Client>(appCtx, 'clients', {
+export const createClientCollection: DependencyCreator<Promise<ClientCollection>> = async (appCtx) => {
+  const db = await appCtx.resolve(Db);
+
+  return db.defineCollection('clients', {
     validationLevel: 'strict',
     validationAction: 'error',
     validator: {
@@ -60,9 +62,13 @@ export const createClientsCollection: DependencyCreator<Promise<ClientsCollectio
     },
 
     indexes: [
-      [{ publicId: 1 }, { unique: true }]
+      {
+        key: { publicId: 1 },
+        unique: true
+      }
     ]
   });
+};
 
 // eslint-disable-next-line max-len
-export const registerClientsCollection = createSingletonDependencyRegistrant(ClientsCollection, createClientsCollection);
+export const registerClientCollection = createSingletonDependencyRegistrant(ClientCollection, createClientCollection);

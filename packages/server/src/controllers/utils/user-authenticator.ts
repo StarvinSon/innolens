@@ -2,9 +2,9 @@ import { UNAUTHORIZED } from 'http-status-codes';
 import { Context as KoaContext } from 'koa';
 
 import { DependencyCreator } from '../../app-context';
-import { Client, ClientsService } from '../../services/client';
+import { Client, ClientService } from '../../services/client';
 import { OAuth2Service, OAuth2Token } from '../../services/oauth2';
-import { User, UsersService } from '../../services/users';
+import { User, UserService } from '../../services/user';
 import { createError } from '../../utils/error';
 
 
@@ -21,12 +21,12 @@ export interface UserAuthenticatorResult {
 // eslint-disable-next-line max-len
 export const createUserAuthenticator: DependencyCreator<Promise<UserAuthenticator>> = async (appCtx) => {
   const [
-    clientsService,
-    usersService,
+    clientService,
+    userService,
     oauth2Service
   ] = await appCtx.resolveAllAsync(
-    ClientsService,
-    UsersService,
+    ClientService,
+    UserService,
     OAuth2Service
   );
 
@@ -54,14 +54,14 @@ export const createUserAuthenticator: DependencyCreator<Promise<UserAuthenticato
     return {
       oauth2Token,
       getClient: async () => {
-        const client = await clientsService.findById(oauth2Token.clientId);
+        const client = await clientService.findById(oauth2Token.clientId);
         if (client === null) {
           throw new Error('Failed to retrieve client from db');
         }
         return client;
       },
       getUser: async () => {
-        const user = await usersService.findById(oauth2Token.userId);
+        const user = await userService.findById(oauth2Token.userId);
         if (user === null) {
           throw new Error('Failed to retrieve user from db');
         }

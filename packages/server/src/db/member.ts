@@ -2,7 +2,7 @@ import { ObjectId, Collection } from 'mongodb';
 
 import { createToken, DependencyCreator, createSingletonDependencyRegistrant } from '../app-context';
 
-import { createCollection } from './db';
+import { Db } from './db';
 
 
 export interface Member {
@@ -10,13 +10,15 @@ export interface Member {
   readonly groupName: string;
 }
 
-export type MembersCollection = Collection<Member>;
+export interface MemberCollection extends Collection<Member> {}
 
-export const MembersCollection = createToken<Promise<MembersCollection>>(module, 'MembersCollection');
+export const MemberCollection = createToken<Promise<MemberCollection>>(module, 'MemberCollection');
 
 // eslint-disable-next-line max-len
-export const createMembersCollection: DependencyCreator<Promise<MembersCollection>> = async (appCtx) =>
-  createCollection<Member>(appCtx, 'members', {
+export const createMemberCollection: DependencyCreator<Promise<MemberCollection>> = async (appCtx) => {
+  const db = await appCtx.resolve(Db);
+
+  return db.defineCollection('members', {
     validationLevel: 'strict',
     validationAction: 'error',
     validator: {
@@ -35,6 +37,7 @@ export const createMembersCollection: DependencyCreator<Promise<MembersCollectio
       }
     }
   });
+};
 
 // eslint-disable-next-line max-len
-export const registerMembersCollection = createSingletonDependencyRegistrant(MembersCollection, createMembersCollection);
+export const registerMemberCollection = createSingletonDependencyRegistrant(MemberCollection, createMemberCollection);

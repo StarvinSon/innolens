@@ -1,19 +1,19 @@
 import { DependencyRegistrant } from '../app-context';
 
-import { registerClientsService } from './client';
-import { registerMemberGroupsService } from './member-groups';
-import { registerMembersService } from './members';
+import { registerClientService } from './client';
+import { registerMemberGroupService } from './member-group';
+import { registerMemberService } from './member';
 import { registerOAuth2Service } from './oauth2';
-import { registerUsersService } from './users';
+import { registerUserService } from './user';
 
 
 export const registerServices: DependencyRegistrant = (appCtx) => {
   const registrants: ReadonlyArray<DependencyRegistrant> = [
-    registerClientsService,
-    registerMemberGroupsService,
-    registerMembersService,
+    registerClientService,
+    registerMemberGroupService,
+    registerMemberService,
     registerOAuth2Service,
-    registerUsersService
+    registerUserService
   ];
   registrants.forEach((register) => {
     register(appCtx);

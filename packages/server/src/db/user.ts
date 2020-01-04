@@ -2,7 +2,7 @@ import { ObjectId, Collection } from 'mongodb';
 
 import { createToken, DependencyCreator, createSingletonDependencyRegistrant } from '../app-context';
 
-import { createCollection } from './db';
+import { Db } from './db';
 
 
 export interface User {
@@ -13,12 +13,14 @@ export interface User {
 }
 
 
-export type UsersCollection = Collection<User>;
+export interface UserCollection extends Collection<User> {}
 
-export const UsersCollection = createToken<Promise<UsersCollection>>(module, 'UsersCollection');
+export const UserCollection = createToken<Promise<UserCollection>>(module, 'UserCollection');
 
-export const createUsersCollection: DependencyCreator<Promise<UsersCollection>> = async (appCtx) =>
-  createCollection<User>(appCtx, 'users', {
+export const createUserCollection: DependencyCreator<Promise<UserCollection>> = async (appCtx) => {
+  const db = await appCtx.resolve(Db);
+
+  return db.defineCollection('users', {
     validationLevel: 'strict',
     validationAction: 'error',
     validator: {
@@ -44,9 +46,13 @@ export const createUsersCollection: DependencyCreator<Promise<UsersCollection>> 
     },
 
     indexes: [
-      [{ username: 1 }, { unique: true }]
+      {
+        key: { username: 1 },
+        unique: true
+      }
     ]
   });
+};
 
 // eslint-disable-next-line max-len
-export const registerUsersCollection = createSingletonDependencyRegistrant(UsersCollection, createUsersCollection);
+export const registerUserCollection = createSingletonDependencyRegistrant(UserCollection, createUserCollection);

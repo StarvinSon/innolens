@@ -2,7 +2,7 @@ import { ObjectId, Collection } from 'mongodb';
 
 import { createToken, DependencyCreator, createSingletonDependencyRegistrant } from '../app-context';
 
-import { createCollection } from './db';
+import { Db } from './db';
 
 
 export interface MemberGroup {
@@ -13,13 +13,14 @@ export interface MemberGroup {
   count: number;
 }
 
-export interface MemberGroupsCollection extends Collection<MemberGroup> {}
+export interface MemberGroupCollection extends Collection<MemberGroup> {}
 
-export const MemberGroupsCollection = createToken<Promise<MemberGroupsCollection>>(module, 'MemberGroupsCollection');
+export const MemberGroupCollection = createToken<Promise<MemberGroupCollection>>(module, 'MemberGroupCollection');
 
 // eslint-disable-next-line max-len
-export const createMemberGroupsCollection: DependencyCreator<Promise<MemberGroupsCollection>> = async (appCtx) =>
-  createCollection(appCtx, 'memberGroups', {
+export const createMemberGroupCollection: DependencyCreator<Promise<MemberGroupCollection>> = async (appCtx) => {
+  const db = await appCtx.resolve(Db);
+  return db.defineCollection('memberGroups', {
     validationLevel: 'strict',
     validationAction: 'error',
     validator: {
@@ -44,9 +45,10 @@ export const createMemberGroupsCollection: DependencyCreator<Promise<MemberGroup
       }
     },
     indexes: [
-      [{ batchId: 1 }]
+      { key: { batchId: 1 } }
     ]
   });
+};
 
 // eslint-disable-next-line max-len
-export const registerMemberGroupsCollection = createSingletonDependencyRegistrant(MemberGroupsCollection, createMemberGroupsCollection);
+export const registerMemberGroupCollection = createSingletonDependencyRegistrant(MemberGroupCollection, createMemberGroupCollection);

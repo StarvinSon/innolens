@@ -1,9 +1,9 @@
-import { MemberGroupsController } from '../../controllers/member-groups';
+import { MemberGroupController } from '../../controllers/member-group';
 import { makeRoutesCreatorAsync } from '../utils/routes-creator';
 
 
 export const createMemberGroupsRoutes = makeRoutesCreatorAsync(async (appCtx, router) => {
-  const memberGroupsController = await appCtx.resolve(MemberGroupsController);
+  const memberGroupController = await appCtx.resolve(MemberGroupController);
 
-  router.get('/', memberGroupsController.get);
+  router.get('/', memberGroupController.get);
 });

@@ -1,30 +1,30 @@
 import { createToken, DependencyCreator, createSingletonDependencyRegistrant } from '../app-context';
 import { Middleware } from '../middlewares';
-import { MembersService } from '../services/members';
+import { MemberService } from '../services/member';
 import { fromAsync } from '../utils/array';
 
 import { createUserAuthenticator } from './utils/user-authenticator';
 
 
-export interface MembersController {
+export interface MemberController {
   get: Middleware;
 }
 
-export const MembersController = createToken<Promise<MembersController>>(module, 'MembersController');
+export const MemberController = createToken<Promise<MemberController>>(module, 'MemberController');
 
 // eslint-disable-next-line max-len
-export const createMembersController: DependencyCreator<Promise<MembersController>> = async (appCtx) => {
+export const createMemberController: DependencyCreator<Promise<MemberController>> = async (appCtx) => {
   const [
-    membersService,
+    memberService,
     authenticateUser
   ] = await appCtx.resolveAllAsync(
-    MembersService,
+    MemberService,
     createUserAuthenticator
   );
 
   const get: Middleware = async (ctx) => {
     await authenticateUser(ctx);
-    ctx.body = await fromAsync(membersService.find());
+    ctx.body = await fromAsync(memberService.find());
   };
 
   return {
@@ -33,4 +33,4 @@ export const createMembersController: DependencyCreator<Promise<MembersControlle
 };
 
 // eslint-disable-next-line max-len
-export const registerMembersController = createSingletonDependencyRegistrant(MembersController, createMembersController);
+export const registerMemberController = createSingletonDependencyRegistrant(MemberController, createMemberController);

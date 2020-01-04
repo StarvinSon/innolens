@@ -4,13 +4,13 @@ import { createToken, createSingletonDependencyRegistrant, DependencyCreator } f
 import { Logger } from '../log';
 import { Middleware } from '../middlewares';
 import { OAuth2Service } from '../services/oauth2';
-import { UsersService } from '../services/users';
+import { UserService } from '../services/user';
 import { createError } from '../utils/error';
-
+import { createValidator, Validator, ValidationError } from '../utils/validator';
 
 import { ERR_EMPTY_BODY, ERR_UNSUPPORTED_CONTENT_TYPE, parseBody } from './utils/body-parser';
 import { createClientAuthenticator, ERR_CLIENT_AUTHENTICATION_FAILED } from './utils/client-authenticator';
-import { createValidator, Validator, ERR_VALIDATION_FAILED } from './utils/validator';
+import { configureError } from './utils/error-configurator';
 
 
 export const ERR_INVALID_REQUEST = 'invalid_request';
@@ -30,12 +30,12 @@ export const OAuth2Controller = createToken<Promise<OAuth2Controller>>(module, '
 export const createOAuth2Controller: DependencyCreator<Promise<OAuth2Controller>> = async (appCtx) => {
   const [
     logger,
-    usersService,
+    userService,
     oauth2Service,
     authenticateClient
   ] = await appCtx.resolveAllAsync(
     Logger,
-    UsersService,
+    UserService,
     OAuth2Service,
     createClientAuthenticator
   );
@@ -154,10 +154,12 @@ export const createOAuth2Controller: DependencyCreator<Promise<OAuth2Controller>
     try {
       validateGrantType(body);
     } catch (err) {
-      if (err.errorCode === ERR_VALIDATION_FAILED) {
-        err.errorCode = ERR_INVALID_REQUEST;
-      }
-      throw err;
+      throw configureError(err, [
+        [ValidationError, {
+          statusCode: BAD_REQUEST,
+          code: ERR_INVALID_REQUEST
+        }]
+      ]);
     }
 
     switch (body.grant_type) {
@@ -165,16 +167,18 @@ export const createOAuth2Controller: DependencyCreator<Promise<OAuth2Controller>
         try {
           validatePassword(body);
         } catch (err) {
-          if (err.errorCode === ERR_VALIDATION_FAILED) {
-            err.errorCode = ERR_INVALID_REQUEST;
-          }
-          throw err;
+          throw configureError(err, [
+            [ValidationError, {
+              statusCode: BAD_REQUEST,
+              code: ERR_INVALID_REQUEST
+            }]
+          ]);
         }
 
         const { username, password } = body;
         const scopes = parseScope(body.scope);
 
-        const user = await usersService.findByCredentials({ username, password });
+        const user = await userService.findByCredentials({ username, password });
         if (user === null) {
           throw createError({
             statusCode: BAD_REQUEST,
@@ -213,10 +217,12 @@ export const createOAuth2Controller: DependencyCreator<Promise<OAuth2Controller>
         try {
           validateRefresh(body);
         } catch (err) {
-          if (err.errorCode === ERR_VALIDATION_FAILED) {
-            err.errorCode = ERR_INVALID_REQUEST;
-          }
-          throw err;
+          throw configureError(err, [
+            [ValidationError, {
+              statusCode: BAD_REQUEST,
+              code: ERR_INVALID_REQUEST
+            }]
+          ]);
         }
 
         const { refresh_token: refreshToken } = body;

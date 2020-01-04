@@ -2,19 +2,19 @@ import { compare, hash } from 'bcrypt';
 import { ObjectId } from 'mongodb';
 
 import { createToken, createSingletonDependencyRegistrant, DependencyCreator } from '../app-context';
-import { Client, ClientType, ClientsCollection } from '../db/clients';
+import { Client, ClientType, ClientCollection } from '../db/client';
 
 
 export { Client, ClientType };
 
-export interface ClientsService {
+export interface ClientService {
   findById(id: ObjectId): Promise<Client | null>;
   findByPublicId(publicId: string): Promise<Client | null>;
   findByCredentials(credentials: ClientCredentials): Promise<Client | null>;
   insert(client: ClientWithSecret): Promise<Client>;
 }
 
-export const ClientsService = createToken<Promise<ClientsService>>(module, 'ClientsService');
+export const ClientService = createToken<Promise<ClientService>>(module, 'ClientService');
 
 export interface ClientCredentials {
   readonly publicId: string;
@@ -27,16 +27,16 @@ export interface ClientWithSecret extends Omit<Client, 'secretHash'> {
 
 const SECRET_SALT_ROUNDS: number = 10;
 
-export const createClientsService: DependencyCreator<Promise<ClientsService>> = async (appCtx) => {
-  const clientsCollection = await appCtx.resolve(ClientsCollection);
+export const createClientService: DependencyCreator<Promise<ClientService>> = async (appCtx) => {
+  const clientCollection = await appCtx.resolve(ClientCollection);
 
-  const findById: ClientsService['findById'] = async (id) =>
-    clientsCollection.findOne({ _id: id });
+  const findById: ClientService['findById'] = async (id) =>
+    clientCollection.findOne({ _id: id });
 
-  const findByPublicId: ClientsService['findByPublicId'] = async (publicId) =>
-    clientsCollection.findOne({ publicId });
+  const findByPublicId: ClientService['findByPublicId'] = async (publicId) =>
+    clientCollection.findOne({ publicId });
 
-  const findByCredentials: ClientsService['findByCredentials'] = async (credentials) => {
+  const findByCredentials: ClientService['findByCredentials'] = async (credentials) => {
     const client = await findByPublicId(credentials.publicId);
     return (
       client !== null
@@ -48,7 +48,7 @@ export const createClientsService: DependencyCreator<Promise<ClientsService>> = 
     ) ? client : null;
   };
 
-  const insert: ClientsService['insert'] = async (clientWithSecret) => {
+  const insert: ClientService['insert'] = async (clientWithSecret) => {
     const { secret, ...clientWithoutSecret } = clientWithSecret;
     const client: Client = {
       ...clientWithoutSecret,
@@ -56,7 +56,7 @@ export const createClientsService: DependencyCreator<Promise<ClientsService>> = 
         ? ''
         : await hash(secret, SECRET_SALT_ROUNDS)
     };
-    await clientsCollection.insertOne(client);
+    await clientCollection.insertOne(client);
     return client;
   };
 
@@ -80,4 +80,4 @@ export const createClientsService: DependencyCreator<Promise<ClientsService>> = 
 };
 
 // eslint-disable-next-line max-len
-export const registerClientsService = createSingletonDependencyRegistrant(ClientsService, createClientsService);
+export const registerClientService = createSingletonDependencyRegistrant(ClientService, createClientService);

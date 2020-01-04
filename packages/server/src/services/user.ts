@@ -2,19 +2,19 @@ import { compare, hash } from 'bcrypt';
 import { ObjectId } from 'mongodb';
 
 import { createToken, DependencyCreator, createSingletonDependencyRegistrant } from '../app-context';
-import { User, UsersCollection } from '../db/users';
+import { User, UserCollection } from '../db/user';
 
 
 export { User };
 
-export interface UsersService {
+export interface UserService {
   findById(id: ObjectId): Promise<User | null>;
   findByUsername(username: string): Promise<User | null>;
   findByCredentials(credential: UserCredential): Promise<User | null>;
   insert(user: UserWithPassword): Promise<void>;
 }
 
-export const UsersService = createToken<Promise<UsersService>>(module, 'UsersService');
+export const UserService = createToken<Promise<UserService>>(module, 'UserService');
 
 export interface UserWithPassword extends Omit<User, 'passwordHash'> {
   readonly password: string;
@@ -27,30 +27,30 @@ export interface UserCredential {
 
 const SALT_ROUNDS: number = 10;
 
-export const createUsersService: DependencyCreator<Promise<UsersService>> = async (appCtx) => {
-  const usersCollection = await appCtx.resolve(UsersCollection);
+export const createUserService: DependencyCreator<Promise<UserService>> = async (appCtx) => {
+  const userCollection = await appCtx.resolve(UserCollection);
 
-  const findById: UsersService['findById'] = async (id) =>
-    usersCollection.findOne({ _id: id });
+  const findById: UserService['findById'] = async (id) =>
+    userCollection.findOne({ _id: id });
 
-  const findByUsername: UsersService['findByUsername'] = async (username) =>
-    usersCollection.findOne({
+  const findByUsername: UserService['findByUsername'] = async (username) =>
+    userCollection.findOne({
       username
     });
 
-  const findByCredentials: UsersService['findByCredentials'] = async (credential) => {
+  const findByCredentials: UserService['findByCredentials'] = async (credential) => {
     const user = await findByUsername(credential.username);
     return user !== null && (await compare(credential.password, user.passwordHash))
       ? user : null;
   };
 
-  const insert: UsersService['insert'] = async (userWithPassword) => {
+  const insert: UserService['insert'] = async (userWithPassword) => {
     const { password, ...userWithoutPassword } = userWithPassword;
     const user: User = {
       ...userWithoutPassword,
       passwordHash: await hash(password, SALT_ROUNDS)
     };
-    await usersCollection.insertOne(user);
+    await userCollection.insertOne(user);
   };
 
   const rootUser = await findByUsername('root');
@@ -72,4 +72,4 @@ export const createUsersService: DependencyCreator<Promise<UsersService>> = asyn
 };
 
 // eslint-disable-next-line max-len
-export const registerUsersService = createSingletonDependencyRegistrant(UsersService, createUsersService);
+export const registerUserService = createSingletonDependencyRegistrant(UserService, createUserService);

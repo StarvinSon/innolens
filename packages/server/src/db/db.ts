@@ -1,118 +1,179 @@
-import {
-  connect, Db as MongoDb, MongoClient,
-  CollectionCreateOptions, IndexOptions, Collection
-} from 'mongodb';
+import deepEqual from 'deep-equal';
+import { CollectionCreateOptions, Collection, IndexSpecification } from 'mongodb';
 
 import {
-  createToken, DependencyCreator, createSingletonDependencyRegistrant,
-  AppContext
+  createToken, DependencyCreator, createSingletonDependencyRegistrant
 } from '../app-context';
 import { Logger } from '../log';
 
+import { DbClient } from './db-client';
 
-export interface DbClientOptions {
-  readonly connectionUri: string;
+
+export interface Db {
+  defineCollection<T>(name: string, options: DefineCollectionOptions): Promise<Collection<T>>;
 }
-
-export type DbClient = MongoClient;
-
-export const DbClient = createToken<Promise<DbClient>>(module, 'DbClient');
-
-// eslint-disable-next-line max-len
-export const createDbClient: DependencyCreator<Promise<DbClient>, [DbClientOptions]> = async (appCtx, options) => {
-  const { connectionUri } = options;
-
-  return connect(connectionUri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-  });
-};
-
-export const registerDbClient = createSingletonDependencyRegistrant(DbClient, createDbClient);
-
-
-export type Db = MongoDb;
 
 export const Db = createToken<Promise<Db>>(module, 'Db');
 
+export interface DefineCollectionOptions {
+  readonly validator?: Required<CollectionCreateOptions>['validator'];
+  readonly validationLevel?: Required<CollectionCreateOptions>['validationLevel'];
+  readonly validationAction?: Required<CollectionCreateOptions>['validationAction'];
+  readonly indexes?: ReadonlyArray<IndexSpecification>;
+}
+
 export const createDb: DependencyCreator<Promise<Db>> = async (appCtx) => {
-  const client = await appCtx.resolve(DbClient);
-  return client.db();
+  const [
+    logger,
+    client
+  ] = await appCtx.resolveAllAsync(
+    Logger,
+    DbClient
+  );
+
+  const rawDb = client.db();
+
+  interface CollModOptions {
+    readonly validator?: Required<CollectionCreateOptions>['validator'];
+    readonly validationLevel?: Required<CollectionCreateOptions>['validationLevel'];
+    readonly validationAction?: Required<CollectionCreateOptions>['validationAction'];
+  }
+
+  const collMod = async (name: string, options: CollModOptions): Promise<void> => {
+    const result = await rawDb.command(Object.fromEntries(Object
+      .entries({
+        collMod: name,
+        validationLevel: options.validationLevel,
+        validationAction: options.validationAction,
+        validator: options.validator
+      })
+      .filter(([, val]) => val !== undefined)));
+
+    if (result.ok !== 1) {
+      throw new Error(`Failed to execute collMod: ${JSON.stringify(result, undefined, 2)}`);
+    }
+  };
+
+  const defineCollection: Db['defineCollection'] = async <T>(name: string, options: DefineCollectionOptions): Promise<Collection<T>> => {
+    const coll = await rawDb.createCollection<T>(name);
+
+    // Update validation options
+    const currCollOpts = await coll.options();
+    const validationOptsIsSame = [
+      'validationLevel',
+      'validationAction',
+      'validator'
+    ]
+      .every((field) => {
+        const currVal = currCollOpts[field];
+        const expectVal = (options as any)[field];
+        return deepEqual(currVal, expectVal, { strict: true });
+      });
+    if (!validationOptsIsSame) {
+      logger.info(
+        'Updating %s schema from %O to %O',
+        name,
+        {
+          validationLevel: currCollOpts.validationLevel,
+          validationAction: currCollOpts.validationAction,
+          validator: currCollOpts.validator
+        }, {
+          validationLevel: options.validationLevel,
+          validationAction: options.validationAction,
+          validator: options.validator
+        }
+      );
+      await collMod(name, {
+        validationLevel: options.validationLevel,
+        validationAction: options.validationAction,
+        validator: options.validator
+      });
+    }
+
+    // Update index options
+    const indexesToDrop: Array<IndexSpecification> = await coll.indexes();
+    const indexesToCreate: Array<IndexSpecification> = options.indexes?.slice() ?? [];
+
+    for (
+      let indexToCreateIdx = indexesToCreate.length - 1;
+      indexToCreateIdx >= 0;
+      indexToCreateIdx -= 1
+    ) {
+      const indexToCreate = indexesToCreate[indexToCreateIdx];
+
+      const indexToDropIdx = indexesToDrop.findIndex((index) =>
+        deepEqual(index.key, indexToCreate.key, { strict: true }));
+      if (indexToDropIdx >= 0) {
+        const indexToDrop = indexesToDrop[indexToDropIdx];
+
+        const indexIsSame = [
+          'key',
+          'name',
+          'background',
+          'unique',
+          'partialFilterExpression',
+          'sparse',
+          'expireAfterSeconds',
+          'storageEngine',
+          'weights',
+          'default_language',
+          'language_override',
+          'textIndexVersion',
+          '2dsphereIndexVersion',
+          'bits',
+          'min',
+          'max',
+          'bucketSize',
+          'collation',
+          'wildcardProjection'
+        ]
+          .every((field) => {
+            const dropVal = (indexToDrop as any)[field];
+            const createVal = (indexToCreate as any)[field];
+            switch (field) {
+              case 'name': {
+                return (
+                  createVal === undefined
+                  || deepEqual(dropVal, createVal, { strict: true })
+                );
+              }
+              default: {
+                return deepEqual(dropVal, createVal, { strict: true });
+              }
+            }
+          });
+
+        if (indexIsSame) {
+          indexesToDrop.splice(indexToDropIdx, 1);
+          indexesToCreate.splice(indexToCreateIdx, 1);
+        }
+      }
+    }
+
+    const idIndexToCreateIdx = indexesToCreate.findIndex((index) =>
+      deepEqual(index.key, { _id: 1 }, { strict: true }));
+    const idIndexToDropIdx = indexesToDrop.findIndex((index) =>
+      deepEqual(index.key, { _id: 1 }, { strict: true }));
+    if (idIndexToCreateIdx < 0 && idIndexToDropIdx >= 0) {
+      indexesToDrop.splice(idIndexToDropIdx, 1);
+    }
+
+    if (indexesToDrop.length > 0) {
+      logger.info('Dropping index in collection %j: %O', name, indexesToDrop);
+      await Promise.all(indexesToDrop.map((index) =>
+        coll.dropIndex(index.name!)));
+    }
+    if (indexesToCreate.length > 0) {
+      logger.info('Creating index in collection %j: %O', name, indexesToCreate);
+      await coll.createIndexes(indexesToCreate);
+    }
+
+    return coll;
+  };
+
+  return {
+    defineCollection
+  };
 };
 
 export const registerDb = createSingletonDependencyRegistrant(Db, createDb);
-
-
-interface CollModOptions {
-  readonly validationLevel?: NonNullable<CollectionCreateOptions['validationLevel']>;
-  readonly validationAction?: NonNullable<CollectionCreateOptions['validationAction']>;
-  readonly validator?: NonNullable<CollectionCreateOptions['validator']>;
-}
-
-const collMod = async (db: Db, name: string, options: CollModOptions): Promise<void> => {
-  const result = await db.command(Object.fromEntries(Object
-    .entries({
-      collMod: name,
-      validationLevel: options.validationLevel,
-      validationAction: options.validationAction,
-      validator: options.validator
-    })
-    .filter(([, val]) => val !== undefined)));
-
-  if (result.ok !== 1) {
-    throw new Error(`Failed to execute collMod: ${JSON.stringify(result, undefined, 2)}`);
-  }
-};
-
-
-export interface CreateCollectionOptions extends CollectionCreateOptions {
-  indexes?: ReadonlyArray<object | readonly [object, IndexOptions?]>;
-}
-
-export const createCollection = async <T extends object>(
-  appCtx: AppContext,
-  name: string,
-  options: CreateCollectionOptions
-): Promise<Collection<T>> => {
-  const {
-    indexes,
-    ...createCollOpts
-  } = options;
-
-  const db = await appCtx.resolve(Db);
-
-  const coll = await db.createCollection<T>(name, createCollOpts);
-
-  const currCollOpts = await coll.options();
-  if (
-    currCollOpts.validationLevel !== createCollOpts.validationLevel
-    || currCollOpts.validationAction !== createCollOpts.validationAction
-    || JSON.stringify(currCollOpts.validator) !== JSON.stringify(createCollOpts.validator)
-  ) {
-    const logger = appCtx.resolve(Logger);
-    logger.info('Updating %s schema from %O to %O', name, {
-      validationLevel: currCollOpts.validationLevel,
-      validationAction: currCollOpts.validationAction,
-      validator: currCollOpts.validator
-    }, {
-      validationLevel: createCollOpts.validationLevel,
-      validationAction: createCollOpts.validationAction,
-      validator: createCollOpts.validator
-    });
-    await collMod(db, name, {
-      validationLevel: createCollOpts.validationLevel,
-      validationAction: createCollOpts.validationAction,
-      validator: createCollOpts.validator
-    });
-  }
-
-  if (indexes !== undefined && indexes.length > 0) {
-    await Promise.all(indexes.map(async (indexOrOpts) => {
-      const [index, opts] = (Array.isArray as (a: any) => a is ReadonlyArray<any>)(indexOrOpts)
-        ? indexOrOpts : [indexOrOpts];
-      await coll.createIndex(index, opts);
-    }));
-  }
-
-  return coll;
-};

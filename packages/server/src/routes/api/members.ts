@@ -1,9 +1,9 @@
-import { MembersController } from '../../controllers/members';
+import { MemberController } from '../../controllers/member';
 import { makeRoutesCreatorAsync } from '../utils/routes-creator';
 
 
 export const createMembersRoutes = makeRoutesCreatorAsync(async (appCtx, router) => {
-  const membersController = await appCtx.resolve(MembersController);
+  const memberController = await appCtx.resolve(MemberController);
 
-  router.get('/', membersController.get);
+  router.get('/', memberController.get);
 });

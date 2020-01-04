@@ -2,7 +2,7 @@ import { UNAUTHORIZED } from 'http-status-codes';
 import { Context as KoaContext } from 'koa';
 
 import { DependencyCreator } from '../../app-context';
-import { Client, ClientsService } from '../../services/client';
+import { Client, ClientService } from '../../services/client';
 import { createError } from '../../utils/error';
 
 
@@ -15,7 +15,7 @@ export interface ClientAuthenticator {
 
 // eslint-disable-next-line max-len
 export const createClientAuthenticator: DependencyCreator<Promise<ClientAuthenticator>> = async (appCtx) => {
-  const clientsService = await appCtx.resolve(ClientsService);
+  const clientService = await appCtx.resolve(ClientService);
 
   const authenticateClient: ClientAuthenticator = async (ctx) => {
     const auth = ctx.get('Authorization');
@@ -28,7 +28,7 @@ export const createClientAuthenticator: DependencyCreator<Promise<ClientAuthenti
         .split(':', 2);
 
     const client = parts !== null && parts.length === 2
-      ? await clientsService.findByCredentials({
+      ? await clientService.findByCredentials({
         publicId: parts[0],
         secret: parts[1]
       })
