@@ -32,6 +32,15 @@ module.exports = {
         .filter(({ selector }) => selector !== 'ForOfStatement')
     ],
     'no-underscore-dangle': 'off',
+    'operator-linebreak': [
+      'error',
+      'before',
+      {
+        'overrides': {
+          '=': 'after'
+        }
+      }
+    ],
     'space-before-function-paren': ['error', {
       anonymous: 'never',
       named: 'never',
