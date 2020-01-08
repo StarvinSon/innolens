@@ -29,6 +29,7 @@ module.exports = {
       exceptAfterSingleLine: true
     }],
     'max-classes-per-file': 'off',
+    'no-confusing-arrow': 'off',
     'no-console': ['warn', {
       allow: ['warn', 'error']
     }],
