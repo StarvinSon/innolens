@@ -15,6 +15,14 @@ module.exports = {
   rules: {
     'comma-dangle': ['error', 'never'],
     'func-names': ['warn', 'as-needed'],
+    'generator-star-spacing': ['error', {
+      before: false,
+      after: true,
+      method: {
+        before: true,
+        after: false
+      }
+    }],
     'implicit-arrow-linebreak': 'off',
     'linebreak-style': 'off',
     'lines-between-class-members': ['error', 'always', {
