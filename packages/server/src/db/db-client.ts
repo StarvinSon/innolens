@@ -1,24 +1,23 @@
 import { MongoClient, connect } from 'mongodb';
 
-import { createToken, DependencyCreator, createSingletonDependencyRegistrant } from '../app-context';
+import { createToken, createSingletonRegistrant } from '../resolver';
+import { ServerOptions } from '../server-options';
 
-
-export interface DbClientOptions {
-  readonly connectionUri: string;
-}
 
 export type DbClient = MongoClient;
 
-export const DbClient = createToken<Promise<DbClient>>(module, 'DbClient');
 
-// eslint-disable-next-line max-len
-export const createDbClient: DependencyCreator<Promise<DbClient>, [DbClientOptions]> = async (appCtx, options) => {
-  const { connectionUri } = options;
-
-  return connect(connectionUri, {
+export const createDbClient = async (connectionUri: string): Promise<DbClient> =>
+  connect(connectionUri, {
     useNewUrlParser: true,
     useUnifiedTopology: true
   });
-};
 
-export const registerDbClient = createSingletonDependencyRegistrant(DbClient, createDbClient);
+
+export const DbClient = createToken<Promise<DbClient>>(__filename, 'DbClient');
+
+export const registerDbClient = createSingletonRegistrant(
+  DbClient,
+  { serverOptions: ServerOptions },
+  async ({ serverOptions }) => createDbClient(serverOptions.dbConnectionUri)
+);

@@ -1,10 +1,11 @@
 import deepEqual from 'deep-equal';
-import { CollectionCreateOptions, Collection, IndexSpecification } from 'mongodb';
-
 import {
-  createToken, DependencyCreator, createSingletonDependencyRegistrant
-} from '../app-context';
-import { Logger } from '../log';
+  CollectionCreateOptions, Collection, IndexSpecification,
+  Db as RawDb
+} from 'mongodb';
+
+import { createToken, createAsyncSingletonRegistrant } from '../resolver';
+import { Logger } from '../logger';
 
 import { DbClient } from './db-client';
 
@@ -13,8 +14,6 @@ export interface Db {
   defineCollection<T>(name: string, options: DefineCollectionOptions): Promise<Collection<T>>;
 }
 
-export const Db = createToken<Promise<Db>>(module, 'Db');
-
 export interface DefineCollectionOptions {
   readonly validator?: Required<CollectionCreateOptions>['validator'];
   readonly validationLevel?: Required<CollectionCreateOptions>['validationLevel'];
@@ -22,40 +21,34 @@ export interface DefineCollectionOptions {
   readonly indexes?: ReadonlyArray<IndexSpecification>;
 }
 
-export const createDb: DependencyCreator<Promise<Db>> = async (appCtx) => {
-  const [
-    logger,
-    client
-  ] = await appCtx.resolveAllAsync(
-    Logger,
-    DbClient
-  );
 
-  const rawDb = client.db();
+interface CollModOptions {
+  readonly validator?: Required<CollectionCreateOptions>['validator'];
+  readonly validationLevel?: Required<CollectionCreateOptions>['validationLevel'];
+  readonly validationAction?: Required<CollectionCreateOptions>['validationAction'];
+}
 
-  interface CollModOptions {
-    readonly validator?: Required<CollectionCreateOptions>['validator'];
-    readonly validationLevel?: Required<CollectionCreateOptions>['validationLevel'];
-    readonly validationAction?: Required<CollectionCreateOptions>['validationAction'];
+export class DbImpl implements Db {
+  private readonly _logger: Logger;
+  private readonly _dbClient: DbClient;
+  private readonly _rawDb: RawDb;
+
+  public constructor(options: {
+    logger: Logger;
+    dbClient: DbClient;
+  }) {
+    ({
+      logger: this._logger,
+      dbClient: this._dbClient
+    } = options);
+    this._rawDb = this._dbClient.db();
   }
 
-  const collMod = async (name: string, options: CollModOptions): Promise<void> => {
-    const result = await rawDb.command(Object.fromEntries(Object
-      .entries({
-        collMod: name,
-        validationLevel: options.validationLevel,
-        validationAction: options.validationAction,
-        validator: options.validator
-      })
-      .filter(([, val]) => val !== undefined)));
-
-    if (result.ok !== 1) {
-      throw new Error(`Failed to execute collMod: ${JSON.stringify(result, undefined, 2)}`);
-    }
-  };
-
-  const defineCollection: Db['defineCollection'] = async <T>(name: string, options: DefineCollectionOptions): Promise<Collection<T>> => {
-    const coll = await rawDb.createCollection<T>(name);
+  public async defineCollection<T>(
+    name: string,
+    options: DefineCollectionOptions
+  ): Promise<Collection<T>> {
+    const coll = await this._rawDb.createCollection<T>(name);
 
     // Update validation options
     const currCollOpts = await coll.options();
@@ -70,7 +63,7 @@ export const createDb: DependencyCreator<Promise<Db>> = async (appCtx) => {
         return deepEqual(currVal, expectVal, { strict: true });
       });
     if (!validationOptsIsSame) {
-      logger.info(
+      this._logger.info(
         'Updating %s schema from %O to %O',
         name,
         {
@@ -83,7 +76,7 @@ export const createDb: DependencyCreator<Promise<Db>> = async (appCtx) => {
           validator: options.validator
         }
       );
-      await collMod(name, {
+      await this._collMod(name, {
         validationLevel: options.validationLevel,
         validationAction: options.validationAction,
         validator: options.validator
@@ -159,21 +152,42 @@ export const createDb: DependencyCreator<Promise<Db>> = async (appCtx) => {
     }
 
     if (indexesToDrop.length > 0) {
-      logger.info('Dropping index in collection %j: %O', name, indexesToDrop);
+      this._logger.info('Dropping index in collection %j: %O', name, indexesToDrop);
       await Promise.all(indexesToDrop.map((index) =>
         coll.dropIndex(index.name!)));
     }
     if (indexesToCreate.length > 0) {
-      logger.info('Creating index in collection %j: %O', name, indexesToCreate);
+      this._logger.info('Creating index in collection %j: %O', name, indexesToCreate);
       await coll.createIndexes(indexesToCreate);
     }
 
     return coll;
-  };
+  }
 
-  return {
-    defineCollection
-  };
-};
+  private async _collMod(name: string, options: CollModOptions): Promise<void> {
+    const result = await this._rawDb.command(Object.fromEntries(Object
+      .entries({
+        collMod: name,
+        validationLevel: options.validationLevel,
+        validationAction: options.validationAction,
+        validator: options.validator
+      })
+      .filter(([, val]) => val !== undefined)));
 
-export const registerDb = createSingletonDependencyRegistrant(Db, createDb);
+    if (result.ok !== 1) {
+      throw new Error(`Failed to execute collMod: ${JSON.stringify(result, undefined, 2)}`);
+    }
+  }
+}
+
+
+export const Db = createToken<Promise<Db>>(__filename, 'Db');
+
+export const registerDb = createAsyncSingletonRegistrant(
+  Db,
+  {
+    logger: Logger,
+    dbClient: DbClient
+  },
+  (opts) => new DbImpl(opts)
+);

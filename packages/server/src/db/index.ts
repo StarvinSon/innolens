@@ -1,8 +1,8 @@
-import { DependencyRegistrant } from '../app-context';
+import { ResolverFunction } from '../resolver';
 
 import { registerClientCollection } from './client';
 import { registerDb } from './db';
-import { DbClientOptions, registerDbClient } from './db-client';
+import { registerDbClient } from './db-client';
 import { registerEquipmentBookingCollection } from './equipment-booking';
 import { registerEquipmentLoginRecordCollection } from './equipment-login-record';
 import { registerEquipmentLogoutRecordCollection } from './equipment-logout-record';
@@ -12,23 +12,21 @@ import { registerOAuth2Collection } from './oauth2';
 import { registerUserCollection } from './user';
 
 
-export type DbAndCollectionsOptions = DbClientOptions;
+const registrants: ReadonlyArray<ResolverFunction> = [
+  registerClientCollection,
+  registerDb,
+  registerDbClient,
+  registerEquipmentBookingCollection,
+  registerEquipmentLoginRecordCollection,
+  registerEquipmentLogoutRecordCollection,
+  registerMemberGroupCollection,
+  registerMemberCollection,
+  registerOAuth2Collection,
+  registerUserCollection
+];
 
-// eslint-disable-next-line max-len
-export const registerDbAndCollections: DependencyRegistrant<[DbAndCollectionsOptions]> = (appCtx, options) => {
-  const registrants: ReadonlyArray<DependencyRegistrant> = [
-    registerClientCollection,
-    registerDb,
-    (c) => registerDbClient(c, options),
-    registerEquipmentBookingCollection,
-    registerEquipmentLoginRecordCollection,
-    registerEquipmentLogoutRecordCollection,
-    registerMemberGroupCollection,
-    registerMemberCollection,
-    registerOAuth2Collection,
-    registerUserCollection
-  ];
-  registrants.forEach((register) => {
-    register(appCtx);
-  });
+export const registerDbAndCollections: ResolverFunction = (resolver) => {
+  for (const register of registrants) {
+    register(resolver);
+  }
 };

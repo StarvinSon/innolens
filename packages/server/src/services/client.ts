@@ -1,7 +1,7 @@
 import { compare, hash } from 'bcrypt';
 import { ObjectId } from 'mongodb';
 
-import { createToken, createSingletonDependencyRegistrant, DependencyCreator } from '../app-context';
+import { createToken, createAsyncSingletonRegistrant } from '../resolver';
 import { Client, ClientType, ClientCollection } from '../db/client';
 
 
@@ -11,10 +11,8 @@ export interface ClientService {
   findById(id: ObjectId): Promise<Client | null>;
   findByPublicId(publicId: string): Promise<Client | null>;
   findByCredentials(credentials: ClientCredentials): Promise<Client | null>;
-  insert(client: ClientWithSecret): Promise<Client>;
+  insert(clientWithSecret: ClientWithSecret): Promise<Client>;
 }
-
-export const ClientService = createToken<Promise<ClientService>>(module, 'ClientService');
 
 export interface ClientCredentials {
   readonly publicId: string;
@@ -25,30 +23,42 @@ export interface ClientWithSecret extends Omit<Client, 'secretHash'> {
   readonly secret: string;
 }
 
+
 const SECRET_SALT_ROUNDS: number = 10;
 
-export const createClientService: DependencyCreator<Promise<ClientService>> = async (appCtx) => {
-  const clientCollection = await appCtx.resolve(ClientCollection);
+export class ClientServiceImpl implements ClientService {
+  private readonly _clientCollection: ClientCollection;
 
-  const findById: ClientService['findById'] = async (id) =>
-    clientCollection.findOne({ _id: id });
+  public constructor(options: {
+    clientCollection: ClientCollection;
+  }) {
+    ({
+      clientCollection: this._clientCollection
+    } = options);
+  }
 
-  const findByPublicId: ClientService['findByPublicId'] = async (publicId) =>
-    clientCollection.findOne({ publicId });
+  public async findById(id: ObjectId): Promise<Client | null> {
+    return this._clientCollection.findOne({ _id: id });
+  }
 
-  const findByCredentials: ClientService['findByCredentials'] = async (credentials) => {
-    const client = await findByPublicId(credentials.publicId);
-    return (
+  public async findByPublicId(publicId: string): Promise<Client | null> {
+    return this._clientCollection.findOne({ publicId });
+  }
+
+  public async findByCredentials(credentials: ClientCredentials): Promise<Client | null> {
+    const client = await this.findByPublicId(credentials.publicId);
+    const match = (
       client !== null
       && (
         (client.type === ClientType.PUBLIC && credentials.secret === '')
         || (client.type === ClientType.CONFIDENTIAL
           && (await compare(credentials.secret, client.secretHash)))
       )
-    ) ? client : null;
-  };
+    );
+    return match ? client : null;
+  }
 
-  const insert: ClientService['insert'] = async (clientWithSecret) => {
+  public async insert(clientWithSecret: ClientWithSecret): Promise<Client> {
     const { secret, ...clientWithoutSecret } = clientWithSecret;
     const client: Client = {
       ...clientWithoutSecret,
@@ -56,28 +66,16 @@ export const createClientService: DependencyCreator<Promise<ClientService>> = as
         ? ''
         : await hash(secret, SECRET_SALT_ROUNDS)
     };
-    await clientCollection.insertOne(client);
+    await this._clientCollection.insertOne(client);
     return client;
-  };
-
-  const publicClient = await findByPublicId('default');
-  if (publicClient === null) {
-    await insert({
-      _id: new ObjectId(),
-      publicId: 'default',
-      type: ClientType.PUBLIC,
-      secret: '',
-      name: 'Default Public Client'
-    });
   }
+}
 
-  return {
-    findById,
-    findByPublicId,
-    findByCredentials,
-    insert
-  };
-};
 
-// eslint-disable-next-line max-len
-export const registerClientService = createSingletonDependencyRegistrant(ClientService, createClientService);
+export const ClientService = createToken<Promise<ClientService>>(__filename, 'ClientService');
+
+export const registerClientService = createAsyncSingletonRegistrant(
+  ClientService,
+  { clientCollection: ClientCollection },
+  (opts) => new ClientServiceImpl(opts)
+);

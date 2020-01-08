@@ -1,36 +1,46 @@
-import { createToken, DependencyCreator, createSingletonDependencyRegistrant } from '../app-context';
+import { createToken, createAsyncSingletonRegistrant } from '../resolver';
 import { Middleware } from '../middlewares';
 import { MemberService } from '../services/member';
 import { fromAsync } from '../utils/array';
 
-import { createUserAuthenticator } from './utils/user-authenticator';
+import { UserAuthenticator } from './utils/user-authenticator';
+import { Context } from './context';
 
 
 export interface MemberController {
   get: Middleware;
 }
 
-export const MemberController = createToken<Promise<MemberController>>(module, 'MemberController');
 
-// eslint-disable-next-line max-len
-export const createMemberController: DependencyCreator<Promise<MemberController>> = async (appCtx) => {
-  const [
-    memberService,
-    authenticateUser
-  ] = await appCtx.resolveAllAsync(
-    MemberService,
-    createUserAuthenticator
-  );
+export class MemberControllerImpl implements MemberController {
+  private readonly _memberService: MemberService;
+  private readonly _userAuthenticator: UserAuthenticator;
 
-  const get: Middleware = async (ctx) => {
-    await authenticateUser(ctx);
-    ctx.body = await fromAsync(memberService.find());
-  };
+  public constructor(options: {
+    memberService: MemberService;
+    userAuthenticator: UserAuthenticator;
+  }) {
+    ({
+      memberService: this._memberService,
+      userAuthenticator: this._userAuthenticator
+    } = options);
+  }
 
-  return {
-    get
-  };
-};
+  public async get(ctx: Context): Promise<void> {
+    await this._userAuthenticator(ctx);
+    ctx.body = await fromAsync(this._memberService.find());
+  }
+}
 
-// eslint-disable-next-line max-len
-export const registerMemberController = createSingletonDependencyRegistrant(MemberController, createMemberController);
+
+export const MemberController =
+  createToken<Promise<MemberController>>(__filename, 'MemberController');
+
+export const registerMemberController = createAsyncSingletonRegistrant(
+  MemberController,
+  {
+    memberService: MemberService,
+    userAuthenticator: UserAuthenticator
+  },
+  (opts) => new MemberControllerImpl(opts)
+);

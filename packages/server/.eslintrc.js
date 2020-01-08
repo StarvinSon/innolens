@@ -7,4 +7,7 @@ module.exports = {
   env: {
     node: true
   },
+  rules: {
+    'class-methods-use-this': 'off'
+  }
 };

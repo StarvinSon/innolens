@@ -1,6 +1,6 @@
 import { ObjectId, Collection } from 'mongodb';
 
-import { createToken, DependencyCreator, createSingletonDependencyRegistrant } from '../app-context';
+import { createToken, createAsyncSingletonRegistrant } from '../resolver';
 
 import { Db } from './db';
 
@@ -12,14 +12,14 @@ export interface EquipmentLogoutRecord {
   time: Date;
 }
 
-
 export interface EquipmentLogoutRecordCollection extends Collection<EquipmentLogoutRecord> {}
 
-export const EquipmentLogoutRecordCollection = createToken<Promise<EquipmentLogoutRecordCollection>>(module, 'EquipmentLogoutRecordCollection');
 
-// eslint-disable-next-line max-len
-export const createEquipmentLogoutRecordCollection: DependencyCreator<Promise<EquipmentLogoutRecordCollection>> = async (appCtx) => {
-  const db = await appCtx.resolve(Db);
+export const createEquipmentLogoutRecordCollection = async (options: {
+  db: Db;
+}): Promise<EquipmentLogoutRecordCollection> => {
+  const { db } = options;
+
   return db.defineCollection('equipmentLogoutRecords', {
     validationLevel: 'strict',
     validationAction: 'error',
@@ -52,5 +52,12 @@ export const createEquipmentLogoutRecordCollection: DependencyCreator<Promise<Eq
   });
 };
 
-// eslint-disable-next-line max-len
-export const registerEquipmentLogoutRecordCollection = createSingletonDependencyRegistrant(EquipmentLogoutRecordCollection, createEquipmentLogoutRecordCollection);
+
+export const EquipmentLogoutRecordCollection =
+  createToken<Promise<EquipmentLogoutRecordCollection>>(__filename, 'EquipmentLogoutRecordCollection');
+
+export const registerEquipmentLogoutRecordCollection = createAsyncSingletonRegistrant(
+  EquipmentLogoutRecordCollection,
+  { db: Db },
+  createEquipmentLogoutRecordCollection
+);

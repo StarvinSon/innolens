@@ -1,4 +1,4 @@
 /node_modules/
 /out/
-/app.config.js
+/server.config.js
 /*.log

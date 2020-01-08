@@ -2,17 +2,22 @@ import { INTERNAL_SERVER_ERROR, getStatusText } from 'http-status-codes';
 import Koa, { DefaultContext, DefaultState } from 'koa';
 import compress from 'koa-compress';
 
-import { createToken, DependencyCreator, createSingletonDependencyRegistrant } from './app-context';
-import { Logger } from './log';
-import { createRoutes } from './routes';
+import { createToken, createAsyncSingletonRegistrant } from './resolver';
+import { Logger } from './logger';
+import { Routes } from './routes';
 
 
-export type App = Koa<DefaultState, DefaultContext>;
+export interface App extends Koa<DefaultState, DefaultContext> {}
 
-export const App = createToken<Promise<App>>(module, 'App');
 
-export const createApp: DependencyCreator<Promise<App>> = async (appCtx) => {
-  const logger = appCtx.resolve(Logger);
+const isError = (val: unknown): val is Error & Readonly<Record<string, unknown>> =>
+  val instanceof Error;
+
+export const createApp = async (options: {
+  logger: Logger;
+  routes: Routes;
+}): Promise<App> => {
+  const { logger, routes } = options;
 
   const app: App = new Koa();
 
@@ -22,15 +27,29 @@ export const createApp: DependencyCreator<Promise<App>> = async (appCtx) => {
     try {
       await next();
     } catch (err) {
-      const statusCode: number = err.statusCode ?? err.status ?? INTERNAL_SERVER_ERROR;
-      const headers: { readonly [key: string]: string } = err.headers ?? {};
-      const errorCode: string = err.errorCode ?? getStatusText(statusCode);
-      const description: string | null = err.description ?? null;
+      const statusCode: number =
+        isError(err) && typeof err.statusCode === 'number'
+          ? err.statusCode
+          : isError(err) && typeof err.status === 'number'
+            ? err.status
+            : INTERNAL_SERVER_ERROR;
+      const headers: Readonly<Record<string, string>> =
+        isError(err) && typeof err.headers === 'object' && err.headers !== null
+          ? err.headers as Readonly<Record<string, string>>
+          : {};
+      const code: string =
+        statusCode < INTERNAL_SERVER_ERROR && isError(err) && typeof err.code === 'string'
+          ? err.code
+          : getStatusText(statusCode);
+      const description: string | null =
+        isError(err)
+          ? err.message
+          : null;
 
       ctx.status = statusCode;
       ctx.set(headers);
       ctx.body = {
-        errorCode,
+        code,
         ...description === null ? null : { description }
       };
 
@@ -40,10 +59,19 @@ export const createApp: DependencyCreator<Promise<App>> = async (appCtx) => {
     }
   });
 
-  const routes = await createRoutes(appCtx);
   routes.forEach((mw) => app.use(mw));
 
   return app;
 };
 
-export const registerApp = createSingletonDependencyRegistrant(App, createApp);
+
+export const App = createToken<Promise<App>>(__filename, 'App');
+
+export const registerApp = createAsyncSingletonRegistrant(
+  App,
+  {
+    logger: Logger,
+    routes: Routes
+  },
+  createApp
+);

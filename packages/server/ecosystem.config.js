@@ -5,11 +5,12 @@ module.exports = {
   apps: [{
     // General
     name: 'innolens-server',
-    script: join(__dirname, 'out/cli.js'),
+    script: join(__dirname, 'out/index.js'),
     cwd: __dirname,
     args: [
+      'start',
       '--config',
-      'app.config.js'
+      'server.config.js'
     ],
 
     // Advanced features

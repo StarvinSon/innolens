@@ -1,40 +1,50 @@
-import { createToken, DependencyCreator, createSingletonDependencyRegistrant } from '../app-context';
+import { createToken, createAsyncSingletonRegistrant } from '../resolver';
 import { Middleware } from '../middlewares';
 import { MemberGroupService } from '../services/member-group';
 
-import { createUserAuthenticator } from './utils/user-authenticator';
+import { UserAuthenticator } from './utils/user-authenticator';
+import { Context } from './context';
 
 
 export interface MemberGroupController {
   get: Middleware;
 }
 
-export const MemberGroupController = createToken<Promise<MemberGroupController>>(module, 'MemberGroupController');
 
-// eslint-disable-next-line max-len
-export const createMemberGroupController: DependencyCreator<Promise<MemberGroupController>> = async (appCtx) => {
-  const [
-    memberGroupService,
-    authenticateUser
-  ] = await appCtx.resolveAllAsync(
-    MemberGroupService,
-    createUserAuthenticator
-  );
+export class MemberGroupControllerImpl implements MemberGroupController {
+  private readonly _memberGroupService: MemberGroupService;
+  private readonly _userAuthenticator: UserAuthenticator;
 
-  const get: MemberGroupController['get'] = async (ctx) => {
-    await authenticateUser(ctx);
-    const batch = await memberGroupService.findLatestBatch();
+  public constructor(options: {
+    memberGroupService: MemberGroupService,
+    userAuthenticator: UserAuthenticator
+  }) {
+    ({
+      memberGroupService: this._memberGroupService,
+      userAuthenticator: this._userAuthenticator
+    } = options);
+  }
+
+  public async get(ctx: Context): Promise<void> {
+    await this._userAuthenticator(ctx);
+    const batch = await this._memberGroupService.findLatestBatch();
     const resBody = batch.map((record) => ({
       name: record.name,
       count: record.count
     }));
     ctx.body = resBody;
-  };
+  }
+}
 
-  return {
-    get
-  };
-};
 
-// eslint-disable-next-line max-len
-export const registerMemberGroupController = createSingletonDependencyRegistrant(MemberGroupController, createMemberGroupController);
+export const MemberGroupController =
+  createToken<Promise<MemberGroupController>>(__filename, 'MemberGroupController');
+
+export const registerMemberGroupController = createAsyncSingletonRegistrant(
+  MemberGroupController,
+  {
+    memberGroupService: MemberGroupService,
+    userAuthenticator: UserAuthenticator
+  },
+  (opts) => new MemberGroupControllerImpl(opts)
+);

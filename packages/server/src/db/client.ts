@@ -1,6 +1,6 @@
 import { ObjectId, Collection } from 'mongodb';
 
-import { createToken, DependencyCreator, createSingletonDependencyRegistrant } from '../app-context';
+import { createToken, createAsyncSingletonRegistrant } from '../resolver';
 
 import { Db } from './db';
 
@@ -18,14 +18,13 @@ export enum ClientType {
   CONFIDENTIAL = 'CONFIDENTIAL'
 }
 
-
 export interface ClientCollection extends Collection<Client> {}
 
-export const ClientCollection = createToken<Promise<ClientCollection>>(module, 'ClientCollection');
 
-// eslint-disable-next-line max-len
-export const createClientCollection: DependencyCreator<Promise<ClientCollection>> = async (appCtx) => {
-  const db = await appCtx.resolve(Db);
+export const createClientCollection = async (options: {
+  db: Db;
+}): Promise<ClientCollection> => {
+  const { db } = options;
 
   return db.defineCollection('clients', {
     validationLevel: 'strict',
@@ -70,5 +69,12 @@ export const createClientCollection: DependencyCreator<Promise<ClientCollection>
   });
 };
 
-// eslint-disable-next-line max-len
-export const registerClientCollection = createSingletonDependencyRegistrant(ClientCollection, createClientCollection);
+
+export const ClientCollection =
+  createToken<Promise<ClientCollection>>(__filename, 'ClientCollection');
+
+export const registerClientCollection = createAsyncSingletonRegistrant(
+  ClientCollection,
+  { db: Db },
+  createClientCollection
+);

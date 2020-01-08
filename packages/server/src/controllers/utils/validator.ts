@@ -1,32 +1,25 @@
-import Ajv from 'ajv';
 import { BAD_REQUEST } from 'http-status-codes';
 
-import { createError } from '../../utils/error';
+import {
+  Validator, ValidationError, createValidator as createBaseValidator
+} from '../../utils/validator';
+
+import { configureError } from './error-configurator';
 
 
-export const ERR_VALIDATION_FAILED = 'Validation failed';
-
-
-export interface Validator<T> {
-  (obj: unknown): asserts obj is T;
-}
+export { Validator, ValidationError };
 
 export const createValidator = <T>(schema: object): Validator<T> => {
-  const ajv = new Ajv({
-    strictDefaults: true,
-    strictKeywords: true
-  });
-  const validateValue = ajv.compile(schema);
-
-  const validate: Validator<T> = (value) => {
-    if (!validateValue(value)) {
-      throw createError({
-        statusCode: BAD_REQUEST,
-        errorCode: ERR_VALIDATION_FAILED,
-        description: ajv.errorsText(validateValue.errors, { dataVar: '' })
-      });
+  const baseValidator: Validator<T> = createBaseValidator(schema);
+  return (obj) => {
+    try {
+      baseValidator(obj);
+    } catch (err) {
+      throw configureError(err, [
+        [ValidationError, {
+          statusCode: BAD_REQUEST
+        }]
+      ]);
     }
   };
-
-  return validate;
 };

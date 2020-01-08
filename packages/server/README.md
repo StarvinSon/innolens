@@ -14,9 +14,9 @@
 # Open a terminal
 
 # Clone the repository
-git clone https://github.com/StarvinSon/innolens-server.git
+git clone https://github.com/StarvinSon/innolens.git
 
-cd innolens-server
+cd innolens/packages/server
 
 # Install the dependencies
 yarn install
@@ -28,7 +28,7 @@ yarn run build
 yarn global add pm2
 
 # Create a server configuration file
-cp app.config.sample.js app.config.js
+cp server.config.sample.js server.config.js
 
 # Edit the configuration file if needed
 # Make sure the MongoDB database is online now
@@ -63,13 +63,13 @@ This explainer lists some important technologies being used and the repository s
 - `.eslintignore` files to exclude from ESLint linting
 - `.eslintrc.js` ESLint config
 - `.gitignore` paths to exclude from git tracking
-- `app.config.js` configs for the server
-- `app.config.sample.js` sample configs from the server
-- `app.log` server log
 - `ecosystem.config.js` PM2 config
 - `nodemon.json` configs for nodemon
 - `package.json` list of dependency of the server
 - `README.md` this file
+- `server.config.js` configs for the server
+- `server.config.sample.js` sample configs from the server
+- `server.log` server log
 - `tsconfig.json` TypeScript config
 - `yarn.lock` list of dependency and their installed versions
 
@@ -80,21 +80,21 @@ This explainer lists some important technologies being used and the repository s
 ```shell
 # Open a terminal
 
-cd path/to/innolens-server
+cd path/to/innolens/packages/server
 
 yarn run [Command]
 ```
 
 | Command     | Usage |
 | ----------- | ----- |
-| lint        | Use ESLint to lint the source code |
+| lint:es     | Use ESLint to lint the source code |
 | build       | Compile the code into the `out` folder |
 | build:watch | Same as build, but auto recompile when the source code is changed |
 | start       | Start the server in PM2 |
 
 ### 4.2. Consistent code style
 
-Use the `lint` command to see if there is any inconsistent code style.
+Use the `lint:es` command to see if there is any inconsistent code style.
 
 Instead of entering the command again and again, install the [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) extension in VS Code. The necessary configuration settings for the extension is provided.
 
@@ -108,7 +108,7 @@ The necessary configuration file for debugging in VS Code is provided.
 
 1.  Open VS Code
 2.  Click "File" > "Open Folder..."
-3.  Select the folder `innolens-server`
+3.  Select the folder `innolens/packages/server`
 4.  Click the debug icon in the activity bar on the left
 5.  Select "Launch Server" in the dropdown menu
 6.  Click the run button to start debugging the server

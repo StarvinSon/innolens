@@ -6,7 +6,7 @@
       "request": "launch",
       "name": "Launch Server",
       "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/nodemon",
-      "program": "${workspaceFolder}/out/cli.js",
+      "program": "${workspaceFolder}/out/index.js",
       "env": {
         "NODE_ENV": "development",
         "DEBUG": "koa*"
@@ -17,8 +17,9 @@
       ],
       "args": [
         "--",
+        "start",
         "--config",
-        "app.config.js"
+        "server.config.js"
       ],
       "restart": true,
       "console": "integratedTerminal",

@@ -1,6 +1,6 @@
 import { ObjectId, Collection } from 'mongodb';
 
-import { createToken, DependencyCreator, createSingletonDependencyRegistrant } from '../app-context';
+import { createToken, createAsyncSingletonRegistrant } from '../resolver';
 
 import { Db } from './db';
 
@@ -14,14 +14,14 @@ export interface EquipmentBooking {
   signInTime: Date | null;
 }
 
-
 export interface EquipmentBookingCollection extends Collection<EquipmentBooking> {}
 
-export const EquipmentBookingCollection = createToken<Promise<EquipmentBookingCollection>>(module, 'EquipmentBookingCollection');
 
-// eslint-disable-next-line max-len
-export const createEquipmentBookingCollection: DependencyCreator<Promise<EquipmentBookingCollection>> = async (appCtx) => {
-  const db = await appCtx.resolve(Db);
+export const createEquipmentBookingCollection = async (options: {
+  db: Db;
+}): Promise<EquipmentBookingCollection> => {
+  const { db } = options;
+
   return db.defineCollection('equipmentBookings', {
     validationLevel: 'strict',
     validationAction: 'error',
@@ -66,5 +66,12 @@ export const createEquipmentBookingCollection: DependencyCreator<Promise<Equipme
   });
 };
 
-// eslint-disable-next-line max-len
-export const registerEquipmentBookingCollection = createSingletonDependencyRegistrant(EquipmentBookingCollection, createEquipmentBookingCollection);
+
+export const EquipmentBookingCollection =
+  createToken<Promise<EquipmentBookingCollection>>(__filename, 'EquipmentBookingCollection');
+
+export const registerEquipmentBookingCollection = createAsyncSingletonRegistrant(
+  EquipmentBookingCollection,
+  { db: Db },
+  createEquipmentBookingCollection
+);

@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb';
 
-import { createToken, createSingletonDependencyRegistrant, DependencyCreator } from '../app-context';
+import { createToken, createAsyncSingletonRegistrant } from '../resolver';
 import { Member, MemberCollection } from '../db/member';
 
 
@@ -12,28 +12,36 @@ export interface MemberService {
   insert(member: Member): Promise<void>;
 }
 
-export const MemberService = createToken<Promise<MemberService>>(module, 'MemberService');
 
-export const createMemberService: DependencyCreator<Promise<MemberService>> = async (appCtx) => {
-  const memberCollection = await appCtx.resolve(MemberCollection);
+export class MemberServiceImpl implements MemberService {
+  private readonly _memberCollection: MemberCollection;
 
-  const find: MemberService['find'] = async function* () {
-    yield* memberCollection.find({}, { limit: 10 });
-  };
+  public constructor(options: {
+    memberCollection: MemberCollection;
+  }) {
+    ({
+      memberCollection: this._memberCollection
+    } = options);
+  }
 
-  const findById: MemberService['findById'] = async (id) =>
-    memberCollection.findOne({ _id: id });
+  public async *find(): AsyncIterable<Member> {
+    yield* this._memberCollection.find({}, { limit: 10 });
+  }
 
-  const insert: MemberService['insert'] = async (member) => {
-    await memberCollection.insertOne(member);
-  };
+  public async findById(id: ObjectId): Promise<Member | null> {
+    return this._memberCollection.findOne({ _id: id });
+  }
 
-  return {
-    find,
-    findById,
-    insert
-  };
-};
+  public async insert(member: Member): Promise<void> {
+    await this._memberCollection.insertOne(member);
+  }
+}
 
-// eslint-disable-next-line max-len
-export const registerMemberService = createSingletonDependencyRegistrant(MemberService, createMemberService);
+
+export const MemberService = createToken<Promise<MemberService>>(__filename, 'MemberService');
+
+export const registerMemberService = createAsyncSingletonRegistrant(
+  MemberService,
+  { memberCollection: MemberCollection },
+  (opts) => new MemberServiceImpl(opts)
+);

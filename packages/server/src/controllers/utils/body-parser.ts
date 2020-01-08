@@ -2,11 +2,22 @@ import { json as parseJson, form as parseForm } from 'co-body';
 import { BAD_REQUEST, UNSUPPORTED_MEDIA_TYPE } from 'http-status-codes';
 import { Context as KoaContext } from 'koa';
 
-import { createError } from '../../utils/error';
 
+export class EmptyBodyError extends Error {
+  public readonly code = 'ERR_EMPTY_BODY';
+  public readonly statusCode = BAD_REQUEST;
+  public constructor() {
+    super('Body is empty');
+  }
+}
 
-export const ERR_EMPTY_BODY = 'Empty body';
-export const ERR_UNSUPPORTED_CONTENT_TYPE = 'Unsupported content type';
+export class UnsupportedContentTypeError extends Error {
+  public readonly code = 'ERR_UNSUPPORTED_CONTENT_TYPE';
+  public readonly statusCode = UNSUPPORTED_MEDIA_TYPE;
+  public constructor(supportedTypes: ReadonlyArray<string>) {
+    super(`Only support ${supportedTypes.join(', ')}`);
+  }
+}
 
 
 export interface BodyParserOptions {
@@ -29,11 +40,7 @@ export const parseBody = async (ctx: KoaContext, options?: BodyParserOptions): P
         returnRawBody: true
       }));
       if (raw.length === 0) {
-        throw createError({
-          statusCode: BAD_REQUEST,
-          errorCode: ERR_EMPTY_BODY,
-          description: 'empty body'
-        });
+        throw new EmptyBodyError();
       }
       break;
     }
@@ -42,11 +49,7 @@ export const parseBody = async (ctx: KoaContext, options?: BodyParserOptions): P
       break;
     }
     default: {
-      throw createError({
-        statusCode: UNSUPPORTED_MEDIA_TYPE,
-        errorCode: ERR_UNSUPPORTED_CONTENT_TYPE,
-        description: `only support ${supportedEncodings.join(', ')}`
-      });
+      throw new UnsupportedContentTypeError(supportedEncodings);
     }
   }
 

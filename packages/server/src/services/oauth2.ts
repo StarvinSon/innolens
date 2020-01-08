@@ -3,7 +3,7 @@ import { promisify } from 'util';
 
 import { ObjectId } from 'mongodb';
 
-import { createToken, DependencyCreator, createSingletonDependencyRegistrant } from '../app-context';
+import { createToken, createAsyncSingletonRegistrant } from '../resolver';
 import { OAuth2Token, OAuth2Collection } from '../db/oauth2';
 
 
@@ -16,12 +16,10 @@ export interface OAuth2Service {
   findByAccessToken(accessToken: string, currDate?: Date): Promise<OAuth2Token | null>;
   verifyScopes(scopes: ReadonlyArray<string>): boolean;
   isScopeFullfilled(grantScopes: ReadonlyArray<string>, requiredScope: string): boolean;
-  findByRefreshToken(refreshToken: string, date: Date): Promise<OAuth2Token | null>;
-  revokeByRefreshToken(refreshToken: string, date: Date): Promise<boolean>;
+  findByRefreshToken(refreshToken: string, time: Date): Promise<OAuth2Token | null>;
+  revokeByRefreshToken(refreshToken: string, time: Date): Promise<boolean>;
   createAccessToken(tokenOptions: CreateAccessTokenOptions): Promise<OAuth2Token>;
 }
-
-export const OAuth2Service = createToken<Promise<OAuth2Service>>(module, 'OAuth2Service');
 
 export interface CreateAccessTokenOptions {
   readonly clientId: ObjectId;
@@ -29,40 +27,55 @@ export interface CreateAccessTokenOptions {
   readonly scopes: ReadonlyArray<string>;
 }
 
-export const createOAuth2Service: DependencyCreator<Promise<OAuth2Service>> = async (appCtx) => {
-  const oauth2Collection = await appCtx.resolve(OAuth2Collection);
 
-  const validScopes = new Set([
-    '*'
-  ]);
+const validScopes = new Set([
+  '*'
+]);
 
-  const generateToken = async (): Promise<string> => (await randomBytesAsync(16)).toString('hex');
+const generateToken = async (): Promise<string> => (await randomBytesAsync(16)).toString('hex');
 
+export class OAuth2ServiceImpl implements OAuth2Service {
+  private readonly _oauth2Collection: OAuth2Collection;
 
-  const findByAccessToken: OAuth2Service['findByAccessToken'] = async (accessToken, currDate = new Date()) =>
-    oauth2Collection.tokens.findOne({
+  public constructor(options: {
+    oauth2Collection: OAuth2Collection;
+  }) {
+    ({
+      oauth2Collection: this._oauth2Collection
+    } = options);
+  }
+
+  public async findByAccessToken(
+    accessToken: string,
+    currDate = new Date()
+  ): Promise<OAuth2Token | null> {
+    return this._oauth2Collection.tokens.findOne({
       accessToken,
       accessTokenExpireDate: { $gt: currDate },
       revoked: false
     });
+  }
 
-  const verifyScopes: OAuth2Service['verifyScopes'] = (scopes) =>
-    scopes.every((s) => validScopes.has(s));
+  public verifyScopes(scopes: ReadonlyArray<string>): boolean {
+    return scopes.every((s) => validScopes.has(s));
+  }
 
-  const isScopeFullfilled: OAuth2Service['isScopeFullfilled'] = (grantScopes, requiredScope) =>
-    grantScopes.some((s) => s === '*' || s === requiredScope);
+  public isScopeFullfilled(grantScopes: ReadonlyArray<string>, requiredScope: string): boolean {
+    return grantScopes.some((s) => s === '*' || s === requiredScope);
+  }
 
-  const findByRefreshToken: OAuth2Service['findByRefreshToken'] = async (refreshToken, date) =>
-    oauth2Collection.tokens.findOne({
+  public async findByRefreshToken(refreshToken: string, time: Date): Promise<OAuth2Token | null> {
+    return this._oauth2Collection.tokens.findOne({
       refreshToken,
-      refreshTokenExpireDate: { $gt: date },
+      refreshTokenExpireDate: { $gt: time },
       revoked: false
     });
+  }
 
-  const revokeByRefreshToken: OAuth2Service['revokeByRefreshToken'] = async (refreshToken, date) => {
-    const result = await oauth2Collection.tokens.updateOne({
+  public async revokeByRefreshToken(refreshToken: string, time: Date): Promise<boolean> {
+    const result = await this._oauth2Collection.tokens.updateOne({
       refreshToken,
-      refreshTokenExpireDate: { $gt: date },
+      refreshTokenExpireDate: { $gt: time },
       revoked: false
     }, {
       $set: {
@@ -70,9 +83,9 @@ export const createOAuth2Service: DependencyCreator<Promise<OAuth2Service>> = as
       }
     });
     return result.modifiedCount > 0;
-  };
+  }
 
-  const createAccessToken: OAuth2Service['createAccessToken'] = async (tokenOptions) => {
+  public async createAccessToken(tokenOptions: CreateAccessTokenOptions): Promise<OAuth2Token> {
     const { clientId, userId, scopes } = tokenOptions;
 
     const [accessToken, refreshToken] = await Promise.all([generateToken(), generateToken()]);
@@ -96,19 +109,16 @@ export const createOAuth2Service: DependencyCreator<Promise<OAuth2Service>> = as
       revoked: false
     };
 
-    await oauth2Collection.tokens.insertOne(token);
+    await this._oauth2Collection.tokens.insertOne(token);
     return token;
-  };
+  }
+}
 
-  return {
-    findByAccessToken,
-    verifyScopes,
-    isScopeFullfilled,
-    findByRefreshToken,
-    revokeByRefreshToken,
-    createAccessToken
-  };
-};
 
-// eslint-disable-next-line max-len
-export const registerOAuth2Service = createSingletonDependencyRegistrant(OAuth2Service, createOAuth2Service);
+export const OAuth2Service = createToken<Promise<OAuth2Service>>(__filename, 'OAuth2Service');
+
+export const registerOAuth2Service = createAsyncSingletonRegistrant(
+  OAuth2Service,
+  { oauth2Collection: OAuth2Collection },
+  (opts) => new OAuth2ServiceImpl(opts)
+);

@@ -1,6 +1,6 @@
 import { ObjectId, Collection } from 'mongodb';
 
-import { createToken, DependencyCreator, createSingletonDependencyRegistrant } from '../app-context';
+import { createToken, createAsyncSingletonRegistrant } from '../resolver';
 
 import { Db } from './db';
 
@@ -18,16 +18,15 @@ export interface OAuth2Token {
   readonly revoked: boolean;
 }
 
-
 export interface OAuth2Collection {
   readonly tokens: Collection<OAuth2Token>;
 }
 
-export const OAuth2Collection = createToken<Promise<OAuth2Collection>>(module, 'OAuth2Collection');
 
-// eslint-disable-next-line max-len
-export const createOAuth2Collection: DependencyCreator<Promise<OAuth2Collection>> = async (appCtx) => {
-  const db = await appCtx.resolve(Db);
+export const createOAuth2Collection = async (options: {
+  db: Db;
+}): Promise<OAuth2Collection> => {
+  const { db } = options;
 
   const tokenColl = await db.defineCollection<OAuth2Token>('oauth2.tokens', {
     validationLevel: 'strict',
@@ -109,5 +108,12 @@ export const createOAuth2Collection: DependencyCreator<Promise<OAuth2Collection>
   return { tokens: tokenColl };
 };
 
-// eslint-disable-next-line max-len
-export const registerOAuth2Collection = createSingletonDependencyRegistrant(OAuth2Collection, createOAuth2Collection);
+
+export const OAuth2Collection =
+  createToken<Promise<OAuth2Collection>>(__filename, 'OAuth2Collection');
+
+export const registerOAuth2Collection = createAsyncSingletonRegistrant(
+  OAuth2Collection,
+  { db: Db },
+  createOAuth2Collection
+);

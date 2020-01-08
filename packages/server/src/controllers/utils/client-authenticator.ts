@@ -1,21 +1,29 @@
 import { UNAUTHORIZED } from 'http-status-codes';
-import { Context as KoaContext } from 'koa';
 
-import { DependencyCreator } from '../../app-context';
+import { createToken, createAsyncSingletonRegistrant } from '../../resolver';
 import { Client, ClientService } from '../../services/client';
-import { createError } from '../../utils/error';
+import { Context } from '../context';
 
 
-export const ERR_CLIENT_AUTHENTICATION_FAILED = 'Client authentication failed';
+export class ClientAuthenticationFailedError extends Error {
+  public readonly code = 'ERR_CLIENT_AUTHENTICATION_FAILED';
+  public readonly statusCode = UNAUTHORIZED;
+  public readonly headers: Readonly<Record<string, string>> = { 'WWW-Authenticate': 'Basic' };
+  public constructor() {
+    super('Failed to authenticate client');
+  }
+}
 
 
 export interface ClientAuthenticator {
-  (ctx: KoaContext): Promise<Client>;
+  (ctx: Context): Promise<Client>;
 }
 
-// eslint-disable-next-line max-len
-export const createClientAuthenticator: DependencyCreator<Promise<ClientAuthenticator>> = async (appCtx) => {
-  const clientService = await appCtx.resolve(ClientService);
+
+export const createClientAuthenticator = (options: {
+  clientService: ClientService;
+}): ClientAuthenticator => {
+  const { clientService } = options;
 
   const authenticateClient: ClientAuthenticator = async (ctx) => {
     const auth = ctx.get('Authorization');
@@ -35,12 +43,7 @@ export const createClientAuthenticator: DependencyCreator<Promise<ClientAuthenti
       : null;
 
     if (client === null) {
-      throw createError({
-        statusCode: UNAUTHORIZED,
-        headers: { 'WWW-Authenticate': 'Basic' },
-        errorCode: ERR_CLIENT_AUTHENTICATION_FAILED,
-        description: 'Failed to authenticate client'
-      });
+      throw new ClientAuthenticationFailedError();
     }
 
     return client;
@@ -48,3 +51,13 @@ export const createClientAuthenticator: DependencyCreator<Promise<ClientAuthenti
 
   return authenticateClient;
 };
+
+
+export const ClientAuthenticator =
+  createToken<Promise<ClientAuthenticator>>(__filename, 'ClientAuthenticator');
+
+export const registerClientAuthenticator = createAsyncSingletonRegistrant(
+  ClientAuthenticator,
+  { clientService: ClientService },
+  createClientAuthenticator
+);

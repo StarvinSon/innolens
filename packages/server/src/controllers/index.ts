@@ -1,28 +1,27 @@
-import { DependencyRegistrant } from '../app-context';
+import { ResolverFunction } from '../resolver';
 
 import { registerMemberGroupController } from './member-group';
 import { registerMemberController } from './member';
 import { registerOAuth2Controller } from './oauth2';
 import { registerStaticController } from './static';
 import { registerUserController } from './user';
+import { registerClientAuthenticator } from './utils/client-authenticator';
+import { registerUserAuthenticator } from './utils/user-authenticator';
 
 
-export interface ControllersOptions {
-  readonly staticRoot: string;
-}
+const registrants: ReadonlyArray<ResolverFunction> = [
+  registerMemberGroupController,
+  registerMemberController,
+  registerOAuth2Controller,
+  registerStaticController,
+  registerUserController,
 
-// eslint-disable-next-line max-len
-export const registerControllers: DependencyRegistrant<[ControllersOptions]> = (appCtx, options) => {
-  const registrants: ReadonlyArray<DependencyRegistrant> = [
-    registerMemberGroupController,
-    registerMemberController,
-    registerOAuth2Controller,
-    (c) => registerStaticController(c, {
-      root: options.staticRoot
-    }),
-    registerUserController
-  ];
-  registrants.forEach((register) => {
-    register(appCtx);
-  });
+  registerClientAuthenticator,
+  registerUserAuthenticator
+];
+
+export const registerControllers: ResolverFunction = (resolver) => {
+  for (const register of registrants) {
+    register(resolver);
+  }
 };

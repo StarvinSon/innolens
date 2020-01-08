@@ -1,6 +1,6 @@
 import { ObjectId, Collection } from 'mongodb';
 
-import { createToken, DependencyCreator, createSingletonDependencyRegistrant } from '../app-context';
+import { createToken, createAsyncSingletonRegistrant } from '../resolver';
 
 import { Db } from './db';
 
@@ -12,11 +12,11 @@ export interface Member {
 
 export interface MemberCollection extends Collection<Member> {}
 
-export const MemberCollection = createToken<Promise<MemberCollection>>(module, 'MemberCollection');
 
-// eslint-disable-next-line max-len
-export const createMemberCollection: DependencyCreator<Promise<MemberCollection>> = async (appCtx) => {
-  const db = await appCtx.resolve(Db);
+export const createMemberCollection = async (options: {
+  db: Db;
+}): Promise<MemberCollection> => {
+  const { db } = options;
 
   return db.defineCollection('members', {
     validationLevel: 'strict',
@@ -39,5 +39,12 @@ export const createMemberCollection: DependencyCreator<Promise<MemberCollection>
   });
 };
 
-// eslint-disable-next-line max-len
-export const registerMemberCollection = createSingletonDependencyRegistrant(MemberCollection, createMemberCollection);
+
+export const MemberCollection =
+  createToken<Promise<MemberCollection>>(__filename, 'MemberCollection');
+
+export const registerMemberCollection = createAsyncSingletonRegistrant(
+  MemberCollection,
+  { db: Db },
+  createMemberCollection
+);

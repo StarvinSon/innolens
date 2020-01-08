@@ -7,8 +7,8 @@ import { createOAuth2Routes } from './oauth2';
 import { createUsersRoutes } from './users';
 
 
-export const createApiRoutes = makeRoutesCreatorAsync(async (appCtx, router) => {
-  await useRoutesAsync(appCtx, router, [
+export const createApiRoutes = makeRoutesCreatorAsync(async (resolver, router) => {
+  await useRoutesAsync(resolver, router, [
     ['/users', createUsersRoutes],
     ['/oauth2', createOAuth2Routes],
     ['/members', createMembersRoutes],

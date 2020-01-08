@@ -1,36 +1,33 @@
 import KoaRouter from 'koa-router';
 
-import { AppContext } from '../../app-context';
 import { RouterMiddleware } from '../../middlewares';
+import { Resolver, ResolverFunction } from '../../resolver';
+import { Router } from '../router';
 
-import { Router } from './router';
 
+export type RoutesCreator<T extends ReadonlyArray<any> = []> =
+  ResolverFunction<Array<RouterMiddleware>, T>;
 
-export interface RoutesCreator<T extends ReadonlyArray<any> = []> {
-  (appCtx: AppContext, ...args: T): Array<RouterMiddleware>;
-}
-
-export interface RoutesCreatorAsync<T extends ReadonlyArray<any> = []> {
-  (appCtx: AppContext, ...args: T): Promise<Array<RouterMiddleware>>;
-}
+export type RoutesCreatorAsync<T extends ReadonlyArray<any> = []> =
+  ResolverFunction<Promise<Array<RouterMiddleware>>, T>;
 
 export const makeRoutesCreator = <T extends ReadonlyArray<any> = []>(
-  builder: (appCtx: AppContext, router: Router, ...args: T) => void
+  builder: (resolver: Resolver, router: Router, ...args: T) => void
 ): RoutesCreator<T> => {
-  const createRoutes: RoutesCreator<T> = (appCtx, ...args) => {
+  const createRoutes: RoutesCreator<T> = (resolver, ...args) => {
     const router: Router = new KoaRouter();
-    builder(appCtx, router, ...args);
+    builder(resolver, router, ...args);
     return [router.routes(), router.allowedMethods()];
   };
   return createRoutes;
 };
 
 export const makeRoutesCreatorAsync = <T extends ReadonlyArray<any> = []>(
-  builder: (appCtx: AppContext, router: Router, ...args: T) => void | Promise<void>
+  builder: (resolver: Resolver, router: Router, ...args: T) => void | Promise<void>
 ): RoutesCreatorAsync<T> => {
-  const createRoutes: RoutesCreatorAsync<T> = async (appCtx, ...args) => {
+  const createRoutes: RoutesCreatorAsync<T> = async (resolver, ...args) => {
     const router: Router = new KoaRouter();
-    await builder(appCtx, router, ...args);
+    await builder(resolver, router, ...args);
     return [router.routes(), router.allowedMethods()];
   };
   return createRoutes;

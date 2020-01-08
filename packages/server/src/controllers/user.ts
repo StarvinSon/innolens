@@ -1,28 +1,38 @@
 import { NOT_IMPLEMENTED } from 'http-status-codes';
 
-import { createToken, createSingletonDependencyRegistrant, DependencyCreator } from '../app-context';
+import { createToken, createAsyncSingletonRegistrant } from '../resolver';
 import { Middleware } from '../middlewares';
 import { UserService } from '../services/user';
+
+import { Context } from './context';
 
 
 export interface UserController {
   getByUsername: Middleware;
 }
 
-export const UserController = createToken<Promise<UserController>>(module, 'UserController');
 
-export const createUserController: DependencyCreator<Promise<UserController>> = async (appCtx) => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const userService = await appCtx.resolve(UserService);
+export class UserControllerImpl implements UserController {
+  private readonly _userService: UserService;
 
-  const getByUsername: Middleware = async (ctx) => {
+  public constructor(options: {
+    userService: UserService;
+  }) {
+    ({
+      userService: this._userService
+    } = options);
+  }
+
+  public async getByUsername(ctx: Context): Promise<void> {
     ctx.status = NOT_IMPLEMENTED;
-  };
+  }
+}
 
-  return {
-    getByUsername
-  };
-};
 
-// eslint-disable-next-line max-len
-export const registerUserController = createSingletonDependencyRegistrant(UserController, createUserController);
+export const UserController = createToken<Promise<UserController>>(__filename, 'UserController');
+
+export const registerUserController = createAsyncSingletonRegistrant(
+  UserController,
+  { userService: UserService },
+  (opts) => new UserControllerImpl(opts)
+);
