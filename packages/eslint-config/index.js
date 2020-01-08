@@ -32,6 +32,7 @@ module.exports = {
     'no-console': ['warn', {
       allow: ['warn', 'error']
     }],
+    'no-nested-ternary': 'off',
     'no-restricted-syntax': [
       baseStyleRules['no-restricted-syntax'][0],
       ...baseStyleRules['no-restricted-syntax']
