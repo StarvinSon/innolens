@@ -1,12 +1,12 @@
 import { URL, URLSearchParams } from 'url';
-import { Readable } from 'stream';
 
-import fetch, {
+import nodeFetch, {
   RequestInfo, RequestInit, Request, Response
 } from 'node-fetch';
 
 import { ContextFunction, createToken } from './context';
 import { CrawlerOptions } from './crawler-options';
+import { Logger } from './logger';
 
 
 const toBase64 = (text: string): string =>
@@ -50,6 +50,7 @@ export const ServerClient = createToken<ServerClient>(__filename, 'ServerClient'
 
 
 interface ServerClientImplOptions {
+  readonly logger: Logger;
   readonly serverHost: string;
   readonly clientId: string;
   readonly username: string;
@@ -57,20 +58,24 @@ interface ServerClientImplOptions {
 }
 
 class ServerClientImpl implements ServerClient {
-  public readonly serverHost: string;
-  private readonly _serverHostUrl: URL;
+  private readonly _logger: Logger;
 
-  public readonly clientId: string;
-  public readonly username: string;
-  public readonly password: string;
+  private readonly _serverHost: string;
+  private readonly _serverHostUrl: URL;
+  private readonly _clientId: string;
+  private readonly _username: string;
+  private readonly _password: string;
   private _accessToken: string | null = null;
 
   public constructor(options: ServerClientImplOptions) {
-    this.serverHost = options.serverHost;
-    this._serverHostUrl = new URL(this.serverHost);
-    this.clientId = options.clientId;
-    this.username = options.username;
-    this.password = options.password;
+    ({
+      logger: this._logger,
+      serverHost: this._serverHost,
+      clientId: this._clientId,
+      username: this._username,
+      password: this._password
+    } = options);
+    this._serverHostUrl = new URL(this._serverHost);
   }
 
   public createRequest(url: RequestInfo, init?: RequestInit): Request {
@@ -78,12 +83,25 @@ class ServerClientImpl implements ServerClient {
     if (typeof url === 'string') {
       normalizedReq = new Request(this._replaceOrigin(url), init);
     } else if (url instanceof Request) {
-      normalizedReq = new Request(this._replaceOrigin(url.url), new Request(url, init));
+      const combinedReq = init === undefined ? url : new Request(url, init);
+      normalizedReq = this._isSameOrigin(combinedReq.url)
+        ? combinedReq
+        : new Request(this._replaceOrigin(combinedReq.url), combinedReq);
     } else {
       normalizedReq = new Request(this._replaceOrigin(url.href), init);
     }
 
     return normalizedReq;
+  }
+
+  private _isSameOrigin(url: string): boolean {
+    const { _serverHostUrl: serverHostUrl } = this;
+
+    const absoluteUrl = new URL(url, serverHostUrl);
+    return (
+      serverHostUrl.protocol === absoluteUrl.protocol
+      && serverHostUrl.host === absoluteUrl.host
+    );
   }
 
   private _replaceOrigin(url: string): string {
@@ -97,7 +115,7 @@ class ServerClientImpl implements ServerClient {
   }
 
   public async fetch(url: RequestInfo, init?: RequestInit): Promise<Response> {
-    return fetch(this.createRequest(url, init));
+    return this._performFetch(this.createRequest(url, init));
   }
 
   public async fetchOk(url: RequestInfo, init?: RequestInit): Promise<Response> {
@@ -124,12 +142,12 @@ class ServerClientImpl implements ServerClient {
       const res = await this.fetchOk('/api/oauth2/token', {
         method: 'POST',
         headers: {
-          Authorization: `Basic ${toBase64(`${this.clientId}:`)}`
+          Authorization: `Basic ${toBase64(`${this._clientId}:`)}`
         },
         body: new URLSearchParams({
           grant_type: 'password',
-          username: this.username,
-          password: this.password,
+          username: this._username,
+          password: this._password,
           scope: '*'
         })
       });
@@ -159,16 +177,12 @@ class ServerClientImpl implements ServerClient {
 
       // Clone the request so that it can be retry.
       // eslint-disable-next-line no-await-in-loop
-      res = await fetch(req.clone());
+      res = await this._performFetch(req.clone());
 
       // Only retry if the server responds 401 and it has not try a new token yet.
       retry = res.status === 401 && !shouldRenewToken;
     } while (retry);
 
-    // Free the request body
-    if (req.body !== null && !(req.body as Readable).destroyed) {
-      (req.body as Readable).destroy();
-    }
     return res;
   }
 
@@ -183,12 +197,69 @@ class ServerClientImpl implements ServerClient {
     }
     return res;
   }
+
+  private async _performFetch(req: Request): Promise<Response> {
+    const fetchPromises = nodeFetch(req.clone())
+      .then<[Response, Response]>((res) => [res, res.clone()]);
+    this._logReq(req, fetchPromises.then(([res]) => res));
+    return fetchPromises.then(([, res]) => res);
+  }
+
+  private _logReq(req: Request, resPromise: Promise<Response>): void {
+    Promise.all([
+      (async (): Promise<[boolean, any]> => {
+        let body: any;
+        let failed = false;
+        try {
+          body = await req.text();
+        } catch (err) {
+          body = err;
+          failed = true;
+        }
+        return [failed, {
+          method: req.method,
+          url: req.url,
+          body
+        }];
+      })(),
+      (async (): Promise<[boolean, any]> => {
+        let info: any;
+        let failed = false;
+        try {
+          const res = await resPromise;
+          failed = failed || !res.ok;
+
+          let body: any;
+          try {
+            body = await res.text();
+          } catch (err) {
+            body = err;
+            failed = true;
+          }
+          info = {
+            status: res.status,
+            statusText: res.statusText,
+            body
+          };
+        } catch (err) {
+          info = err;
+          failed = true;
+        }
+        return [failed, info];
+      })()
+    ])
+      .then(([[reqFailed, reqInfo], [resFailed, resInfo]]) => {
+        const level = reqFailed || resFailed ? 'error' : 'info';
+        this._logger[level]('Fetch\n%O', { request: reqInfo, response: resInfo });
+      });
+  }
 }
 
 export const registerServerClient: ContextFunction = (ctx) => {
   ctx.registerSingletonDependency(ServerClient, (c) => {
-    const opts = c.resolve(CrawlerOptions);
+    const [logger, opts] = c.resolveAll(Logger, CrawlerOptions);
     return new ServerClientImpl({
+      logger,
       serverHost: opts.serverHost,
       clientId: opts.clientId,
       username: opts.username,
