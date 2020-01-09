@@ -1,7 +1,7 @@
 import { BAD_REQUEST } from 'http-status-codes';
 
 import {
-  Validator, ValidationError, createValidator as createBaseValidator
+  Validator, ValidationError, ValidatorImpl as BaseValidatorImpl
 } from '../../utils/validator';
 
 import { configureError } from './error-configurator';
@@ -9,11 +9,12 @@ import { configureError } from './error-configurator';
 
 export { Validator, ValidationError };
 
-export const createValidator = <T>(schema: object): Validator<T> => {
-  const baseValidator: Validator<T> = createBaseValidator(schema);
-  return (obj) => {
+
+export class ValidatorImpl<T> extends BaseValidatorImpl<T> {
+  public assert(val: T): asserts val is T {
     try {
-      baseValidator(obj);
+      // @ts-ignore
+      super.assert(val);
     } catch (err) {
       throw configureError(err, [
         [ValidationError, {
@@ -21,5 +22,7 @@ export const createValidator = <T>(schema: object): Validator<T> => {
         }]
       ]);
     }
-  };
-};
+  }
+}
+
+export const createValidator = <T>(schema: object): Validator<T> => new ValidatorImpl<T>(schema);

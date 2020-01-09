@@ -7,7 +7,12 @@ import { Db } from './db';
 
 export interface Member {
   readonly _id: ObjectId;
-  readonly groupName: string;
+  readonly name: string;
+  readonly department: string;
+  readonly typeOfStudy: string;
+  readonly yearOfStudy: string;
+  readonly studyProgramme: string;
+  readonly affiliatedStudentInterestGroup: string;
 }
 
 export interface MemberCollection extends Collection<Member> {}
@@ -24,13 +29,36 @@ export const createMemberCollection = async (options: {
     validator: {
       $jsonSchema: {
         bsonType: 'object',
-        required: ['_id', 'groupName'],
         additionalProperties: false,
+        required: [
+          '_id',
+          'name',
+          'department',
+          'typeOfStudy',
+          'yearOfStudy',
+          'studyProgramme',
+          'affiliatedStudentInterestGroup'
+        ],
         properties: {
           _id: {
             bsonType: 'objectId'
           },
-          groupName: {
+          name: {
+            bsonType: 'string'
+          },
+          department: {
+            bsonType: 'string'
+          },
+          typeOfStudy: {
+            bsonType: 'string'
+          },
+          yearOfStudy: {
+            bsonType: 'string'
+          },
+          studyProgramme: {
+            bsonType: 'string'
+          },
+          affiliatedStudentInterestGroup: {
             bsonType: 'string'
           }
         }

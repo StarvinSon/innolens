@@ -64,7 +64,7 @@ export class DbImpl implements Db {
       });
     if (!validationOptsIsSame) {
       this._logger.info(
-        'Updating %s schema from %O to %O',
+        'Updating %s schema from %j to %j',
         name,
         {
           validationLevel: currCollOpts.validationLevel,
@@ -152,12 +152,12 @@ export class DbImpl implements Db {
     }
 
     if (indexesToDrop.length > 0) {
-      this._logger.info('Dropping index in collection %j: %O', name, indexesToDrop);
+      this._logger.info('Dropping index in collection %j: %j', name, indexesToDrop);
       await Promise.all(indexesToDrop.map((index) =>
         coll.dropIndex(index.name!)));
     }
     if (indexesToCreate.length > 0) {
-      this._logger.info('Creating index in collection %j: %O', name, indexesToCreate);
+      this._logger.info('Creating index in collection %j: %j', name, indexesToCreate);
       await coll.createIndexes(indexesToCreate);
     }
 

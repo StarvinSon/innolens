@@ -9,7 +9,7 @@ import { Middleware } from '../middlewares';
 import { Client } from '../services/client';
 import { OAuth2Service } from '../services/oauth2';
 import { UserService } from '../services/user';
-import { createValidator as createBaseValidator, Validator, ValidationError } from '../utils/validator';
+import { ValidatorImpl as BaseValidatorImpl, Validator, ValidationError } from '../utils/validator';
 
 import { Next, Context } from './context';
 import { parseBody, EmptyBodyError, UnsupportedContentTypeError } from './utils/body-parser';
@@ -57,26 +57,28 @@ class UnsupportedGrantTypeError extends Error {
 }
 
 
-const createValidator = <T>(schema: object): Validator<T> => {
-  const baseValidator: Validator<T> = createBaseValidator(schema);
-  return (val) => {
+class ValidatorImpl<T> extends BaseValidatorImpl<T> {
+  public assert(val: T): asserts val is T {
     try {
-      baseValidator(val);
+      // @ts-ignore
+      super.assert(val);
     } catch (err) {
       if (err instanceof ValidationError) {
         throw new InvalidRequestError(`Failed to validate body: ${err.message}`);
       }
       throw err;
     }
-  };
-};
+  }
+}
+
+const createValidator = <T>(schema: object): Validator<T> => new ValidatorImpl<T>(schema);
 
 
 interface RequestBody {
   readonly grant_type: string;
 }
 
-const validateGrantType: Validator<RequestBody> = createValidator({
+const grantTypeValidator: Validator<RequestBody> = createValidator({
   type: 'object',
   required: ['grant_type'],
   properties: {
@@ -94,7 +96,7 @@ interface PasswordGrantBody {
   readonly scope: string;
 }
 
-const validatePasswordGrantBody: Validator<PasswordGrantBody> = createValidator({
+const passwordGrantBodyValidator: Validator<PasswordGrantBody> = createValidator({
   type: 'object',
   required: ['grant_type', 'username', 'password', 'scope'],
   additionalProperties: false,
@@ -121,7 +123,7 @@ interface RefreshTokenGrantBody {
   readonly scope: string;
 }
 
-const validateRefreshTokenGrantBody: Validator<RefreshTokenGrantBody> = createValidator({
+const refreshTokenGrantBodyValidator: Validator<RefreshTokenGrantBody> = createValidator({
   type: 'object',
   required: ['grant_type', 'refresh_token', 'scope'],
   additionalProperties: false,
@@ -211,7 +213,7 @@ export class OAuth2ControllerImpl implements OAuth2Controller {
     const client = await this._authenticateClient(ctx);
     const body = await this._parseFormBody(ctx);
 
-    validateGrantType(body);
+    grantTypeValidator.assert(body);
     switch (body.grant_type) {
       case 'password': {
         await this._handlePasswordGrant(ctx, client, body);
@@ -254,7 +256,7 @@ export class OAuth2ControllerImpl implements OAuth2Controller {
     client: Client,
     body: unknown
   ): Promise<void> {
-    validatePasswordGrantBody(body);
+    passwordGrantBodyValidator.assert(body);
     const { username, password } = body;
 
     const scopes = parseScope(body.scope);
@@ -290,7 +292,7 @@ export class OAuth2ControllerImpl implements OAuth2Controller {
     client: Client,
     body: unknown
   ): Promise<void> {
-    validateRefreshTokenGrantBody(body);
+    refreshTokenGrantBodyValidator.assert(body);
     const { refresh_token: refreshToken } = body;
 
     const scopes = parseScope(body.scope);

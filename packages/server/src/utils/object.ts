@@ -10,3 +10,5 @@ export type Writable<T> = { -readonly [K in keyof T]: T[K]; };
 
 // eslint-disable-next-line max-len
 export type Intersect<T> = (T extends any ? ((a: T) => any) : never) extends ((a: infer U) => any) ? U : never;
+
+export type SomePartial<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;

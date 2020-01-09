@@ -7,4 +7,5 @@ export const createMembersRoutes = makeRoutesCreatorAsync(async (resolver, route
   const memberController = await resolver.resolve(bindAsyncController(MemberController));
 
   router.get('/', memberController.get);
+  router.post('/', memberController.post);
 });

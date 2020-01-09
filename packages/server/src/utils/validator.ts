@@ -1,4 +1,4 @@
-import Ajv from 'ajv';
+import Ajv, { Ajv as AjvInstance, ValidateFunction as AjvValidateFunction } from 'ajv';
 
 
 export class ValidationError extends Error {
@@ -10,21 +10,44 @@ export class ValidationError extends Error {
 
 
 export interface Validator<T> {
-  (obj: unknown): asserts obj is T;
+  readonly lastValidationError: string;
+  validate(val: unknown): val is T;
+  assert(val: unknown): asserts val is T;
 }
 
-export const createValidator = <T>(schema: object): Validator<T> => {
-  const ajv = new Ajv({
-    strictDefaults: true,
-    strictKeywords: true
-  });
-  const validateValue = ajv.compile(schema);
 
-  const validate: Validator<T> = (value) => {
-    if (!validateValue(value)) {
-      throw new ValidationError(ajv.errorsText(validateValue.errors, { dataVar: '' }));
+export class ValidatorImpl<T> implements Validator<T> {
+  private readonly _ajv: AjvInstance;
+  private readonly _validationFunc: AjvValidateFunction;
+
+  private _lastValidationError = '';
+
+  public constructor(schema: object) {
+    this._ajv = new Ajv({
+      strictDefaults: true,
+      strictKeywords: true
+    });
+    this._validationFunc = this._ajv.compile(schema);
+  }
+
+  public get lastValidationError(): string {
+    return this._lastValidationError;
+  }
+
+  public validate(val: unknown): val is T {
+    if (this._validationFunc(val)) {
+      this._lastValidationError = '';
+      return true;
     }
-  };
+    this._lastValidationError = this._ajv.errorsText(this._validationFunc.errors, { dataVar: '' });
+    return false;
+  }
 
-  return validate;
-};
+  public assert(val: unknown): asserts val is T {
+    if (!this.validate(val)) {
+      throw new ValidationError(this._lastValidationError);
+    }
+  }
+}
+
+export const createValidator = <T>(schema: object): Validator<T> => new ValidatorImpl(schema);
