@@ -982,7 +982,7 @@
   dependencies:
     "@types/node" "*"
 
-"@types/node@*", "@types/node@^13.1.1":
+"@types/node@*":
   version "13.1.4"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-13.1.4.tgz#4cfd90175a200ee9b02bd6b1cd19bc349741607e"
   integrity sha512-Lue/mlp2egZJoHXZr4LndxDAd7i/7SQYhV0EjWfb/a4/OZ6tuVwMCVPiwkU5nsEipxEf7hmkSU7Em5VQ8P5NGA==
@@ -1041,10 +1041,22 @@
     "@types/source-list-map" "*"
     source-map "^0.6.1"
 
-"@types/webpack@*", "@types/webpack@^4.41.0":
+"@types/webpack@*":
   version "4.41.1"
   resolved "https://registry.yarnpkg.com/@types/webpack/-/webpack-4.41.1.tgz#571f0e137ce698710dd2637f7d222811eb83e274"
   integrity sha512-n9fP8UrMxOi1wiM3oM+vMZHMJJ7WoQohqd63C20cmKOFkNEy9Q8hyZyDR6PWdvSYt3V3A7cwDq/kWxHlRYYZEg==
+  dependencies:
+    "@types/anymatch" "*"
+    "@types/node" "*"
+    "@types/tapable" "*"
+    "@types/uglify-js" "*"
+    "@types/webpack-sources" "*"
+    source-map "^0.6.0"
+
+"@types/webpack@^4.41.2":
+  version "4.41.2"
+  resolved "https://registry.yarnpkg.com/@types/webpack/-/webpack-4.41.2.tgz#c6faf0111de27afdffe1158dac559e447c273516"
+  integrity sha512-DNMQOfEvwzWRRyp6Wy9QVCgJ3gkelZsuBE2KUD318dg95s9DKGiT5CszmmV58hq8jk89I9NClre48AEy1MWAJA==
   dependencies:
     "@types/anymatch" "*"
     "@types/node" "*"
@@ -2388,10 +2400,10 @@ d@1, d@^1.0.1:
     es5-ext "^0.10.50"
     type "^1.0.1"
 
-dart-sass@^1.24.0:
-  version "1.24.2"
-  resolved "https://registry.yarnpkg.com/dart-sass/-/dart-sass-1.24.2.tgz#2a7f8040457114d86cc2b3bd698e3ba42e6f49e3"
-  integrity sha512-8nlMt9VIKqlKWjPxozW1kHxqfehakxEfLQju2qsDeO1utXGNv/ovkvbAHtLZI+f12gMu7rbWyrsf7h4tlT+faA==
+dart-sass@^1.24.3:
+  version "1.24.3"
+  resolved "https://registry.yarnpkg.com/dart-sass/-/dart-sass-1.24.3.tgz#b9718dfe5f5b15ba4e7267fa6fee3eda2ca9441e"
+  integrity sha512-Tvpsk6UjEFVBuQciKabIengw2audvf390PAHqTKog/6HAioGSl+B+BcKlugPX8lF1Ii6VQE06pKfTEWQl/H4tA==
   dependencies:
     chokidar ">=2.0.0 <4.0.0"
 
