@@ -19,9 +19,9 @@
   },
   "devDependencies": {
     "@innolens/eslint-config": "0.1.0",
-    "@types/node": "^13.1.4",
+    "@types/node": "^13.1.5",
     "@types/node-fetch": "^2.5.4",
-    "@types/yargs": "^13.0.4",
+    "@types/yargs": "^15.0.0",
     "eslint": "^6.8.0",
     "nodemon": "^2.0.2",
     "typescript": "3.7.2"
