@@ -16,6 +16,7 @@ export interface MemberController {
 
 
 interface MemberCreateData {
+  readonly memberId: string;
   readonly name: string;
   readonly department: string;
   readonly typeOfStudy: string;
@@ -30,6 +31,7 @@ const postBodyValidator: Validator<ReadonlyArray<MemberCreateData>> = createVali
     type: 'object',
     additionalProperties: false,
     required: [
+      'memberId',
       'name',
       'department',
       'typeOfStudy',
@@ -38,6 +40,9 @@ const postBodyValidator: Validator<ReadonlyArray<MemberCreateData>> = createVali
       'affiliatedStudentInterestGroup'
     ],
     properties: {
+      memberId: {
+        type: 'string'
+      },
       name: {
         type: 'string'
       },
@@ -77,7 +82,16 @@ export class MemberControllerImpl implements MemberController {
 
   public async get(ctx: Context): Promise<void> {
     await this._userAuthenticator(ctx);
-    ctx.body = await fromAsync(this._memberService.findAll());
+    const members = await fromAsync(this._memberService.findAll());
+    ctx.body = members.map((member) => ({
+      memberId: member.memberId,
+      name: member.name,
+      department: member.department,
+      typeOfStudy: member.typeOfStudy,
+      yearOfStudy: member.yearOfStudy,
+      studyProgramme: member.studyProgramme,
+      affiliatedStudentInterestGroup: member.affiliatedStudentInterestGroup
+    }));
   }
 
   public async post(ctx: Context): Promise<void> {

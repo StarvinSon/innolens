@@ -2,7 +2,6 @@ import { ObjectId } from 'mongodb';
 
 import { createToken, createAsyncSingletonRegistrant } from '../resolver';
 import { Member, MemberCollection } from '../db/member';
-import { SomePartial } from '../utils/object';
 
 
 export { Member };
@@ -11,7 +10,7 @@ export interface MemberService {
   findAll(): AsyncIterable<Member>;
   findOneById(id: ObjectId): Promise<Member | null>;
   insertOne(member: Member): Promise<void>;
-  insertMany(members: ReadonlyArray<SomePartial<Member, '_id'>>): Promise<void>
+  insertMany(members: ReadonlyArray<Omit<Member, '_id'>>): Promise<void>
 }
 
 
@@ -38,17 +37,14 @@ export class MemberServiceImpl implements MemberService {
     await this._memberCollection.insertOne(member);
   }
 
-  public async insertMany(members: ReadonlyArray<SomePartial<Member, '_id'>>): Promise<void> {
+  public async insertMany(members: ReadonlyArray<Omit<Member, '_id'>>): Promise<void> {
     if (members.length === 0) {
       return;
     }
-    await this._memberCollection.insertMany(members.map<Member>((member) =>
-      member._id === undefined
-        ? {
-          ...member,
-          _id: new ObjectId()
-        }
-        : member as Member));
+    await this._memberCollection.insertMany(members.map<Member>((member) => ({
+      ...member,
+      _id: new ObjectId()
+    })));
   }
 }
 

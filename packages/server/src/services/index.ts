@@ -1,15 +1,15 @@
 import { ResolverFunction } from '../resolver';
 
 import { registerClientService } from './client';
-import { registerMemberGroupService } from './member-group';
 import { registerMemberService } from './member';
+import { registerMemberCompositionService } from './member-composition';
 import { registerOAuth2Service } from './oauth2';
 import { registerUserService } from './user';
 
 
 const registrants: ReadonlyArray<ResolverFunction> = [
   registerClientService,
-  registerMemberGroupService,
+  registerMemberCompositionService,
   registerMemberService,
   registerOAuth2Service,
   registerUserService

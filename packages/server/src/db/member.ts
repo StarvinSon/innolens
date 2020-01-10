@@ -7,6 +7,7 @@ import { Db } from './db';
 
 export interface Member {
   readonly _id: ObjectId;
+  readonly memberId: string;
   readonly name: string;
   readonly department: string;
   readonly typeOfStudy: string;
@@ -32,6 +33,7 @@ export const createMemberCollection = async (options: {
         additionalProperties: false,
         required: [
           '_id',
+          'memberId',
           'name',
           'department',
           'typeOfStudy',
@@ -42,6 +44,9 @@ export const createMemberCollection = async (options: {
         properties: {
           _id: {
             bsonType: 'objectId'
+          },
+          memberId: {
+            bsonType: 'string'
           },
           name: {
             bsonType: 'string'
@@ -63,7 +68,13 @@ export const createMemberCollection = async (options: {
           }
         }
       }
-    }
+    },
+    indexes: [
+      {
+        key: { memberId: 1 },
+        unique: true
+      }
+    ]
   });
 };
 
