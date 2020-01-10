@@ -12,6 +12,7 @@ import { Logger } from '../logger';
 
 
 interface MemberCreateData {
+  readonly memberId: string;
   readonly name: string;
   readonly department: string;
   readonly typeOfStudy: string;
@@ -29,13 +30,13 @@ const departments: ReadonlyArray<string> = [
   'Electrical and Electronic Engineering',
   'Industrial and Manufacturing Systems Engineering',
   'Mechanical Engineering'
-];
+].map((d) => d.toUpperCase().replace(/ /g, '_'));
 
 const typeOfStudies: ReadonlyArray<string> = [
   'Undergraduate',
   'Taught Postgraduate',
   'Research postgraduate'
-];
+].map((d) => d.toUpperCase().replace(/ /g, '_'));
 
 const yearOfStudies: ReadonlyArray<string> = [
   '1',
@@ -55,7 +56,7 @@ const studyProgrammes: ReadonlyArray<string> = [
   'BEng in Mechanical Engineering',
   'BEng in Engineering Science',
   'BEng in Biomedical Engineering'
-];
+].map((d) => d.toUpperCase().replace(/ /g, '_'));
 
 const affiliatedStudentInterestGroups: ReadonlyArray<string> = [
   'COMP1000',
@@ -64,6 +65,22 @@ const affiliatedStudentInterestGroups: ReadonlyArray<string> = [
   'COMP4000'
 ];
 
+
+let lastTime = 0;
+let lastIncrement = 0;
+const randomMemberId = (): string => {
+  const time = Date.now();
+  if (time === lastTime) {
+    lastIncrement += 1;
+  } else {
+    lastTime = time;
+    lastIncrement = 0;
+  }
+  if (lastIncrement >= 100) {
+    throw new Error('Increment overflow');
+  }
+  return String(lastTime * 100 + lastIncrement);
+};
 
 const randomElement = <T>(list: ReadonlyArray<T>): T => {
   const idx = Math.floor(Math.random() * list.length);
@@ -102,10 +119,11 @@ export const initMemberTask: ContextFunction = (ctx) => {
 
   scheduler.addTask(new Task(
     'Add Member',
-    new IntervalSchedule(0, 60 * 1000 /* 1min */),
+    new IntervalSchedule(0, 10 * 1000 /* 10s */),
     async () => {
       const members: ReadonlyArray<MemberCreateData> = [...Array(Math.floor(Math.random() * 3))]
         .map(() => ({
+          memberId: randomMemberId(),
           name: randomName(),
           department: randomDepartment(),
           typeOfStudy: randomTypeOfStudy(),
@@ -114,8 +132,7 @@ export const initMemberTask: ContextFunction = (ctx) => {
           affiliatedStudentInterestGroup: randomAffiliatedStudentInterestGroup()
         }));
 
-      logger.info('Adding members');
-
+      logger.info('Uploading members');
       await serverClient
         .authenticatedFetchOk('/api/members', {
           method: 'POST',
@@ -125,7 +142,7 @@ export const initMemberTask: ContextFunction = (ctx) => {
           body: JSON.stringify(members)
         });
 
-      logger.info('Members added');
+      logger.info('Members uploaded');
     }
   ));
 };
