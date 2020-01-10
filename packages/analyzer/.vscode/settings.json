@@ -1,0 +1,7 @@
+{
+  "eslint.options": {
+    "configFile": ".eslintrc.js",
+    "ignorePath": ".eslintignore"
+  },
+  "typescript.tsdk": "../../node_modules/typescript/lib"
+}

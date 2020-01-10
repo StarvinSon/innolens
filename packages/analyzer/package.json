@@ -1,0 +1,32 @@
+{
+  "name": "@innolens/analyzer",
+  "version": "0.1.0",
+  "license": "UNLICENSED",
+  "homepage": "https://i.cs.hku.hk/fyp/2019/fyp19027/",
+  "repository": "https://github.com/StarvinSon/innolens/tree/develop/packages/analyzer",
+  "scripts": {
+    "lint:es": "eslint --config .eslintrc.js --ignore-path .eslintignore --ext .js,.ts .",
+    "build": "tsc --project tsconfig.json",
+    "build:watch": "tsc --project tsconfig.json --watch",
+    "start": "node out/index.js start --config analyzer.config.js"
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.0",
+    "tslib": "^1.10.0",
+    "winston": "^3.2.1",
+    "yargs": "^15.1.0"
+  },
+  "devDependencies": {
+    "@innolens/eslint-config": "0.1.0",
+    "@types/node": "^13.1.5",
+    "@types/node-fetch": "^2.5.4",
+    "@types/yargs": "^15.0.0",
+    "eslint": "^6.8.0",
+    "nodemon": "^2.0.2",
+    "typescript": "3.7.2"
+  },
+  "engines": {
+    "node": ">=13.5.0"
+  },
+  "private": true
+}
