@@ -30,7 +30,7 @@ export class MemberCompopsitionServiceImpl implements MemberCompositionService {
   public async findLatest(): Promise<MemberComposition | null> {
     return this._memberCompositionCollection
       .findOne({}, {
-        sort: { _id: -1 }
+        sort: { time: -1 }
       });
   }
 
