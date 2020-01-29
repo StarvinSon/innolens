@@ -4,7 +4,7 @@ import {
   customElement, LitElement, html, TemplateResult, property, query
 } from 'lit-element';
 
-import { MemberGroup, MemberGroupsActions } from '../../state/member-groups';
+import { MemberCompositionActions, MemberCompositionState } from '../../state/member-composition';
 import { connectContext } from '../utils/context-connector';
 
 import { styleCss } from './app.scss';
@@ -23,14 +23,14 @@ export class App extends connectContext(LitElement) {
   public static readonly styles = styleCss;
 
   @property({ attribute: false })
-  declare protected memberGroups: ReadonlyArray<MemberGroup>;
+  declare protected memberComposition: MemberCompositionState;
 
   @query('inno-login-dialog')
   declare protected loginDialogElement: import('../login-dialog').LoginDialog;
 
   public constructor() {
     super();
-    this.memberGroups = [];
+    this.memberComposition = null;
   }
 
   protected async _getUpdateComplete(): Promise<void> {
@@ -39,16 +39,16 @@ export class App extends connectContext(LitElement) {
   }
 
   public onContextStateChanged(): void {
-    this.memberGroups = this.getConnectedContext()
-      .resolve(MemberGroupsActions)
+    this.memberComposition = this.getConnectedContext()
+      .resolve(MemberCompositionActions)
       .get();
   }
 
   protected render(): TemplateResult {
-    const { context, memberGroups } = this;
+    const { context, memberComposition } = this;
     return html`
       <button @click="${this.onUpdateButtonClick}">Update</button>
-      <pre>${JSON.stringify(memberGroups, undefined, 2)}</pre>
+      <pre>${JSON.stringify(memberComposition, undefined, 2)}</pre>
       <inno-login-dialog .context="${context}"></inno-login-dialog>
     `;
   }
@@ -56,7 +56,7 @@ export class App extends connectContext(LitElement) {
   protected onUpdateButtonClick(): void {
     const context = this.connectedContext;
     if (context !== null) {
-      context.resolve(MemberGroupsActions)
+      context.resolve(MemberCompositionActions)
         .update();
     }
   }

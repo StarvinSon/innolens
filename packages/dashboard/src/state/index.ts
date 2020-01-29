@@ -9,7 +9,7 @@ import {
 } from '../context';
 
 import { Reducer, AnyAction } from './types';
-import { MemberGroupsState, reduceMemberGroupsState, registerMemberGroupsActions } from './member-groups';
+import { MemberCompositionState, reduceMemberCompositionState, registerMemberCompositionActions } from './member-composition';
 import { OAuth2State, reduceOAuth2TokenState, registerOAuth2Actions } from './oauth2';
 import { PathState, reducePathState, registerPathActions } from './path';
 
@@ -20,14 +20,14 @@ export { AnyAction };
 export interface State {
   readonly path: PathState;
   readonly oauth2Token: OAuth2State;
-  readonly memberGroups: MemberGroupsState;
+  readonly memberComposition: MemberCompositionState;
 }
 
 
 const reduce: Reducer<State> = combineReducers({
   path: reducePathState,
   oauth2Token: reduceOAuth2TokenState,
-  memberGroups: reduceMemberGroupsState
+  memberComposition: reduceMemberCompositionState
 });
 
 
@@ -45,7 +45,7 @@ export const registerStore = createSingletonDependencyRegistrant(Store, createSt
 
 
 export const registerActions: DependencyRegistrant<[() => State]> = (ctx, getState) => {
-  registerMemberGroupsActions(ctx, () => getState().memberGroups);
+  registerMemberCompositionActions(ctx, () => getState().memberComposition);
   registerOAuth2Actions(ctx, () => getState().oauth2Token);
   registerPathActions(ctx, () => getState().path);
 };
