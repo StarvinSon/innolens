@@ -26,7 +26,7 @@ export class MemberServiceImpl implements MemberService {
   }
 
   public async *findAll(): AsyncIterable<Member> {
-    yield* this._memberCollection.find({}, { limit: 10 });
+    yield* this._memberCollection.find({});
   }
 
   public async findOneById(id: ObjectId): Promise<Member | null> {
