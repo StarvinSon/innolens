@@ -1,31 +1,25 @@
+import {
+  decorate, singleton, name,
+  injectableFactory
+} from '@innolens/resolver';
+
 import { StaticController } from '../controllers/static';
-import { RouterMiddleware } from '../middlewares';
-import { createToken, ResolverFunction } from '../resolver';
+import { bindMethods } from '../utils/method-binder';
 
-import { createApiRoutes } from './api';
-import { makeRoutesCreatorAsync } from './utils/routes-creator';
-import { useRoutesAsync } from './utils/routes-user';
-import { bindController } from './utils/bind-controller';
+import { createApiRouter } from './api';
+import { Router, createRouter, nest } from './router';
 
 
-export type Routes = ReadonlyArray<RouterMiddleware>;
+export const createAppRouter = decorate(
+  name('createRoutes'),
+  injectableFactory(createApiRouter, StaticController),
+  singleton(),
+  (apiRouter: Router, staticCtr: StaticController): Router => {
+    const boundStaticCtr = bindMethods(staticCtr);
 
-
-export const createRoutes = makeRoutesCreatorAsync(async (resolver, router) => {
-  const staticController = resolver.resolve(bindController(StaticController));
-
-  await useRoutesAsync(resolver, router, [
-    ['/api', createApiRoutes]
-  ]);
-
-  router.get(':subPath(.*)', staticController.get);
-});
-
-
-export const Routes = createToken<Promise<Routes>>(__filename, 'Routes');
-
-export const registerRoutes: ResolverFunction = (resolver) =>
-  resolver.registerSingleton(
-    Routes,
-    createRoutes
-  );
+    const router = createRouter();
+    nest(router, '/api', apiRouter);
+    router.get(':subPath(.*)', boundStaticCtr.get);
+    return router;
+  }
+);

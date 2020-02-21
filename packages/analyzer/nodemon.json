@@ -1,7 +1,0 @@
-{
-  "ext": "js",
-  "watch": [
-    "out"
-  ],
-  "verbose": true
-}

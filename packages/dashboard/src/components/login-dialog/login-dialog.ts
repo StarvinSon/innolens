@@ -1,11 +1,12 @@
 import {
-  customElement, LitElement, TemplateResult, html, property, query
+  customElement, LitElement, TemplateResult,
+  html, property, query
 } from 'lit-element';
 import { classMap } from 'lit-html/directives/class-map';
 
-import { Context } from '../../context';
-import { OAuth2PasswordCredentialsUIAdapter, OAuth2Actions } from '../../state/oauth2';
-import { connectContext } from '../utils/context-connector';
+import { OAuth2PasswordCredentialsUIAdapter, OAuth2Service } from '../../services/oauth2';
+import { injectableProperty } from '../../utils/property-injector';
+import { observeProperty } from '../../utils/property-observer';
 
 import { styleCss, styleClasses } from './login-dialog.scss';
 
@@ -20,6 +21,7 @@ export class CredentialsEvent extends Event {
     this.password = options.password;
   }
 }
+
 
 const TAG_NAME = 'inno-login-dialog';
 
@@ -36,23 +38,30 @@ export interface LoginDialog {
 }
 
 @customElement(TAG_NAME)
-export class LoginDialog extends connectContext(LitElement) {
+export class LoginDialog extends LitElement {
   public static readonly styles = styleCss;
 
-  @property({ attribute: false })
-  declare protected open: boolean;
+  @injectableProperty(OAuth2Service)
+  @observeProperty('updateServiceAdapter')
+  public oauth2Service: OAuth2Service | null = null;
 
   @property({ attribute: false })
-  declare protected errorMessage: string;
+  protected open: boolean = false;
+
+  @property({ attribute: false })
+  protected errorMessage: string | null = null;
 
   @query(`.${styleClasses.form}`)
-  declare protected formElement: HTMLFormElement;
+  protected readonly formElement!: HTMLFormElement;
 
+  @observeProperty('updateServiceAdapter')
   private readonly _passwordCredentialsUIAdpater: OAuth2PasswordCredentialsUIAdapter = {
-    openAndGetCredentials: () => new Promise((resolve) => {
+    requestCredentials: (opts) => new Promise((resolve) => {
       this.open = true;
+      this.errorMessage = opts.errorMessage;
       this.addEventListener('credentials', (event) => {
         resolve({
+          type: 'ENTER',
           username: event.username,
           password: event.password
         });
@@ -60,37 +69,34 @@ export class LoginDialog extends connectContext(LitElement) {
         once: true
       });
     }),
-    showError: (msg) => {
-      this.open = true;
-      this.errorMessage = msg;
-    },
     close: () => {
       this.open = false;
-      this.errorMessage = '';
     }
   };
 
-  public constructor() {
-    super();
-    this.open = false;
-    this.errorMessage = '';
+
+  public connectedCallback(): void {
+    super.connectedCallback();
+    this.updateServiceAdapter();
   }
 
-  public onContextConnected(context: Context): void {
-    super.onContextConnected(context);
-    const actions = context.resolve(OAuth2Actions);
-    if (actions.getPasswordCredentialsUIAdapter() === null) {
-      actions.setPasswordCredentialsUIAdapter(this._passwordCredentialsUIAdpater);
-    } else {
-      console.warn('Password credentials UI adapter has already been installed');
+  public disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.updateServiceAdapter();
+  }
+
+  protected updateServiceAdapter(): void {
+    if (this.oauth2Service === undefined || this._passwordCredentialsUIAdpater === undefined) {
+      return;
     }
-  }
 
-  public onContextDisconnected(context: Context): void {
-    super.onContextDisconnected(context);
-    const actions = context.resolve(OAuth2Actions);
-    if (actions.getPasswordCredentialsUIAdapter() === this._passwordCredentialsUIAdpater) {
-      actions.setPasswordCredentialsUIAdapter(null);
+    if (this.isConnected && this.oauth2Service !== null) {
+      this.oauth2Service.passwordCredentialsUIAdapter = this._passwordCredentialsUIAdpater;
+    } else if (
+      this.oauth2Service?.passwordCredentialsUIAdapter
+      === this._passwordCredentialsUIAdpater
+    ) {
+      this.oauth2Service.passwordCredentialsUIAdapter = null;
     }
   }
 
@@ -105,7 +111,7 @@ export class LoginDialog extends connectContext(LitElement) {
             <input class="${styleClasses.form_input}" name="password" type="password" required placeholder="password">
             <button class="${styleClasses.form_submitButton}" type="submit">Log in</button>
           </form>
-          <pre class="${styleClasses.errorMessage}">${errorMessage}</pre>
+          <pre class="${classMap({ [styleClasses.errorMessage]: true, [styleClasses.errorMessage_$hide]: errorMessage === null })}">${errorMessage ?? ''}</pre>
         </div>
       </div>
     `;

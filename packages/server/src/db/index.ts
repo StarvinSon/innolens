@@ -1,32 +1,26 @@
-import { ResolverFunction } from '../resolver';
+import { Token, FactoryOrConstructor } from '@innolens/resolver';
 
-import { registerClientCollection } from './client';
-import { registerDb } from './db';
-import { registerDbClient } from './db-client';
-import { registerEquipmentBookingCollection } from './equipment-booking';
-import { registerEquipmentLoginRecordCollection } from './equipment-login-record';
-import { registerEquipmentLogoutRecordCollection } from './equipment-logout-record';
-import { registerMemberCollection } from './member';
-import { registerMemberCompositionCollection } from './member-composition';
-import { registerOAuth2Collection } from './oauth2';
-import { registerUserCollection } from './user';
+import { ClientCollection, createClientCollection } from './client';
+import { Db, DbImpl } from './db';
+import { createDbClient, DbClient } from './db-client';
+import { createEquipmentBookingCollection, EquipmentBookingCollection } from './equipment-booking';
+import { createEquipmentLoginRecordCollection, EquipmentLoginRecordCollection } from './equipment-login-record';
+import { createEquipmentLogoutRecordCollection, EquipmentLogoutRecordCollection } from './equipment-logout-record';
+import { createMemberCollection, MemberCollection } from './member';
+import { createMemberCompositionCollection, MemberCompositionCollection } from './member-composition';
+import { createOAuth2Collection, OAuth2Collection } from './oauth2';
+import { createUserCollection, UserCollection } from './user';
 
 
-const registrants: ReadonlyArray<ResolverFunction> = [
-  registerClientCollection,
-  registerDb,
-  registerDbClient,
-  registerEquipmentBookingCollection,
-  registerEquipmentLoginRecordCollection,
-  registerEquipmentLogoutRecordCollection,
-  registerMemberCollection,
-  registerMemberCompositionCollection,
-  registerOAuth2Collection,
-  registerUserCollection
+export const dbCreators: ReadonlyArray<readonly [Token<unknown>, FactoryOrConstructor<unknown>]> = [
+  [ClientCollection, createClientCollection],
+  [Db, DbImpl],
+  [DbClient, createDbClient],
+  [EquipmentBookingCollection, createEquipmentBookingCollection],
+  [EquipmentLoginRecordCollection, createEquipmentLoginRecordCollection],
+  [EquipmentLogoutRecordCollection, createEquipmentLogoutRecordCollection],
+  [MemberCollection, createMemberCollection],
+  [MemberCompositionCollection, createMemberCompositionCollection],
+  [OAuth2Collection, createOAuth2Collection],
+  [UserCollection, createUserCollection]
 ];
-
-export const registerDbAndCollections: ResolverFunction = (resolver) => {
-  for (const register of registrants) {
-    register(resolver);
-  }
-};

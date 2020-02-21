@@ -1,22 +1,17 @@
-import { ResolverFunction } from '../resolver';
+import { Token, FactoryOrConstructor } from '@innolens/resolver';
 
-import { registerClientService } from './client';
-import { registerMemberService } from './member';
-import { registerMemberCompositionService } from './member-composition';
-import { registerOAuth2Service } from './oauth2';
-import { registerUserService } from './user';
+import { ClientService, ClientServiceImpl } from './client';
+import { MemberService, MemberServiceImpl } from './member';
+import { MemberCompositionService, MemberCompositionServiceImpl } from './member-composition';
+import { OAuth2Service, OAuth2ServiceImpl } from './oauth2';
+import { UserService, UserServiceImpl } from './user';
 
 
-const registrants: ReadonlyArray<ResolverFunction> = [
-  registerClientService,
-  registerMemberCompositionService,
-  registerMemberService,
-  registerOAuth2Service,
-  registerUserService
+// eslint-disable-next-line max-len
+export const serviceCreators: ReadonlyArray<readonly [Token<unknown>, FactoryOrConstructor<unknown>]> = [
+  [ClientService, ClientServiceImpl],
+  [MemberService, MemberServiceImpl],
+  [MemberCompositionService, MemberCompositionServiceImpl],
+  [OAuth2Service, OAuth2ServiceImpl],
+  [UserService, UserServiceImpl]
 ];
-
-export const registerServices: ResolverFunction = (resolver) => {
-  for (const register of registrants) {
-    register(resolver);
-  }
-};

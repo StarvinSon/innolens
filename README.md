@@ -9,11 +9,7 @@ This is the monorepo for all modules in InnoLens.
 Node.JS modules:
 
 1. Node.JS >=13.7.0
-2. Yarn >=1.12.1, **<2**
-
-Python modules:
-
-1. Python >=3.7, <3.8 (TensorFlow does not support 3.8 yet)
+2. Yarn >=1.22.0, **<2**
 
 Database:
 
@@ -33,43 +29,14 @@ git clone https://github.com/StarvinSon/innolens.git innolens
 cd innolens
 ```
 
-For Node.JS modules:
+For Node.JS modules (server, dashboard):
 
 ```shell
 # Make sure yarn has the right version
 yarn --version
 
+# Install the dependencies
 yarn install
 ```
 
-For Python modules:
-
-```shell
-# Make sure the python version is current
-python --version
-
-# Create a virtual environment
-python -m venv .venv
-
-# For Unix shell
-./.venv/Scripts/activate
-# For Powershell
-./.venv/Scripts/activate.ps1
-# For Command Prompt
-./.venv/Scripts/activate.bat
-
-# Make sure pip is the latest version
-python -m pip install --upgrade pip
-
-# Install dependencies
-python -m pip install --requirement requirements.lock
-
-# If you want TensorFlow to support CUDA, follow this guide:
-# https://www.tensorflow.org/install/gpu
-
-# If you want to deactivate:
-# For Unix shell or Powershell
-deactivate
-# For Command Prompt
-./.venv/Scripts/deactivate.bat
-```
+For more information about server, see `./packages/server/README.md`.

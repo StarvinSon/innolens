@@ -1,4 +1,4 @@
-import { createToken } from './resolver';
+import { createToken } from '@innolens/resolver';
 
 
 export interface ServerOptions {
@@ -7,5 +7,4 @@ export interface ServerOptions {
   readonly dbConnectionUri: string;
 }
 
-
-export const ServerOptions = createToken<ServerOptions>(__filename, 'ServerOptions');
+export const ServerOptions = createToken<ServerOptions>('ServerOptions');

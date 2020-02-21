@@ -1,40 +1,68 @@
+import 'reflect-metadata';
+import {
+  createResolver, Token, FactoryOrConstructor,
+  decorate, singleton, name,
+  injectableFactory
+} from '@innolens/resolver';
+import { ObjectId } from 'mongodb';
 import yargs from 'yargs';
 
-import { App, registerApp } from './app';
-import { Logger, registerLogger } from './logger';
+import { App, createApp } from './app';
+import { controllerCreators } from './controllers';
+import { dbCreators } from './db';
+import { Logger, createLogger } from './logger';
 import { ServerOptions } from './server-options';
-import { createResolver } from './resolver';
-import { registerControllers } from './controllers';
-import { registerDbAndCollections } from './db';
-import { registerRoutes } from './routes';
-import { registerServices } from './services';
+import { serviceCreators } from './services';
+import { UserService } from './services/user';
+import { utilCreators } from './utils';
 
 
-const start = (options: ServerOptions): void => {
-  Promise.resolve()
-    .then(async () => {
-      const resolver = createResolver();
-      registerControllers(resolver);
-      registerDbAndCollections(resolver);
-      registerRoutes(resolver);
-      registerServices(resolver);
-      registerApp(resolver);
-      registerLogger(resolver);
-      resolver.registerSingleton(ServerOptions, () => options);
+const getCreators = (
+  serverOptions: ServerOptions
+): ReadonlyArray<readonly [Token<unknown>, FactoryOrConstructor<unknown>]> => [
+  ...controllerCreators,
+  ...dbCreators,
+  ...serviceCreators,
+  ...utilCreators,
+  [App, createApp],
+  [Logger, createLogger],
+  [ServerOptions, decorate(
+    name('createServerOptions'),
+    injectableFactory(),
+    singleton(),
+    () => serverOptions
+  )]
+];
 
-      const logger = resolver.resolve(Logger);
-      logger.info('Starting server using options: %O', options);
+const start = async (options: ServerOptions): Promise<void> => {
+  try {
+    const resolver = createResolver();
+    for (const [token, creator] of getCreators(options)) {
+      resolver.register(token, creator);
+    }
 
-      const app = await resolver.resolve(App);
+    const [userService, app, logger] =
+      await resolver.resolve([UserService, App, Logger] as const);
 
-      const server = app.listen(options.port, () => {
-        logger.info('Server is listening: %O', server.address());
+    const rootUser = await userService.findByUsername('root');
+    if (rootUser === null) {
+      await userService.insert({
+        _id: new ObjectId(),
+        username: 'root',
+        password: 'innoroot',
+        name: 'Root Administrator'
       });
-    })
-    .catch((err) => {
-      console.error(err);
-      process.exit(process.exitCode ?? 1);
+    }
+
+    logger.info('Starting server using options: %O', options);
+    const server = app.listen(options.port, () => {
+      logger.info('Server is listening: %O', server.address());
     });
+
+  } catch (err) {
+    console.error(err);
+    process.exit(process.exitCode ?? 1);
+  }
 };
 
 
@@ -65,11 +93,11 @@ const main = (): void => {
           }
         })
         .config(),
-      (argv) => start({
+      (argv) => Promise.resolve().then(() => start({
         port: argv.port,
         staticRoot: argv.staticRoot,
         dbConnectionUri: argv.dbConnectionUri
-      })
+      }))
     )
     .demandCommand(1)
     .alias({

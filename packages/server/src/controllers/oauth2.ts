@@ -1,26 +1,31 @@
+import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
 import {
   BAD_REQUEST, INTERNAL_SERVER_ERROR, UNAUTHORIZED,
   getStatusText
 } from 'http-status-codes';
 
-import { createToken, createAsyncSingletonRegistrant } from '../resolver';
 import { Logger } from '../logger';
-import { Middleware } from '../middlewares';
-import { Client } from '../services/client';
 import { OAuth2Service } from '../services/oauth2';
 import { UserService } from '../services/user';
-import { ValidatorImpl as BaseValidatorImpl, Validator, ValidationError } from '../utils/validator';
 
 import { Next, Context } from './context';
-import { parseBody, EmptyBodyError, UnsupportedContentTypeError } from './utils/body-parser';
-import { ClientAuthenticator, ClientAuthenticationFailedError } from './utils/client-authenticator';
-import { Headers } from './utils/headers';
-
-
-export interface OAuth2Controller {
-  handleError: Middleware;
-  postToken: Middleware;
-}
+import { Headers } from './headers';
+import { Middleware } from './middleware';
+import {
+  parseBody, EmptyBodyError, UnsupportedContentTypeError,
+  InjectedBodyParserFactory,
+  initializeParseBody
+} from './utils/body-parser';
+import {
+  validateBody, getValidatedBody, BodyValidationError,
+  InjectedBodyValidatorFactory,
+  initializeValidateBody
+} from './utils/body-validator';
+import {
+  ClientAuthenticator, authenticateClient, InvalidClientCredentialError,
+  InvalidAuthorizationHeaderError, getAuthenticatedClient, initializeAuthenticateClient
+} from './utils/client-authenticator';
+import { mapError } from './utils/error-configurator';
 
 
 class InvalidRequestError extends Error {
@@ -57,28 +62,19 @@ class UnsupportedGrantTypeError extends Error {
 }
 
 
-class ValidatorImpl<T> extends BaseValidatorImpl<T> {
-  public assert(val: T): asserts val is T {
-    try {
-      // @ts-ignore
-      super.assert(val);
-    } catch (err) {
-      if (err instanceof ValidationError) {
-        throw new InvalidRequestError(`Failed to validate body: ${err.message}`);
-      }
-      throw err;
-    }
-  }
+export interface OAuth2Controller {
+  handleError: Middleware;
+  postToken: Middleware;
 }
 
-const createValidator = <T>(schema: object): Validator<T> => new ValidatorImpl<T>(schema);
+export const OAuth2Controller = createToken<OAuth2Controller>('OAuth2Controller');
 
 
-interface RequestBody {
+interface PostTokenBody {
   readonly grant_type: string;
 }
 
-const grantTypeValidator: Validator<RequestBody> = createValidator({
+const PostTokenBody: object = {
   type: 'object',
   required: ['grant_type'],
   properties: {
@@ -86,17 +82,17 @@ const grantTypeValidator: Validator<RequestBody> = createValidator({
       type: 'string'
     }
   }
-});
+};
 
 
-interface PasswordGrantBody {
+interface PostPasswordGrantBody {
   readonly grant_type: 'password';
   readonly username: string;
   readonly password: string;
   readonly scope: string;
 }
 
-const passwordGrantBodyValidator: Validator<PasswordGrantBody> = createValidator({
+const PostPasswordGrantBody: object = {
   type: 'object',
   required: ['grant_type', 'username', 'password', 'scope'],
   additionalProperties: false,
@@ -114,16 +110,16 @@ const passwordGrantBodyValidator: Validator<PasswordGrantBody> = createValidator
       type: 'string'
     }
   }
-});
+};
 
 
-interface RefreshTokenGrantBody {
+interface PostRefreshTokenGrantBody {
   readonly grant_type: 'refresh_token';
   readonly refresh_token: string;
   readonly scope: string;
 }
 
-const refreshTokenGrantBodyValidator: Validator<RefreshTokenGrantBody> = createValidator({
+const PostRefreshTokenGrantBody: object = {
   type: 'object',
   required: ['grant_type', 'refresh_token', 'scope'],
   additionalProperties: false,
@@ -138,35 +134,46 @@ const refreshTokenGrantBodyValidator: Validator<RefreshTokenGrantBody> = createV
       type: 'string'
     }
   }
-});
+};
 
 
 const parseScope = (str: string): Array<string> => Array
   .from(str.matchAll(/[^\s]+/g))
   .map((match) => match[0]);
 
-
 const isError = (val: unknown): val is Error & Readonly<Record<string, unknown>> =>
   val instanceof Error;
 
+@injectableConstructor({
+  logger: Logger,
+  userService: UserService,
+  oauth2Service: OAuth2Service,
+  clientAuthenticator: ClientAuthenticator,
+  injectedBodyParserFactory: InjectedBodyParserFactory,
+  injectedBodyValidatorFactory: InjectedBodyValidatorFactory
+})
+@singleton()
 export class OAuth2ControllerImpl implements OAuth2Controller {
   private readonly _logger: Logger;
   private readonly _userService: UserService;
   private readonly _oauth2Service: OAuth2Service;
-  private readonly _clientAuthenticator: ClientAuthenticator;
 
-  public constructor(options: {
+  public constructor(deps: {
     logger: Logger;
     userService: UserService;
     oauth2Service: OAuth2Service;
     clientAuthenticator: ClientAuthenticator;
+    injectedBodyParserFactory: InjectedBodyParserFactory;
+    injectedBodyValidatorFactory: InjectedBodyValidatorFactory;
   }) {
     ({
       logger: this._logger,
       userService: this._userService,
-      oauth2Service: this._oauth2Service,
-      clientAuthenticator: this._clientAuthenticator
-    } = options);
+      oauth2Service: this._oauth2Service
+    } = deps);
+    initializeAuthenticateClient(OAuth2ControllerImpl, this, deps.clientAuthenticator);
+    initializeParseBody(OAuth2ControllerImpl, this, deps.injectedBodyParserFactory);
+    initializeValidateBody(OAuth2ControllerImpl, this, deps.injectedBodyValidatorFactory);
   }
 
   public async handleError(ctx: Context, next: Next): Promise<void> {
@@ -192,7 +199,7 @@ export class OAuth2ControllerImpl implements OAuth2Controller {
           ? err.code.toLowerCase().replace(/^err_/, '')
           : getStatusText(statusCode).replace(' ', '_').toLowerCase();
       const description: string | null =
-        isError(err) && typeof err.message === 'string'
+        statusCode < INTERNAL_SERVER_ERROR && isError(err) && typeof err.message === 'string'
           ? err.message
           : null;
 
@@ -204,24 +211,32 @@ export class OAuth2ControllerImpl implements OAuth2Controller {
       };
 
       if (statusCode >= INTERNAL_SERVER_ERROR) {
-        this._logger.error(err);
+        this._logger.error('%O', err);
       }
     }
   }
 
+  @mapError([
+    [
+      [InvalidAuthorizationHeaderError, InvalidClientCredentialError],
+      (err) => new InvalidClientError(`Failed to authenticate client: ${err.message}`)
+    ],
+    [
+      [EmptyBodyError, UnsupportedContentTypeError, BodyValidationError],
+      (err) => new InvalidRequestError(`Failed to parse body: ${err.message}`)
+    ]
+  ])
+  @authenticateClient()
+  @parseBody({ json: false, form: true })
+  @validateBody(PostTokenBody)
   public async postToken(ctx: Context): Promise<void> {
-    const client = await this._authenticateClient(ctx);
-    const body = await this._parseFormBody(ctx);
-
-    grantTypeValidator.assert(body);
+    const body = getValidatedBody<PostTokenBody>(ctx);
     switch (body.grant_type) {
       case 'password': {
-        await this._handlePasswordGrant(ctx, client, body);
-        break;
+        return this._handlePasswordGrant(ctx);
       }
       case 'refresh_token': {
-        await this._handleRefreshTokenGrant(ctx, client, body);
-        break;
+        return this._handleRefreshTokenGrant(ctx);
       }
       default: {
         throw new UnsupportedGrantTypeError('Only support password and refresh_token grant type');
@@ -229,34 +244,11 @@ export class OAuth2ControllerImpl implements OAuth2Controller {
     }
   }
 
-  private async _authenticateClient(ctx: Context): Promise<Client> {
-    try {
-      return await this._clientAuthenticator(ctx);
-    } catch (err) {
-      if (err instanceof ClientAuthenticationFailedError) {
-        throw new InvalidClientError(`Failed to authenticate client: ${err.message}`);
-      }
-      throw err;
-    }
-  }
+  @validateBody(PostPasswordGrantBody)
+  private async _handlePasswordGrant(ctx: Context): Promise<void> {
+    const client = getAuthenticatedClient(ctx);
 
-  private async _parseFormBody(ctx: Context): Promise<unknown> {
-    try {
-      return await parseBody(ctx, { json: false, form: true });
-    } catch (err) {
-      if (err instanceof EmptyBodyError || err instanceof UnsupportedContentTypeError) {
-        throw new InvalidRequestError(`Failed to parse body: ${err.message}`);
-      }
-      throw err;
-    }
-  }
-
-  private async _handlePasswordGrant(
-    ctx: Context,
-    client: Client,
-    body: unknown
-  ): Promise<void> {
-    passwordGrantBodyValidator.assert(body);
+    const body = getValidatedBody<PostPasswordGrantBody>(ctx);
     const { username, password } = body;
 
     const scopes = parseScope(body.scope);
@@ -287,12 +279,9 @@ export class OAuth2ControllerImpl implements OAuth2Controller {
     };
   }
 
-  private async _handleRefreshTokenGrant(
-    ctx: Context,
-    client: Client,
-    body: unknown
-  ): Promise<void> {
-    refreshTokenGrantBodyValidator.assert(body);
+  @validateBody(PostRefreshTokenGrantBody)
+  private async _handleRefreshTokenGrant(ctx: Context): Promise<void> {
+    const body = getValidatedBody<PostRefreshTokenGrantBody>(ctx);
     const { refresh_token: refreshToken } = body;
 
     const scopes = parseScope(body.scope);
@@ -335,18 +324,3 @@ export class OAuth2ControllerImpl implements OAuth2Controller {
     };
   }
 }
-
-
-export const OAuth2Controller =
-  createToken<Promise<OAuth2Controller>>(__filename, 'OAuth2Controller');
-
-export const registerOAuth2Controller = createAsyncSingletonRegistrant(
-  OAuth2Controller,
-  {
-    logger: Logger,
-    userService: UserService,
-    oauth2Service: OAuth2Service,
-    clientAuthenticator: ClientAuthenticator
-  },
-  (opts) => new OAuth2ControllerImpl(opts)
-);

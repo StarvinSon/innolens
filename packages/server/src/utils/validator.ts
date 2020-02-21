@@ -1,3 +1,7 @@
+import {
+  createToken, decorate, name,
+  singleton, injectableFactory
+} from '@innolens/resolver';
 import Ajv, { Ajv as AjvInstance, ValidateFunction as AjvValidateFunction } from 'ajv';
 
 
@@ -14,7 +18,6 @@ export interface Validator<T> {
   validate(val: unknown): val is T;
   assert(val: unknown): asserts val is T;
 }
-
 
 export class ValidatorImpl<T> implements Validator<T> {
   private readonly _ajv: AjvInstance;
@@ -50,4 +53,17 @@ export class ValidatorImpl<T> implements Validator<T> {
   }
 }
 
-export const createValidator = <T>(schema: object): Validator<T> => new ValidatorImpl(schema);
+
+export interface InjectedValidatorFactory {
+  <T>(schema: object): Validator<T>;
+}
+
+export const InjectedValidatorFactory =
+  createToken<InjectedValidatorFactory>('InjectedValidatorFactory');
+
+export const createInjectedValidatorFactory = decorate(
+  name('createInjectedValidatorFactory'),
+  injectableFactory(),
+  singleton(),
+  (): InjectedValidatorFactory => (schema) => new ValidatorImpl(schema)
+);

@@ -1,6 +1,6 @@
+import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
 import { ObjectId } from 'mongodb';
 
-import { createToken, createAsyncSingletonRegistrant } from '../resolver';
 import {
   MemberComposition, MemberCompositionCollection, MemberCompositionPerspective,
   MemberCompositionGroup
@@ -15,8 +15,15 @@ export interface MemberCompositionService {
   insertOne(memberComposition: Omit<MemberComposition, '_id'>): Promise<void>;
 }
 
+export const MemberCompositionService =
+  createToken<MemberCompositionService>('MemberCompositionService');
 
-export class MemberCompopsitionServiceImpl implements MemberCompositionService {
+
+@injectableConstructor({
+  memberCompositionCollection: MemberCompositionCollection
+})
+@singleton()
+export class MemberCompositionServiceImpl implements MemberCompositionService {
   private readonly _memberCompositionCollection: MemberCompositionCollection;
 
   public constructor(options: {
@@ -43,13 +50,3 @@ export class MemberCompopsitionServiceImpl implements MemberCompositionService {
       .insertOne(withId);
   }
 }
-
-
-export const MemberCompositionService =
-  createToken<Promise<MemberCompositionService>>(__filename, 'MemberCompositionService');
-
-export const registerMemberCompositionService = createAsyncSingletonRegistrant(
-  MemberCompositionService,
-  { memberCompositionCollection: MemberCompositionCollection },
-  (opts) => new MemberCompopsitionServiceImpl(opts)
-);

@@ -12,6 +12,9 @@
   },
   "private": true,
   "workspaces": [
-    "packages/*"
+    "packages/dashboard",
+    "packages/eslint-config",
+    "packages/resolver",
+    "packages/server"
   ]
 }

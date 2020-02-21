@@ -1,10 +1,10 @@
+import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
 import deepEqual from 'deep-equal';
 import {
   CollectionCreateOptions, Collection, IndexSpecification,
   Db as RawDb
 } from 'mongodb';
 
-import { createToken, createAsyncSingletonRegistrant } from '../resolver';
 import { Logger } from '../logger';
 
 import { DbClient } from './db-client';
@@ -13,6 +13,8 @@ import { DbClient } from './db-client';
 export interface Db {
   defineCollection<T>(name: string, options: DefineCollectionOptions): Promise<Collection<T>>;
 }
+
+export const Db = createToken<Db>('Db');
 
 export interface DefineCollectionOptions {
   readonly validator?: Required<CollectionCreateOptions>['validator'];
@@ -28,6 +30,11 @@ interface CollModOptions {
   readonly validationAction?: Required<CollectionCreateOptions>['validationAction'];
 }
 
+@injectableConstructor({
+  logger: Logger,
+  dbClient: DbClient
+})
+@singleton()
 export class DbImpl implements Db {
   private readonly _logger: Logger;
   private readonly _dbClient: DbClient;
@@ -100,7 +107,6 @@ export class DbImpl implements Db {
         const indexToDrop = indexesToDrop[indexToDropIdx];
 
         const indexIsSame = [
-          'key',
           'name',
           'background',
           'unique',
@@ -179,15 +185,3 @@ export class DbImpl implements Db {
     }
   }
 }
-
-
-export const Db = createToken<Promise<Db>>(__filename, 'Db');
-
-export const registerDb = createAsyncSingletonRegistrant(
-  Db,
-  {
-    logger: Logger,
-    dbClient: DbClient
-  },
-  (opts) => new DbImpl(opts)
-);

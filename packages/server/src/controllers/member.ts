@@ -1,12 +1,13 @@
-import { createToken, createAsyncSingletonRegistrant } from '../resolver';
-import { Middleware } from '../middlewares';
+import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
+
 import { MemberService } from '../services/member';
 import { fromAsync } from '../utils/array';
 
-import { UserAuthenticator } from './utils/user-authenticator';
 import { Context } from './context';
-import { createValidator, Validator } from './utils/validator';
-import { parseBody } from './utils/body-parser';
+import { Middleware } from './middleware';
+import { parseBody, InjectedBodyParserFactory, initializeParseBody } from './utils/body-parser';
+import { validateBody, getValidatedBody } from './utils/body-validator';
+import { UserAuthenticator, authenticateUser, initializeAuthenticateUser } from './utils/user-authenticator';
 
 
 export interface MemberController {
@@ -14,8 +15,11 @@ export interface MemberController {
   post: Middleware;
 }
 
+export const MemberController =
+  createToken<MemberController>('MemberController');
 
-interface MemberCreateData {
+
+type PostMemberBody = ReadonlyArray<{
   readonly memberId: string;
   readonly name: string;
   readonly department: string;
@@ -23,9 +27,9 @@ interface MemberCreateData {
   readonly yearOfStudy: string;
   readonly studyProgramme: string;
   readonly affiliatedStudentInterestGroup: string;
-}
+}>;
 
-const postBodyValidator: Validator<ReadonlyArray<MemberCreateData>> = createValidator({
+const PostMemberBody: object = {
   type: 'array',
   items: {
     type: 'object',
@@ -63,25 +67,31 @@ const postBodyValidator: Validator<ReadonlyArray<MemberCreateData>> = createVali
       }
     }
   }
-});
+};
 
-
+@injectableConstructor({
+  memberService: MemberService,
+  userAuthenticator: UserAuthenticator,
+  injectedBodyParserFactory: InjectedBodyParserFactory
+})
+@singleton()
 export class MemberControllerImpl implements MemberController {
   private readonly _memberService: MemberService;
-  private readonly _userAuthenticator: UserAuthenticator;
 
-  public constructor(options: {
+  public constructor(deps: {
     memberService: MemberService;
     userAuthenticator: UserAuthenticator;
+    injectedBodyParserFactory: InjectedBodyParserFactory
   }) {
     ({
-      memberService: this._memberService,
-      userAuthenticator: this._userAuthenticator
-    } = options);
+      memberService: this._memberService
+    } = deps);
+    initializeAuthenticateUser(MemberControllerImpl, this, deps.userAuthenticator);
+    initializeParseBody(MemberControllerImpl, this, deps.injectedBodyParserFactory);
   }
 
+  @authenticateUser()
   public async get(ctx: Context): Promise<void> {
-    await this._userAuthenticator(ctx);
     const members = await fromAsync(this._memberService.findAll());
     ctx.body = members.map((member) => ({
       memberId: member.memberId,
@@ -94,25 +104,12 @@ export class MemberControllerImpl implements MemberController {
     }));
   }
 
+  @authenticateUser()
+  @parseBody()
+  @validateBody(PostMemberBody)
   public async post(ctx: Context): Promise<void> {
-    await this._userAuthenticator(ctx);
-    const members = await parseBody(ctx);
-    postBodyValidator.assert(members);
-
+    const members = getValidatedBody<PostMemberBody>(ctx);
     await this._memberService.insertMany(members);
     ctx.body = null;
   }
 }
-
-
-export const MemberController =
-  createToken<Promise<MemberController>>(__filename, 'MemberController');
-
-export const registerMemberController = createAsyncSingletonRegistrant(
-  MemberController,
-  {
-    memberService: MemberService,
-    userAuthenticator: UserAuthenticator
-  },
-  (opts) => new MemberControllerImpl(opts)
-);

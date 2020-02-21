@@ -1,16 +1,23 @@
 import {
+  createToken, decorate, singleton,
+  name, injectableFactory
+} from '@innolens/resolver';
+import {
   Logger as WinstonLogger, createLogger as createWinstonLogger,
   format, transports
 } from 'winston';
 
-import { createToken, createSingletonRegistrant } from './resolver';
-
 
 export type Logger = WinstonLogger;
 
+export const Logger = createToken<Logger>('Logger');
 
-export const createLogger = (): Logger =>
-  createWinstonLogger({
+
+export const createLogger = decorate(
+  name('createLogger'),
+  injectableFactory(),
+  singleton(),
+  (): Logger => createWinstonLogger({
     format: format.combine(
       format.timestamp(),
       format.splat(),
@@ -31,9 +38,5 @@ export const createLogger = (): Logger =>
         format: format.uncolorize()
       })
     ]
-  });
-
-
-export const Logger = createToken<Logger>(__filename, 'Logger');
-
-export const registerLogger = createSingletonRegistrant(Logger, {}, createLogger);
+  })
+);

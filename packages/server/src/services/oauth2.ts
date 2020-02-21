@@ -1,9 +1,9 @@
 import { randomBytes } from 'crypto';
 import { promisify } from 'util';
 
+import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
 import { ObjectId } from 'mongodb';
 
-import { createToken, createAsyncSingletonRegistrant } from '../resolver';
 import { OAuth2Token, OAuth2Collection } from '../db/oauth2';
 
 
@@ -21,6 +21,8 @@ export interface OAuth2Service {
   createAccessToken(tokenOptions: CreateAccessTokenOptions): Promise<OAuth2Token>;
 }
 
+export const OAuth2Service = createToken<OAuth2Service>('OAuth2Service');
+
 export interface CreateAccessTokenOptions {
   readonly clientId: ObjectId;
   readonly userId: ObjectId;
@@ -34,6 +36,10 @@ const validScopes = new Set([
 
 const generateToken = async (): Promise<string> => (await randomBytesAsync(16)).toString('hex');
 
+@injectableConstructor({
+  oauth2Collection: OAuth2Collection
+})
+@singleton()
 export class OAuth2ServiceImpl implements OAuth2Service {
   private readonly _oauth2Collection: OAuth2Collection;
 
@@ -113,12 +119,3 @@ export class OAuth2ServiceImpl implements OAuth2Service {
     return token;
   }
 }
-
-
-export const OAuth2Service = createToken<Promise<OAuth2Service>>(__filename, 'OAuth2Service');
-
-export const registerOAuth2Service = createAsyncSingletonRegistrant(
-  OAuth2Service,
-  { oauth2Collection: OAuth2Collection },
-  (opts) => new OAuth2ServiceImpl(opts)
-);

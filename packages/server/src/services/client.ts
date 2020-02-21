@@ -1,7 +1,7 @@
+import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
 import { compare, hash } from 'bcrypt';
 import { ObjectId } from 'mongodb';
 
-import { createToken, createAsyncSingletonRegistrant } from '../resolver';
 import { Client, ClientType, ClientCollection } from '../db/client';
 
 
@@ -13,6 +13,8 @@ export interface ClientService {
   findByCredentials(credentials: ClientCredentials): Promise<Client | null>;
   insert(clientWithSecret: ClientWithSecret): Promise<Client>;
 }
+
+export const ClientService = createToken<ClientService>('ClientService');
 
 export interface ClientCredentials {
   readonly publicId: string;
@@ -26,6 +28,10 @@ export interface ClientWithSecret extends Omit<Client, 'secretHash'> {
 
 const SECRET_SALT_ROUNDS: number = 10;
 
+@injectableConstructor({
+  clientCollection: ClientCollection
+})
+@singleton()
 export class ClientServiceImpl implements ClientService {
   private readonly _clientCollection: ClientCollection;
 
@@ -70,12 +76,3 @@ export class ClientServiceImpl implements ClientService {
     return client;
   }
 }
-
-
-export const ClientService = createToken<Promise<ClientService>>(__filename, 'ClientService');
-
-export const registerClientService = createAsyncSingletonRegistrant(
-  ClientService,
-  { clientCollection: ClientCollection },
-  (opts) => new ClientServiceImpl(opts)
-);

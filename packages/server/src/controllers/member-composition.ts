@@ -1,13 +1,13 @@
+import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
 import { NOT_IMPLEMENTED } from 'http-status-codes';
 
-import { createToken, createAsyncSingletonRegistrant } from '../resolver';
-import { Middleware } from '../middlewares';
 import { MemberCompositionService, MemberCompositionPerspective } from '../services/member-composition';
 
-import { UserAuthenticator } from './utils/user-authenticator';
 import { Context } from './context';
-import { Validator, createValidator } from './utils/validator';
-import { parseBody } from './utils/body-parser';
+import { Middleware } from './middleware';
+import { parseBody, InjectedBodyParserFactory, initializeParseBody } from './utils/body-parser';
+import { getValidatedBody, validateBody } from './utils/body-validator';
+import { UserAuthenticator, authenticateUser, initializeAuthenticateUser } from './utils/user-authenticator';
 
 
 export interface MemberCompositionController {
@@ -15,13 +15,16 @@ export interface MemberCompositionController {
   post: Middleware;
 }
 
+export const MemberCompositionController =
+  createToken<MemberCompositionController>('MemberCompositionController');
+
 
 interface PostBody {
   readonly time: string;
   readonly perspectives: ReadonlyArray<MemberCompositionPerspective>;
 }
 
-const postBodyValidator: Validator<PostBody> = createValidator({
+const PostBody: object = {
   type: 'object',
   required: [
     'time',
@@ -68,24 +71,32 @@ const postBodyValidator: Validator<PostBody> = createValidator({
       }
     }
   }
-});
+};
 
+
+@injectableConstructor({
+  memberCompositionService: MemberCompositionService,
+  userAuthenticator: UserAuthenticator,
+  injectedBodyParserFactory: InjectedBodyParserFactory
+})
+@singleton()
 export class MemberCompositionControllerImpl implements MemberCompositionController {
   private readonly _memberCompositionService: MemberCompositionService;
-  private readonly _userAuthenticator: UserAuthenticator;
 
-  public constructor(options: {
+  public constructor(deps: {
     memberCompositionService: MemberCompositionService,
-    userAuthenticator: UserAuthenticator
+    userAuthenticator: UserAuthenticator,
+    injectedBodyParserFactory: InjectedBodyParserFactory
   }) {
     ({
-      memberCompositionService: this._memberCompositionService,
-      userAuthenticator: this._userAuthenticator
-    } = options);
+      memberCompositionService: this._memberCompositionService
+    } = deps);
+    initializeAuthenticateUser(MemberCompositionControllerImpl, this, deps.userAuthenticator);
+    initializeParseBody(MemberCompositionControllerImpl, this, deps.injectedBodyParserFactory);
   }
 
+  @authenticateUser()
   public async get(ctx: Context): Promise<void> {
-    await this._userAuthenticator(ctx);
     if (ctx.query.latest !== undefined) {
       await this._getLatest(ctx);
     } else {
@@ -104,11 +115,11 @@ export class MemberCompositionControllerImpl implements MemberCompositionControl
     ctx.body = result;
   }
 
+  @authenticateUser()
+  @parseBody()
+  @validateBody(PostBody)
   public async post(ctx: Context): Promise<void> {
-    await this._userAuthenticator(ctx);
-    const body = await parseBody(ctx);
-    postBodyValidator.assert(body);
-
+    const body = getValidatedBody<PostBody>(ctx);
     await this._memberCompositionService.insertOne({
       ...body,
       time: new Date(body.time)
@@ -116,16 +127,3 @@ export class MemberCompositionControllerImpl implements MemberCompositionControl
     ctx.body = null;
   }
 }
-
-
-export const MemberCompositionController =
-  createToken<Promise<MemberCompositionController>>(__filename, 'MemberCompositionController');
-
-export const registerMemberCompositionController = createAsyncSingletonRegistrant(
-  MemberCompositionController,
-  {
-    memberCompositionService: MemberCompositionService,
-    userAuthenticator: UserAuthenticator
-  },
-  (opts) => new MemberCompositionControllerImpl(opts)
-);

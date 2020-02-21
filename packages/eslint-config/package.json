@@ -4,11 +4,13 @@
   "license": "UNLICENSED",
   "homepage": "https://i.cs.hku.hk/fyp/2019/fyp19027/",
   "repository": "https://github.com/StarvinSon/innolens/tree/develop/packages/eslint-config",
-  "main": "index.js",
   "dependencies": {
-    "@typescript-eslint/eslint-plugin": "^2.18.0",
-    "eslint-config-airbnb-typescript": "^6.3.1",
-    "eslint-plugin-import": "^2.20.0"
+    "@typescript-eslint/eslint-plugin": "^2.20.0",
+    "@typescript-eslint/parser": "*",
+    "eslint": "*",
+    "eslint-config-airbnb-typescript": "^7.0.0",
+    "eslint-plugin-import": "2.20.0",
+    "typescript": "^3.8.2"
   },
   "engines": {
     "node": ">=13.5.0"

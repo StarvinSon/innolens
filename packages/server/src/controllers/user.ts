@@ -1,17 +1,23 @@
+import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
 import { NOT_IMPLEMENTED } from 'http-status-codes';
 
-import { createToken, createAsyncSingletonRegistrant } from '../resolver';
-import { Middleware } from '../middlewares';
 import { UserService } from '../services/user';
 
 import { Context } from './context';
+import { Middleware } from './middleware';
 
 
 export interface UserController {
   getByUsername: Middleware;
 }
 
+export const UserController = createToken<UserController>('UserController');
 
+
+@injectableConstructor({
+  userService: UserService
+})
+@singleton()
 export class UserControllerImpl implements UserController {
   private readonly _userService: UserService;
 
@@ -27,12 +33,3 @@ export class UserControllerImpl implements UserController {
     ctx.status = NOT_IMPLEMENTED;
   }
 }
-
-
-export const UserController = createToken<Promise<UserController>>(__filename, 'UserController');
-
-export const registerUserController = createAsyncSingletonRegistrant(
-  UserController,
-  { userService: UserService },
-  (opts) => new UserControllerImpl(opts)
-);

@@ -2,35 +2,25 @@
 
 ## 1. Prerequisites
 
-1.  [Git](https://www.git-scm.com)
-1.  [Node.js](https://nodejs.org) (version >= 12.12.0)
-2.  [Yarn](https://yarnpkg.com)
-3.  [MongoDB](https://www.mongodb.com)
-3.  [Visual Studio Code](https://code.visualstudio.com) for easier development
+Follow the instructions in `../../README.md`.
 
-## 2. Run the server
+## 2. Install
 
 ```shell
-# Open a terminal
-
-# Clone the repository
-git clone https://github.com/StarvinSon/innolens.git
-
-cd innolens/packages/server
-
-# Install the dependencies
-yarn install
+cd ./packages/server
 
 # Compile the source code
 yarn run build
-
-# Install the process manager
-yarn global add pm2
 
 # Create a server configuration file
 cp server.config.sample.js server.config.js
 
 # Edit the configuration file if needed
+```
+
+## 3. Run
+
+```shell
 # Make sure the MongoDB database is online now
 
 # Start the server
@@ -39,49 +29,11 @@ yarn run start
 # Go to http://localhost:3000/api to see if it is working
 ```
 
-## 3. Explainer
-
-This explainer lists some important technologies being used and the repository structure.
-
-### 3.1. Language
-
-1.  [TypeScript](https://www.typescriptlang.org)
-
-### 3.2. Libraries
-
-1.  [koa](https://koajs.com)
-2.  [PM2](http://pm2.keymetrics.io)
-
-### 3.3. Structure
-
-- `.vscode` settings for VS Code
-  - `launch.json` debug config
-  - `settings.json` settings for the IDE
-- `node_modules` folder for dependencies
-- `out` compiled code
-- `src` source code
-- `.eslintignore` files to exclude from ESLint linting
-- `.eslintrc.js` ESLint config
-- `.gitignore` paths to exclude from git tracking
-- `ecosystem.config.js` PM2 config
-- `nodemon.json` configs for nodemon
-- `package.json` list of dependency of the server
-- `README.md` this file
-- `server.config.js` configs for the server
-- `server.config.sample.js` sample configs from the server
-- `server.log` server log
-- `tsconfig.json` TypeScript config
-- `yarn.lock` list of dependency and their installed versions
-
 ## 4. Developer notes
 
 ## 4.1. Commands
 
 ```shell
-# Open a terminal
-
-cd path/to/innolens/packages/server
-
 yarn run [Command]
 ```
 
@@ -90,7 +42,8 @@ yarn run [Command]
 | lint:es     | Use ESLint to lint the source code |
 | build       | Compile the code into the `out` folder |
 | build:watch | Same as build, but auto recompile when the source code is changed |
-| start       | Start the server in PM2 |
+| start       | Start the server |
+| deploy      | Start the server in PM2 |
 
 ### 4.2. Consistent code style
 
@@ -117,7 +70,7 @@ The necessary configuration file for debugging in VS Code is provided.
 
 For more information, see [Debugging in Visual Studio Code](https://code.visualstudio.com/docs/editor/debugging) and [Debug Node.js Apps using Visual Studio Code](https://code.visualstudio.com/docs/nodejs/nodejs-debugging).
 
-### 4.5. Monitoring
+### 4.5. Deployment Monitoring
 
 To see the process status, logs, etc., use PM2. Learn more on the [PM2 documentation](http://pm2.keymetrics.io/docs/usage/pm2-doc-single-page/).
 

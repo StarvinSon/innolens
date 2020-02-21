@@ -4,8 +4,11 @@ import {
   customElement, LitElement, html, TemplateResult, property, query
 } from 'lit-element';
 
-import { MemberCompositionActions, MemberCompositionState } from '../../state/member-composition';
-import { connectContext } from '../utils/context-connector';
+import { MemberCompositionService, MemberCompositionState } from '../../services/member-composition';
+import { autoBind } from '../../utils/method-binder';
+import { injectableProperty } from '../../utils/property-injector';
+import { observeProperty } from '../../utils/property-observer';
+import { PropertyInjectorElement } from '../utils/element-property-injector';
 
 import { styleCss } from './app.scss';
 
@@ -19,45 +22,60 @@ declare global {
 }
 
 @customElement(TAG_NAME)
-export class App extends connectContext(LitElement) {
+export class App extends PropertyInjectorElement(LitElement) {
   public static readonly styles = styleCss;
 
+  @injectableProperty(MemberCompositionService)
+  @observeProperty('updateListeners')
+  private memberCompositionService: MemberCompositionService | null = null;
+
   @property({ attribute: false })
-  declare protected memberComposition: MemberCompositionState;
+  protected memberComposition: MemberCompositionState = null;
 
   @query('inno-login-dialog')
-  declare protected loginDialogElement: import('../login-dialog').LoginDialog;
-
-  public constructor() {
-    super();
-    this.memberComposition = null;
-  }
+  protected readonly loginDialogElement!: import('../login-dialog').LoginDialog;
 
   protected async _getUpdateComplete(): Promise<void> {
     await super._getUpdateComplete();
     await this.loginDialogElement.updateComplete;
   }
 
-  public onContextStateChanged(): void {
-    this.memberComposition = this.getConnectedContext()
-      .resolve(MemberCompositionActions)
-      .get();
+  public connectedCallback(): void {
+    super.connectedCallback();
+    this.updateListeners();
+  }
+
+  public disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.updateListeners();
+  }
+
+  public updateListeners(): void {
+    if (this.isConnected && this.memberCompositionService !== null) {
+      this.memberCompositionService.addEventListener('changed', this.bindmemberComposition);
+      this.bindmemberComposition();
+    } else {
+      this.memberCompositionService?.removeEventListener('changed', this.bindmemberComposition);
+    }
+  }
+
+  @autoBind()
+  protected bindmemberComposition(): void {
+    this.memberComposition = this.memberCompositionService?.memberComposition ?? null;
   }
 
   protected render(): TemplateResult {
-    const { context, memberComposition } = this;
+    const { memberComposition } = this;
     return html`
       <button @click="${this.onUpdateButtonClick}">Update</button>
       <pre>${JSON.stringify(memberComposition, undefined, 2)}</pre>
-      <inno-login-dialog .context="${context}"></inno-login-dialog>
+      ${this.inject(html`
+        <inno-login-dialog></inno-login-dialog>
+      `)}
     `;
   }
 
   protected onUpdateButtonClick(): void {
-    const context = this.connectedContext;
-    if (context !== null) {
-      context.resolve(MemberCompositionActions)
-        .update();
-    }
+    this.memberCompositionService?.update();
   }
 }

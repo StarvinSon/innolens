@@ -1,10 +1,20 @@
+import {
+  decorate, singleton, name,
+  injectableFactory
+} from '@innolens/resolver';
+
 import { UserController } from '../../controllers/user';
-import { makeRoutesCreatorAsync } from '../utils/routes-creator';
-import { bindAsyncController } from '../utils/bind-controller';
+import { bindMethods } from '../../utils/method-binder';
+import { createRouter, Router } from '../router';
 
 
-export const createUsersRoutes = makeRoutesCreatorAsync(async (resolver, router) => {
-  const userController = await resolver.resolve(bindAsyncController(UserController));
-
-  router.get('/:username', userController.getByUsername);
-});
+export const createUsersRouter = decorate(
+  name('createUsersRouter'),
+  injectableFactory(UserController),
+  singleton(),
+  (ctr: UserController): Router => {
+    const bctr = bindMethods(ctr);
+    return createRouter()
+      .get('/:username', bctr.getByUsername);
+  }
+);

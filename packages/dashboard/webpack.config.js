@@ -1,5 +1,5 @@
 // @ts-check
-const { join, resolve, sep } = require('path');
+const { resolve } = require('path');
 
 const DartSass = require('dart-sass');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
@@ -20,15 +20,6 @@ const outPath = resolve(rootPath, 'out');
  * @returns {import('webpack').Configuration}
  */
 module.exports = (env, { publicPath = '/static' }) => {
-  /**
-   * @param {string} name
-   * @returns {string}
-   */
-  const resolvePackagePath = (name) => {
-    const parts = require.resolve(name).split(sep);
-    const nodeModulesIdx = parts.indexOf('node_modules');
-    return join(...parts.slice(0, nodeModulesIdx + 2));
-  };
 
   /** @type {import('webpack').RuleSetUse} */
   const jsUse = [
@@ -48,7 +39,8 @@ module.exports = (env, { publicPath = '/static' }) => {
     {
       loader: 'ts-loader',
       options: {
-        configFile: resolve(rootPath, 'tsconfig.json')
+        configFile: resolve(rootPath, 'tsconfig.json'),
+        projectReferences: true
       }
     }
   ];
@@ -112,7 +104,7 @@ module.exports = (env, { publicPath = '/static' }) => {
         {
           include: [
             srcPath,
-            resolvePackagePath('tsyringe') // polyfill reflect metadata
+            resolve(rootPath, '../resolver')
           ],
           test: /\.js$/i,
           use: jsUse
@@ -137,6 +129,7 @@ module.exports = (env, { publicPath = '/static' }) => {
 
     // Plugins
     plugins: [
+      // @ts-ignore
       new HtmlWebpackPlugin({
         filename: resolve(outPath, 'index.html'),
         template: resolve(srcPath, 'index.ejs'),

@@ -1,11 +1,21 @@
+import {
+  decorate, singleton, name,
+  injectableFactory
+} from '@innolens/resolver';
+
 import { MemberController } from '../../controllers/member';
-import { makeRoutesCreatorAsync } from '../utils/routes-creator';
-import { bindAsyncController } from '../utils/bind-controller';
+import { bindMethods } from '../../utils/method-binder';
+import { Router, createRouter } from '../router';
 
 
-export const createMembersRoutes = makeRoutesCreatorAsync(async (resolver, router) => {
-  const memberController = await resolver.resolve(bindAsyncController(MemberController));
-
-  router.get('/', memberController.get);
-  router.post('/', memberController.post);
-});
+export const createMembersRouter = decorate(
+  name('createMembersRouter'),
+  injectableFactory(MemberController),
+  singleton(),
+  (ctr: MemberController): Router => {
+    const bctr = bindMethods(ctr);
+    return createRouter()
+      .get('/', bctr.get)
+      .post('/', bctr.post);
+  }
+);

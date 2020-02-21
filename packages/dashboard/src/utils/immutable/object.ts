@@ -24,33 +24,32 @@ export const mergeObject: MergeObject = <T extends object>(
   target: T | undefined | null,
   source: T | null
 ) => {
+  if (target === source) {
+    return target;
+  }
+
+  if (target === undefined || target === null) {
+    return source === null ? null : { ...source };
+  }
+
+  if (source === null) {
+    return null;
+  }
+
+  const keys = new Set([
+    ...Reflect.ownKeys(target),
+    ...Reflect.ownKeys(source)
+  ]) as unknown as ReadonlySet<keyof T>;
+
   let result: T | null | undefined;
-
-  if (target === undefined) {
-    result = source === null ? null : { ...source };
-  } else if (target === null) {
-    if (source !== null) {
-      result = { ...source };
-    }
-  } else if (source === null) {
-    if (target !== null) {
-      result = null;
-    }
-  } else if (target !== source) {
-    const keys = new Set([
-      ...Reflect.ownKeys(target),
-      ...Reflect.ownKeys(source)
-    ]) as unknown as ReadonlySet<keyof T>;
-
-    for (const key of keys) {
-      const targetVal = getOwnPropertyValue(target, key);
-      const sourceVal = getOwnPropertyValue(source, key);
-      if (sourceVal !== undefined && targetVal !== sourceVal) {
-        if (result === undefined) {
-          result = { ...target };
-        }
-        (result as any)[key] = sourceVal;
+  for (const key of keys) {
+    const targetVal = getOwnPropertyValue(target, key);
+    const sourceVal = getOwnPropertyValue(source, key);
+    if (sourceVal !== undefined && targetVal !== sourceVal) {
+      if (result === undefined) {
+        result = { ...target };
       }
+      (result as any)[key] = sourceVal;
     }
   }
 

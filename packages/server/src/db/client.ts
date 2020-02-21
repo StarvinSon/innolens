@@ -1,6 +1,8 @@
+import {
+  createToken, decorate, singleton,
+  name, injectableFactory
+} from '@innolens/resolver';
 import { ObjectId, Collection } from 'mongodb';
-
-import { createToken, createAsyncSingletonRegistrant } from '../resolver';
 
 import { Db } from './db';
 
@@ -18,63 +20,56 @@ export enum ClientType {
   CONFIDENTIAL = 'CONFIDENTIAL'
 }
 
+
 export interface ClientCollection extends Collection<Client> {}
 
+export const ClientCollection = createToken<ClientCollection>('ClientCollection');
 
-export const createClientCollection = async (options: {
-  db: Db;
-}): Promise<ClientCollection> => {
-  const { db } = options;
 
-  return db.defineCollection('clients', {
-    validationLevel: 'strict',
-    validationAction: 'error',
-    validator: {
-      $jsonSchema: {
-        bsonType: 'object',
-        required: [
-          '_id',
-          'publicId',
-          'type',
-          'secretHash',
-          'name'
-        ],
-        additionalProperties: false,
-        properties: {
-          _id: {
-            bsonType: 'objectId'
-          },
-          publicId: {
-            bsonType: 'string'
-          },
-          type: {
-            enum: [ClientType.PUBLIC, ClientType.CONFIDENTIAL]
-          },
-          secretHash: {
-            bsonType: 'string'
-          },
-          name: {
-            bsonType: 'string'
+export const createClientCollection = decorate(
+  name('createClientCollection'),
+  injectableFactory(Db),
+  singleton(),
+  async (db: Db): Promise<ClientCollection> =>
+    db.defineCollection('clients', {
+      validationLevel: 'strict',
+      validationAction: 'error',
+      validator: {
+        $jsonSchema: {
+          bsonType: 'object',
+          required: [
+            '_id',
+            'publicId',
+            'type',
+            'secretHash',
+            'name'
+          ],
+          additionalProperties: false,
+          properties: {
+            _id: {
+              bsonType: 'objectId'
+            },
+            publicId: {
+              bsonType: 'string'
+            },
+            type: {
+              enum: [ClientType.PUBLIC, ClientType.CONFIDENTIAL]
+            },
+            secretHash: {
+              bsonType: 'string'
+            },
+            name: {
+              bsonType: 'string'
+            }
           }
         }
-      }
-    },
+      },
 
-    indexes: [
-      {
-        key: { publicId: 1 },
-        unique: true
-      }
-    ]
-  });
-};
-
-
-export const ClientCollection =
-  createToken<Promise<ClientCollection>>(__filename, 'ClientCollection');
-
-export const registerClientCollection = createAsyncSingletonRegistrant(
-  ClientCollection,
-  { db: Db },
-  createClientCollection
+      indexes: [
+        {
+          key: { publicId: 1 },
+          unique: true
+        }
+      ]
+    })
 );

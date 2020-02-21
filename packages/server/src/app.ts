@@ -1,29 +1,26 @@
+import {
+  createToken, decorate, singleton,
+  name, injectableFactory
+} from '@innolens/resolver';
 import { INTERNAL_SERVER_ERROR, getStatusText } from 'http-status-codes';
-import Koa, { DefaultContext, DefaultState } from 'koa';
+import Koa, { Middleware as KoaMiddleware, DefaultContext, DefaultState } from 'koa';
 import compress from 'koa-compress';
 
-import { createToken, createAsyncSingletonRegistrant } from './resolver';
 import { Logger } from './logger';
-import { Routes } from './routes';
+import { createAppRouter } from './routes';
+import { Router } from './routes/router';
 
 
 export interface App extends Koa<DefaultState, DefaultContext> {}
+
+export const App = createToken<App>('App');
 
 
 const isError = (val: unknown): val is Error & Readonly<Record<string, unknown>> =>
   val instanceof Error;
 
-export const createApp = async (options: {
-  logger: Logger;
-  routes: Routes;
-}): Promise<App> => {
-  const { logger, routes } = options;
-
-  const app: App = new Koa();
-
-  app.use(compress());
-
-  app.use(async (ctx, next) => {
+const errorHandler = (logger: Logger): KoaMiddleware<DefaultState, DefaultContext> =>
+  async (ctx, next) => {
     try {
       await next();
     } catch (err) {
@@ -42,7 +39,7 @@ export const createApp = async (options: {
           ? err.code
           : getStatusText(statusCode);
       const description: string | null =
-        isError(err)
+        statusCode < INTERNAL_SERVER_ERROR && isError(err) && typeof err.message === 'string'
           ? err.message
           : null;
 
@@ -54,24 +51,20 @@ export const createApp = async (options: {
       };
 
       if (statusCode >= INTERNAL_SERVER_ERROR) {
-        logger.error(err);
+        logger.error('%O', err);
       }
     }
-  });
+  };
 
-  routes.forEach((mw) => app.use(mw));
-
-  return app;
-};
-
-
-export const App = createToken<Promise<App>>(__filename, 'App');
-
-export const registerApp = createAsyncSingletonRegistrant(
-  App,
-  {
-    logger: Logger,
-    routes: Routes
-  },
-  createApp
+export const createApp = decorate(
+  name('createApp'),
+  injectableFactory(createAppRouter, Logger),
+  singleton(),
+  (router: Router, logger: Logger): App => {
+    const app: App = new Koa();
+    app.use(compress());
+    app.use(errorHandler(logger));
+    app.use(router.allowedMethods()).use(router.routes());
+    return app;
+  }
 );

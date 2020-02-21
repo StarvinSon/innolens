@@ -1,3 +1,5 @@
+// https://wicg.github.io/construct-stylesheets/
+
 interface CSSStyleSheetConstructor {
   prototype: CSSStyleSheet;
   new (options?: CSSStyleSheetInit): CSSStyleSheet;

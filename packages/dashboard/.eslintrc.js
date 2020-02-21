@@ -1,25 +1,27 @@
 // @ts-check
 const { join } = require('path');
+const { createExtendRule } = require('@innolens/eslint-config/utils');
 
-const { rules: baseTypeScriptRules } = require('eslint-config-airbnb-typescript/lib/shared');
+const extendRule = createExtendRule(require('@innolens/eslint-config/web'));
+
 
 module.exports = {
   extends: [
-    '@innolens'
+    '@innolens/eslint-config/web'
   ],
-  env: {
-    browser: true
+  parserOptions: {
+    project: './tsconfig.json'
   },
   rules: {
-    'import/no-extraneous-dependencies': [
-      baseTypeScriptRules['import/no-extraneous-dependencies'][0],
+    'import/no-extraneous-dependencies': extendRule('import/no-extraneous-dependencies', ([severity, opts]) => [
+      severity,
       {
-        ...baseTypeScriptRules['import/no-extraneous-dependencies'][1],
+        ...opts,
         devDependencies: [
-          ...baseTypeScriptRules['import/no-extraneous-dependencies'][1].devDependencies,
+          ...opts.devDependencies,
           join(__dirname, 'loaders/**')
         ]
       }
-    ],
+    ]),
   }
 };

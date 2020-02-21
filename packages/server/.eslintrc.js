@@ -1,13 +1,8 @@
 // @ts-check
 
 module.exports = {
-  extends: [
-    '@innolens'
-  ],
-  env: {
-    node: true
-  },
-  rules: {
-    'class-methods-use-this': 'off'
+  extends: '@innolens/eslint-config/node',
+  parserOptions: {
+    project: './tsconfig.json'
   }
 };

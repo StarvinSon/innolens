@@ -9,7 +9,9 @@ module.exports = (api) => {
   return {
     plugins: [
       ['@babel/plugin-proposal-optional-chaining'],
-      ['@babel/plugin-proposal-class-properties'],
+      ['@babel/plugin-proposal-class-properties', {
+        loose: true // Not compatible with TypeScript decorator
+      }],
       ['@babel/plugin-transform-runtime', {
         corejs: {
           version: 3,

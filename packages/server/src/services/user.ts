@@ -1,7 +1,7 @@
+import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
 import { compare, hash } from 'bcrypt';
 import { ObjectId } from 'mongodb';
 
-import { createToken, createAsyncSingletonRegistrant } from '../resolver';
 import { User, UserCollection } from '../db/user';
 
 
@@ -13,6 +13,8 @@ export interface UserService {
   findByCredentials(credential: UserCredential): Promise<User | null>;
   insert(userWithPassword: UserWithPassword): Promise<void>;
 }
+
+export const UserService = createToken<UserService>('UserService');
 
 export interface UserWithPassword extends Omit<User, 'passwordHash'> {
   readonly password: string;
@@ -26,6 +28,10 @@ export interface UserCredential {
 
 const SALT_ROUNDS: number = 10;
 
+@injectableConstructor({
+  userCollection: UserCollection
+})
+@singleton()
 export class UserServiceImpl implements UserService {
   private readonly _userCollection: UserCollection;
 
@@ -62,26 +68,3 @@ export class UserServiceImpl implements UserService {
     await this._userCollection.insertOne(user);
   }
 }
-
-
-export const UserService = createToken<Promise<UserService>>(__filename, 'UserService');
-
-export const registerUserService = createAsyncSingletonRegistrant(
-  UserService,
-  { userCollection: UserCollection },
-  async (opts) => {
-    const service = new UserServiceImpl(opts);
-
-    const rootUser = await service.findByUsername('root');
-    if (rootUser === null) {
-      await service.insert({
-        _id: new ObjectId(),
-        username: 'root',
-        password: 'innoroot',
-        name: 'Root Administrator'
-      });
-    }
-
-    return service;
-  }
-);

@@ -52,4 +52,8 @@
 
 .error-message {
   margin: 0rem;
+
+  &--hide {
+    display: none;
+  }
 }

@@ -1,6 +1,8 @@
+import {
+  createToken, decorate, singleton,
+  name, injectableFactory
+} from '@innolens/resolver';
 import { ObjectId, Collection } from 'mongodb';
-
-import { createToken, createAsyncSingletonRegistrant } from '../resolver';
 
 import { Db } from './db';
 
@@ -24,59 +26,63 @@ export interface MemberCompositionGroup {
 
 export interface MemberCompositionCollection extends Collection<MemberComposition> {}
 
+export const MemberCompositionCollection =
+  createToken<MemberCompositionCollection>('MemberCompositionCollection');
 
-export const createMemberCompositionCollection = async (options: {
-  db: Db;
-}): Promise<MemberCompositionCollection> => {
-  const { db } = options;
 
-  return db.defineCollection('memberCompositions', {
-    validationLevel: 'strict',
-    validationAction: 'error',
-    validator: {
-      $jsonSchema: {
-        bsonType: 'object',
-        required: [
-          '_id',
-          'time',
-          'perspectives'
-        ],
-        additionalProperties: false,
-        properties: {
-          _id: {
-            bsonType: 'objectId'
-          },
-          time: {
-            bsonType: 'date'
-          },
-          perspectives: {
-            bsonType: 'array',
-            items: {
-              bsonType: 'object',
-              additionalProperties: false,
-              required: [
-                'type',
-                'groups'
-              ],
-              properties: {
-                type: {
-                  bsonType: 'string'
-                },
-                groups: {
-                  bsonType: 'array',
-                  items: {
-                    bsonType: 'object',
-                    additionalProperties: false,
-                    required: [
-                      'type',
-                      'count'
-                    ],
-                    properties: {
-                      type: {
-                        bsonType: 'string'
-                      },
-                      count: {
-                        bsonType: 'int'
+export const createMemberCompositionCollection = decorate(
+  name('createMemberCompositionCollection'),
+  injectableFactory(Db),
+  singleton(),
+  async (db: Db): Promise<MemberCompositionCollection> =>
+    db.defineCollection('memberCompositions', {
+      validationLevel: 'strict',
+      validationAction: 'error',
+      validator: {
+        $jsonSchema: {
+          bsonType: 'object',
+          required: [
+            '_id',
+            'time',
+            'perspectives'
+          ],
+          additionalProperties: false,
+          properties: {
+            _id: {
+              bsonType: 'objectId'
+            },
+            time: {
+              bsonType: 'date'
+            },
+            perspectives: {
+              bsonType: 'array',
+              items: {
+                bsonType: 'object',
+                additionalProperties: false,
+                required: [
+                  'type',
+                  'groups'
+                ],
+                properties: {
+                  type: {
+                    bsonType: 'string'
+                  },
+                  groups: {
+                    bsonType: 'array',
+                    items: {
+                      bsonType: 'object',
+                      additionalProperties: false,
+                      required: [
+                        'type',
+                        'count'
+                      ],
+                      properties: {
+                        type: {
+                          bsonType: 'string'
+                        },
+                        count: {
+                          bsonType: 'int'
+                        }
                       }
                     }
                   }
@@ -85,20 +91,9 @@ export const createMemberCompositionCollection = async (options: {
             }
           }
         }
-      }
-    },
-    indexes: [
-      { key: { time: 1 } }
-    ]
-  });
-};
-
-
-export const MemberCompositionCollection =
-  createToken<Promise<MemberCompositionCollection>>(__filename, 'MemberCompositionCollection');
-
-export const registerMemberCompositionCollection = createAsyncSingletonRegistrant(
-  MemberCompositionCollection,
-  { db: Db },
-  createMemberCompositionCollection
+      },
+      indexes: [
+        { key: { time: 1 } }
+      ]
+    })
 );

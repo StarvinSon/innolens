@@ -1,6 +1,6 @@
+import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
 import { ObjectId } from 'mongodb';
 
-import { createToken, createAsyncSingletonRegistrant } from '../resolver';
 import { Member, MemberCollection } from '../db/member';
 
 
@@ -13,7 +13,13 @@ export interface MemberService {
   insertMany(members: ReadonlyArray<Omit<Member, '_id'>>): Promise<void>
 }
 
+export const MemberService = createToken<MemberService>('MemberService');
 
+
+@injectableConstructor({
+  memberCollection: MemberCollection
+})
+@singleton()
 export class MemberServiceImpl implements MemberService {
   private readonly _memberCollection: MemberCollection;
 
@@ -47,12 +53,3 @@ export class MemberServiceImpl implements MemberService {
     })));
   }
 }
-
-
-export const MemberService = createToken<Promise<MemberService>>(__filename, 'MemberService');
-
-export const registerMemberService = createAsyncSingletonRegistrant(
-  MemberService,
-  { memberCollection: MemberCollection },
-  (opts) => new MemberServiceImpl(opts)
-);
