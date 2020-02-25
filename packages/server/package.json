@@ -15,7 +15,7 @@
     "@innolens/resolver": "*",
     "@koa/router": "^8.0.8",
     "ajv": "^6.11.0",
-    "bcrypt": "^3.0.8",
+    "bcrypt": "^4.0.0",
     "co-body": "^6.0.0",
     "deep-equal": "^2.0.1",
     "http-status-codes": "^1.4.0",
