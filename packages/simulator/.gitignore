@@ -1,0 +1,4 @@
+/.mypy_cache/
+/simulation_result/
+__pycache__/
+*.csv
