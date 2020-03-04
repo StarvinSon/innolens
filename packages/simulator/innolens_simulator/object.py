@@ -63,7 +63,7 @@ class Object:
   def add_object(self, child_object: Object) -> None:
     if child_object.__parent_object is self:
       return
-    if child_object is self.engine.root_object:
+    if child_object is self.engine.world:
       raise ValueError('Cannot move root object')
 
     if child_object.parent_object is not None:

@@ -11,18 +11,18 @@ from innolens_simulator.components.member import MemberComponent
 
 
 class SpaceComponentMixin(Component):
-  _log: Final[MutableSequence[Tuple[datetime, str, str]]]
+  __log: Final[MutableSequence[Tuple[datetime, str, str]]]
 
   def __init__(self, *args: Any, **kwargs: Any):
     super().__init__(*args, **kwargs)
-    self._log = []
+    self.__log = []
 
   @property
   def log(self) -> Sequence[Tuple[datetime, str, str]]:
-    return self._log
+    return self.__log
 
   def enter(self, member: MemberComponent) -> None:
-    self._log.append((self.engine.clock.current_time, member.uid, 'enter'))
+    self.__log.append((self.engine.clock.current_time, member.uid, 'enter'))
 
   def exit(self, member: MemberComponent) -> None:
-    self._log.append((self.engine.clock.current_time, member.uid, 'exit'))
+    self.__log.append((self.engine.clock.current_time, member.uid, 'exit'))

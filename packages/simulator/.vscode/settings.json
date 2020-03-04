@@ -6,6 +6,6 @@
   "python.linting.mypyEnabled": true,
   "python.linting.mypyArgs": [
     "--config-file", "mypy.ini",
-    "--namespace-packages"
+    "--follow-imports", "silent"
   ]
 }
