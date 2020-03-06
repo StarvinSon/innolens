@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from argparse import ArgumentParser
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterable
 
@@ -24,7 +24,9 @@ def add_inno_wing_space(engine: Engine) -> None:
 def add_machine_room(engine: Engine) -> None:
   obj = engine.create_object()
   obj.add_component(MachineRoomComponent)
-  engine.world.add_object(obj)
+  inno_wing = engine.world.find_component(InnoWingSpaceComponent, recursive=True)
+  assert inno_wing is not None
+  inno_wing.attached_object.add_object(obj)
 
 
 def add_inno_lens_members(engine: Engine) -> None:
@@ -105,8 +107,8 @@ args = parser.parse_args()
 output_path = Path(args.output)
 
 engine = create_engine(
-  start_time=datetime(year=2019, month=9, day=1),
-  end_time=datetime(year=2019, month=12, day=1),
+  start_time=datetime(year=2019, month=9, day=1, tzinfo=timezone(timedelta(hours=8))),
+  end_time=datetime(year=2019, month=12, day=1, tzinfo=timezone(timedelta(hours=8))),
   time_step=timedelta(minutes=30)
 )
 

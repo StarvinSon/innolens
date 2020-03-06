@@ -1,0 +1,2 @@
+mypy == 0.761
+tensorflow ~= 2.1.0

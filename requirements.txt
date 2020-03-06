@@ -1,1 +1,2 @@
+-r ./packages/models/requirements.txt
 -r ./packages/simulator/requirements.txt
