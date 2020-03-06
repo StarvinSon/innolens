@@ -4,13 +4,13 @@ from datetime import datetime, timedelta
 from typing import Optional, Tuple
 
 from innolens_simulator.component import Component
-from innolens_simulator.components.inno_wing import InnoWingSpaceComponent
+from innolens_simulator.components.space import SpaceComponent
 from innolens_simulator.components.member import MemberComponent
 from innolens_simulator.object import Object
 
 
 class InnoLensComponent(Component):
-  __inno_wing_space: InnoWingSpaceComponent
+  __inno_wing_space: SpaceComponent
   __member: MemberComponent
   __staying_period: Optional[Tuple[datetime, datetime]]
 
@@ -19,9 +19,9 @@ class InnoLensComponent(Component):
     self.__staying_period = None
 
   def _on_late_init(self) -> None:
-    inno_wing_space = self.engine.world.find_component(InnoWingSpaceComponent, recursive=True)
+    inno_wing_space = SpaceComponent.find(self.engine.world, 'Inno Wing')
     if inno_wing_space is None:
-      raise ValueError(f'Cannot find object attached with {InnoWingSpaceComponent.__name__}')
+      raise ValueError('Cannot find Inno Wing space')
     self.__inno_wing_space = inno_wing_space
 
     member = self.attached_object.find_component(MemberComponent)

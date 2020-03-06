@@ -4,15 +4,14 @@ from datetime import datetime, timedelta
 from typing import Optional, Tuple
 
 from innolens_simulator.component import Component
-from innolens_simulator.components.machine_room import MachineRoomComponent
+from innolens_simulator.components.space import SpaceComponent
 from innolens_simulator.components.member import MemberComponent
 from innolens_simulator.object import Object
-from innolens_simulator.components.inno_wing import InnoWingSpaceComponent
 
 
 class COMP3356RoboticsComponent(Component):
-  __inno_wing: InnoWingSpaceComponent
-  __machine_room: MachineRoomComponent
+  __inno_wing: SpaceComponent
+  __machine_room: SpaceComponent
   __member: MemberComponent
   __staying_period: Optional[Tuple[datetime, datetime]]
 
@@ -21,14 +20,14 @@ class COMP3356RoboticsComponent(Component):
     self.__staying_period = None
 
   def _on_late_init(self) -> None:
-    inno_wing = self.engine.world.find_component(InnoWingSpaceComponent, recursive=True)
+    inno_wing = SpaceComponent.find(self.engine.world, 'Inno Wing')
     if inno_wing is None:
-      raise ValueError(f'Cannot find object attached with {InnoWingSpaceComponent.__name__}')
+      raise ValueError('Cannot find Inno Wing space')
     self.__inno_wing = inno_wing
 
-    machine_room = self.engine.world.find_component(MachineRoomComponent, recursive=True)
+    machine_room = SpaceComponent.find(self.engine.world, 'Machine room')
     if machine_room is None:
-      raise ValueError(f'Cannot find object attached with {MachineRoomComponent.__name__}')
+      raise ValueError('Cannot find machine room space')
     self.__machine_room = machine_room
 
     member = self.attached_object.find_component(MemberComponent)

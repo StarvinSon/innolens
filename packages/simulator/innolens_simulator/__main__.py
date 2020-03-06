@@ -10,21 +10,22 @@ import pandas as pd
 from innolens_simulator import create_engine
 from innolens_simulator.components.member import MemberComponent
 from innolens_simulator.engine import Engine
-from innolens_simulator.components.inno_wing import InnoWingSpaceComponent
 from innolens_simulator.components.inno_lens import InnoLensComponent
 from innolens_simulator.components.comp3356_robotics import COMP3356RoboticsComponent
-from innolens_simulator.components.machine_room import MachineRoomComponent
+from innolens_simulator.components.space import SpaceComponent
 
 
 def add_inno_wing_space(engine: Engine) -> None:
   obj = engine.create_object()
-  obj.add_component(InnoWingSpaceComponent)
+  space = obj.add_component(SpaceComponent)
+  space.name = 'Inno Wing'
   engine.world.add_object(obj)
 
 def add_machine_room(engine: Engine) -> None:
   obj = engine.create_object()
-  obj.add_component(MachineRoomComponent)
-  inno_wing = engine.world.find_component(InnoWingSpaceComponent, recursive=True)
+  space = obj.add_component(SpaceComponent)
+  space.name = 'Machine room'
+  inno_wing = SpaceComponent.find(engine.world, 'Inno Wing')
   assert inno_wing is not None
   inno_wing.attached_object.add_object(obj)
 
@@ -59,6 +60,7 @@ def add_comp3356_robotics_members(engine: Engine) -> None:
     obj.add_component(COMP3356RoboticsComponent)
     engine.world.add_object(obj)
 
+
 def get_member_df(engine: Engine) -> pd.DataFrame:
   return pd.DataFrame.from_dict(
     {
@@ -73,7 +75,7 @@ def get_member_df(engine: Engine) -> pd.DataFrame:
   )
 
 def get_inno_wing_access_record_df(engine: Engine) -> pd.DataFrame:
-  inno_wing_space = engine.world.find_component(InnoWingSpaceComponent, recursive=True)
+  inno_wing_space = SpaceComponent.find(engine.world, 'Inno Wing')
   assert inno_wing_space is not None
   return pd.DataFrame.from_dict(
     {
@@ -85,7 +87,7 @@ def get_inno_wing_access_record_df(engine: Engine) -> pd.DataFrame:
   )
 
 def get_machine_room_access_record_df(engine: Engine) -> pd.DataFrame:
-  machine_room = engine.world.find_component(MachineRoomComponent, recursive=True)
+  machine_room = SpaceComponent.find(engine.world, 'Machine room')
   assert machine_room is not None
   return pd.DataFrame.from_dict(
     {
