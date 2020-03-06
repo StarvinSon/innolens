@@ -20,13 +20,14 @@ export const MemberController =
 
 
 type PostMemberBody = ReadonlyArray<{
-  readonly memberId: string;
+  readonly uid: string;
   readonly name: string;
   readonly department: string;
   readonly typeOfStudy: string;
   readonly yearOfStudy: string;
   readonly studyProgramme: string;
   readonly affiliatedStudentInterestGroup: string;
+  readonly registrationTime: string;
 }>;
 
 const PostMemberBody: object = {
@@ -35,16 +36,17 @@ const PostMemberBody: object = {
     type: 'object',
     additionalProperties: false,
     required: [
-      'memberId',
+      'uid',
       'name',
       'department',
       'typeOfStudy',
       'yearOfStudy',
       'studyProgramme',
-      'affiliatedStudentInterestGroup'
+      'affiliatedStudentInterestGroup',
+      'registrationTime'
     ],
     properties: {
-      memberId: {
+      uid: {
         type: 'string'
       },
       name: {
@@ -63,6 +65,9 @@ const PostMemberBody: object = {
         type: 'string'
       },
       affiliatedStudentInterestGroup: {
+        type: 'string'
+      },
+      registrationTime: {
         type: 'string'
       }
     }
@@ -94,13 +99,14 @@ export class MemberControllerImpl implements MemberController {
   public async get(ctx: Context): Promise<void> {
     const members = await fromAsync(this._memberService.findAll());
     ctx.body = members.map((member) => ({
-      memberId: member.memberId,
+      uid: member.uid,
       name: member.name,
       department: member.department,
       typeOfStudy: member.typeOfStudy,
       yearOfStudy: member.yearOfStudy,
       studyProgramme: member.studyProgramme,
-      affiliatedStudentInterestGroup: member.affiliatedStudentInterestGroup
+      affiliatedStudentInterestGroup: member.affiliatedStudentInterestGroup,
+      registrationTime: member.registrationTime.toISOString()
     }));
   }
 
@@ -109,7 +115,10 @@ export class MemberControllerImpl implements MemberController {
   @validateBody(PostMemberBody)
   public async post(ctx: Context): Promise<void> {
     const members = getValidatedBody<PostMemberBody>(ctx);
-    await this._memberService.insertMany(members);
+    await this._memberService.insertMany(members.map((member) => ({
+      ...member,
+      registrationTime: new Date(member.registrationTime)
+    })));
     ctx.body = null;
   }
 }

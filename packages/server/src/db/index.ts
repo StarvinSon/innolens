@@ -10,6 +10,10 @@ import { createMachineUsageCollection, MachineUsageCollection } from './machine-
 import { createMemberCollection, MemberCollection } from './member';
 import { createMemberCompositionCollection, MemberCompositionCollection } from './member-composition';
 import { createOAuth2Collection, OAuth2Collection } from './oauth2';
+import { createReusableInventoryCollection, ReusableInventoryCollection } from './reusable-inventory';
+import { createReusableInventoryUsageCollection, ReusableInventoryUsageCollection } from './reusable-inventory-usage';
+import { createSpaceCollection, SpaceCollection } from './space';
+import { createSpaceAccessCollection, SpaceAccessCollection } from './space-access';
 import { createUserCollection, UserCollection } from './user';
 
 
@@ -24,5 +28,9 @@ export const dbCreators: ReadonlyArray<readonly [Token<unknown>, FactoryOrConstr
   [MemberCollection, createMemberCollection],
   [MemberCompositionCollection, createMemberCompositionCollection],
   [OAuth2Collection, createOAuth2Collection],
+  [ReusableInventoryCollection, createReusableInventoryCollection],
+  [ReusableInventoryUsageCollection, createReusableInventoryUsageCollection],
+  [SpaceCollection, createSpaceCollection],
+  [SpaceAccessCollection, createSpaceAccessCollection],
   [UserCollection, createUserCollection]
 ];

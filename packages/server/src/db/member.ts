@@ -9,13 +9,14 @@ import { Db } from './db';
 
 export interface Member {
   readonly _id: ObjectId;
-  readonly memberId: string;
+  readonly uid: string;
   readonly name: string;
   readonly department: string;
   readonly typeOfStudy: string;
   readonly yearOfStudy: string;
   readonly studyProgramme: string;
   readonly affiliatedStudentInterestGroup: string;
+  readonly registrationTime: Date;
 }
 
 
@@ -39,19 +40,20 @@ export const createMemberCollection = decorate(
           additionalProperties: false,
           required: [
             '_id',
-            'memberId',
+            'uid',
             'name',
             'department',
             'typeOfStudy',
             'yearOfStudy',
             'studyProgramme',
-            'affiliatedStudentInterestGroup'
+            'affiliatedStudentInterestGroup',
+            'registrationTime'
           ],
           properties: {
             _id: {
               bsonType: 'objectId'
             },
-            memberId: {
+            uid: {
               bsonType: 'string'
             },
             name: {
@@ -71,13 +73,16 @@ export const createMemberCollection = decorate(
             },
             affiliatedStudentInterestGroup: {
               bsonType: 'string'
+            },
+            registrationTime: {
+              bsonType: 'date'
             }
           }
         }
       },
       indexes: [
         {
-          key: { memberId: 1 },
+          key: { uid: 1 },
           unique: true
         }
       ]

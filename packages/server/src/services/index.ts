@@ -8,6 +8,10 @@ import { MachineUsageService, MachineUsageServiceImpl } from './machine-usage';
 import { MemberService, MemberServiceImpl } from './member';
 import { MemberCompositionService, MemberCompositionServiceImpl } from './member-composition';
 import { OAuth2Service, OAuth2ServiceImpl } from './oauth2';
+import { ReusableInventoryService, ReusableInventoryServiceImpl } from './reusable-inventory';
+import { ReusableInventoryUsageService, ReusableInventoryUsageServiceImpl } from './reusable-inventory-usage';
+import { SpaceService, SpaceServiceImpl } from './space';
+import { SpaceAccessService, SpaceAccessServiceImpl } from './space-access';
 import { UserService, UserServiceImpl } from './user';
 
 
@@ -21,5 +25,9 @@ export const serviceCreators: ReadonlyArray<readonly [Token<unknown>, FactoryOrC
   [MemberService, MemberServiceImpl],
   [MemberCompositionService, MemberCompositionServiceImpl],
   [OAuth2Service, OAuth2ServiceImpl],
+  [ReusableInventoryService, ReusableInventoryServiceImpl],
+  [ReusableInventoryUsageService, ReusableInventoryUsageServiceImpl],
+  [SpaceService, SpaceServiceImpl],
+  [SpaceAccessService, SpaceAccessServiceImpl],
   [UserService, UserServiceImpl]
 ];
