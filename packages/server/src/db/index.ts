@@ -6,6 +6,10 @@ import { createDbClient, DbClient } from './db-client';
 import { createEquipmentBookingCollection, EquipmentBookingCollection } from './equipment-booking';
 import { createEquipmentLoginRecordCollection, EquipmentLoginRecordCollection } from './equipment-login-record';
 import { createEquipmentLogoutRecordCollection, EquipmentLogoutRecordCollection } from './equipment-logout-record';
+import { createExpendableInventoryStockRecordCollection, ExpendableInventoryStockRecordCollection } from './expendable-inventory-stock-record';
+import { createInventoryCollection, InventoryCollection } from './inventory';
+import { createMachineCollection, MachineCollection } from './machine';
+import { createMachineUsageCollection, MachineUsageCollection } from './machine-usage';
 import { createMemberCollection, MemberCollection } from './member';
 import { createMemberCompositionCollection, MemberCompositionCollection } from './member-composition';
 import { createOAuth2Collection, OAuth2Collection } from './oauth2';
@@ -19,6 +23,10 @@ export const dbCreators: ReadonlyArray<readonly [Token<unknown>, FactoryOrConstr
   [EquipmentBookingCollection, createEquipmentBookingCollection],
   [EquipmentLoginRecordCollection, createEquipmentLoginRecordCollection],
   [EquipmentLogoutRecordCollection, createEquipmentLogoutRecordCollection],
+  [ExpendableInventoryStockRecordCollection, createExpendableInventoryStockRecordCollection],
+  [InventoryCollection, createInventoryCollection],
+  [MachineCollection, createMachineCollection],
+  [MachineUsageCollection, createMachineUsageCollection],
   [MemberCollection, createMemberCollection],
   [MemberCompositionCollection, createMemberCompositionCollection],
   [OAuth2Collection, createOAuth2Collection],
