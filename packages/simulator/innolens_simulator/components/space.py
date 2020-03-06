@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Tuple, Sequence, MutableSequence, Any, Optional
+from typing import Tuple, Sequence, MutableSequence, Any, Optional, Union
 from typing_extensions import Final
 
 from innolens_simulator.object import Object
@@ -13,7 +13,10 @@ from innolens_simulator.components.member import MemberComponent
 class SpaceComponent(Component):
 
   @staticmethod
-  def find(obj: Object, name: str) -> Optional[SpaceComponent]:
+  def find(obj: Union[Object, Component], name: str) -> Optional[SpaceComponent]:
+    if isinstance(obj, Component):
+      obj = obj.attached_object
+
     for comp in obj.find_components(SpaceComponent, recursive=True):
       if comp.name == name:
         return comp
