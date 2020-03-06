@@ -91,30 +91,45 @@ def get_member_df(engine: Engine) -> pd.DataFrame:
     for member in engine.world.find_components(MemberComponent, recursive=True)
   )
 
-def get_inno_wing_access_record_df(engine: Engine) -> pd.DataFrame:
-  inno_wing_space = SpaceComponent.find(engine.world, 'Inno Wing')
-  assert inno_wing_space is not None
+def get_space_access_record_df(engine: Engine, space_name: str) -> pd.DataFrame:
+  space = SpaceComponent.find(engine.world, space_name)
+  assert space is not None
   return pd.DataFrame.from_dict(
     {
       'Time': time.isoformat(),
       'UID': uid,
       'Action': action
     }
-    for time, uid, action in inno_wing_space.log
+    for time, uid, action in space.log
   )
 
-def get_machine_room_access_record_df(engine: Engine) -> pd.DataFrame:
-  machine_room = SpaceComponent.find(engine.world, 'Machine room')
-  assert machine_room is not None
+def get_machine_access_record_df(engine: Engine, space_name: str, machine_name: str) -> pd.DataFrame:
+  space = SpaceComponent.find(engine.world, space_name)
+  assert space is not None
+  machine = MachineComponent.find(space.attached_object, machine_name)
+  assert machine is not None
   return pd.DataFrame.from_dict(
     {
       'Time': time.isoformat(),
       'UID': uid,
       'Action': action
     }
-    for time, uid, action in machine_room.log
+    for time, uid, action in machine.log
   )
 
+def get_inventory_access_record_df(engine: Engine, space_name: str, inventory_name: str) -> pd.DataFrame:
+  space = SpaceComponent.find(engine.world, space_name)
+  assert space is not None
+  inventory = InventoryComponent.find(space.attached_object, inventory_name)
+  assert inventory is not None
+  return pd.DataFrame.from_dict(
+    {
+      'Time': time.isoformat(),
+      'UID': uid,
+      'Action': action
+    }
+    for time, uid, action in inventory.log
+  )
 
 parser = ArgumentParser(description='Simulate Inno Wing member')
 parser.add_argument(
@@ -132,9 +147,16 @@ engine = create_engine(
 )
 
 add_inno_wing_space(engine)
-add_space(engine, 'Machine room')
-add_machine(engine, 'Machine room', 'CNC milling machine')
+add_inventory(engine, 'Inno Wing', 'VR gadget')
 add_inventory(engine, 'Inno Wing', 'Copper wire')
+
+add_space(engine, 'Machine room')
+add_machine(engine, 'Machine room', 'Waterjet cutting machine')
+add_machine(engine, 'Machine room', 'CNC milling machine')
+
+add_space(engine, 'Laser cutting room')
+add_machine(engine, 'Laser cutting room', 'Acrylic laser cut machine')
+add_machine(engine, 'Laser cutting room', 'Metal laser cut machine')
 
 add_inno_lens_members(engine)
 add_comp3356_robotics_members(engine)
@@ -143,8 +165,18 @@ engine.run()
 
 result = {
   'members': get_member_df(engine),
-  'inno_wing_access_records': get_inno_wing_access_record_df(engine),
-  'machine_room_access_records': get_machine_room_access_record_df(engine)
+
+  'inno_wing_access_records': get_space_access_record_df(engine, 'Inno Wing'),
+  'vr_gadget_access_records': get_inventory_access_record_df(engine, 'Inno Wing', 'VR gadget'),
+  'copper_wire_access_records': get_inventory_access_record_df(engine, 'Inno Wing', 'Copper wire'),
+
+  'machine_room_access_records': get_space_access_record_df(engine, 'Machine room'),
+  'waterjet_cutting_machine_access_records': get_machine_access_record_df(engine, 'Machine room', 'Waterjet cutting machine'),
+  'cnc_milling_machine_access_records': get_machine_access_record_df(engine, 'Machine room', 'CNC milling machine'),
+
+  'laser_cutting_room_access_records': get_space_access_record_df(engine, 'Laser cutting room'),
+  'acrylic_laser_cut_machine_access_records': get_machine_access_record_df(engine, 'Laser cutting room', 'Acrylic laser cut machine'),
+  'metal_laser_cut_machine_access_records': get_machine_access_record_df(engine, 'Laser cutting room', 'Metal laser cut machine')
 }
 
 output_path.mkdir(parents=True, exist_ok=True)

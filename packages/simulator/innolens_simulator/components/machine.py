@@ -34,7 +34,7 @@ class MachineComponent(Component):
     assert hasattr(self, 'name')
 
   def acquire(self, member: MemberComponent) -> None:
-    self.__log.append((self.engine.clock.current_time, member.uid, 'enter'))
+    self.__log.append((self.engine.clock.current_time, member.uid, 'acquire'))
 
   def release(self, member: MemberComponent) -> None:
-    self.__log.append((self.engine.clock.current_time, member.uid, 'exit'))
+    self.__log.append((self.engine.clock.current_time, member.uid, 'release'))

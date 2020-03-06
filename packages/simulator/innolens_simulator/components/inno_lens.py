@@ -5,13 +5,16 @@ from typing import Optional, Tuple
 
 from innolens_simulator.component import Component
 from innolens_simulator.components.space import SpaceComponent
+from innolens_simulator.components.machine import MachineComponent
+from innolens_simulator.components.inventory import InventoryComponent
 from innolens_simulator.components.member import MemberComponent
 from innolens_simulator.object import Object
 
 
 class InnoLensComponent(Component):
-  __inno_wing_space: SpaceComponent
+  __inno_wing: SpaceComponent
   __member: MemberComponent
+  __vr_gadget: InventoryComponent
   __staying_period: Optional[Tuple[datetime, datetime]]
 
   def __init__(self, attached_object: Object):
@@ -19,10 +22,15 @@ class InnoLensComponent(Component):
     self.__staying_period = None
 
   def _on_late_init(self) -> None:
-    inno_wing_space = SpaceComponent.find(self.engine.world, 'Inno Wing')
-    if inno_wing_space is None:
+    inno_wing = SpaceComponent.find(self.engine.world, 'Inno Wing')
+    if inno_wing is None:
       raise ValueError('Cannot find Inno Wing space')
-    self.__inno_wing_space = inno_wing_space
+    self.__inno_wing = inno_wing
+
+    vr_gadget = InventoryComponent.find(inno_wing.attached_object, 'VR gadget')
+    if vr_gadget is None:
+      raise ValueError('Cannot find vr gadget inventory')
+    self.__vr_gadget = vr_gadget
 
     member = self.attached_object.find_component(MemberComponent)
     if member is None:
@@ -36,7 +44,8 @@ class InnoLensComponent(Component):
       end_time = curr_time + timedelta(hours=span)
       if self.__staying_period is None:
         self.__staying_period = (curr_time, end_time)
-        self.__inno_wing_space.enter(self.__member)
+        self.__inno_wing.enter(self.__member)
+        self.__vr_gadget.acquire(self.__member)
       else:
         self.__staying_period = (
           self.__staying_period[0],
@@ -45,4 +54,5 @@ class InnoLensComponent(Component):
 
     if self.__staying_period is not None and curr_time >= self.__staying_period[1]:
       self.__staying_period = None
-      self.__inno_wing_space.exit(self.__member)
+      self.__inno_wing.exit(self.__member)
+      self.__vr_gadget.release(self.__member)
