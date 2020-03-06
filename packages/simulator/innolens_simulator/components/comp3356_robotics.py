@@ -9,6 +9,7 @@ from innolens_simulator.components.machine import MachineComponent
 from innolens_simulator.components.inventory import InventoryComponent
 from innolens_simulator.components.member import MemberComponent
 from innolens_simulator.object import Object
+from innolens_simulator.utils.random import randint_nd
 
 
 class COMP3356RoboticsComponent(Component):
@@ -80,9 +81,9 @@ class COMP3356RoboticsComponent(Component):
       or curr_time.weekday() == 4 and curr_time.hour == 13 and curr_time.minute == 30
     ):
       if curr_time.weekday() == 1:
-        span = 60
+        span = randint_nd(lower=45, upper=75, mean=60, stddev=5)
       else:
-        span = 120
+        span = randint_nd(lower=105, upper=135, mean=120, stddev=5)
 
       end_time = curr_time + timedelta(minutes=span)
       if self.__staying_period is None:

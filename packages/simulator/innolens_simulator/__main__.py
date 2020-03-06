@@ -143,7 +143,7 @@ output_path = Path(args.output)
 engine = create_engine(
   start_time=datetime(year=2019, month=9, day=1, tzinfo=timezone(timedelta(hours=8))),
   end_time=datetime(year=2019, month=12, day=1, tzinfo=timezone(timedelta(hours=8))),
-  time_step=timedelta(minutes=30)
+  time_step=timedelta(minutes=10)
 )
 
 add_inno_wing_space(engine)
