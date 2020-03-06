@@ -44,6 +44,16 @@ def preprocess_access_records(df: pd.DataFrame, start_time: pd.Timestamp, end_ti
 
   spans = list(iterate_spans())
 
+  def time_components(prefix: str, time: pd.Timestamp) -> Mapping[str, Any]:
+    return {
+      prefix: time,
+      f'{prefix} (Year)': time.year,
+      f'{prefix} (Month)': time.month,
+      f'{prefix} (Day)': time.day,
+      f'{prefix} (Hour)': time.hour,
+      f'{prefix} (Minute)': time.minute
+    }
+
   def iterate_rows() -> Iterator[Mapping[str, Any]]:
     period_start_time = start_time
     period_end_time = period_start_time + time_step
@@ -80,8 +90,8 @@ def preprocess_access_records(df: pd.DataFrame, start_time: pd.Timestamp, end_ti
         for span in curr_spans
       ))
       yield {
-        'Start Time': period_start_time,
-        'End Time': period_end_time,
+        **time_components('Start Time', period_start_time),
+        **time_components('End Time', period_end_time),
         'Enter Count': enter_count,
         'Unique Enter Count': unique_enter_count,
         'Exit Count': exit_count,
