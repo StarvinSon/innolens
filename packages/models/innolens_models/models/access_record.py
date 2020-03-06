@@ -50,6 +50,7 @@ def preprocess_access_records(df: pd.DataFrame, start_time: pd.Timestamp, end_ti
       f'{prefix} (Year)': time.year,
       f'{prefix} (Month)': time.month,
       f'{prefix} (Day)': time.day,
+      f'{prefix} (Weekday)': time.weekday(),
       f'{prefix} (Hour)': time.hour,
       f'{prefix} (Minute)': time.minute
     }
@@ -109,6 +110,10 @@ def preprocess_access_records(df: pd.DataFrame, start_time: pd.Timestamp, end_ti
       period_end_time = period_start_time + time_step
 
   return pd.DataFrame.from_records(iterate_rows())
+
+
+def create_models():
+  pass
 
 
 if __name__ == '__main__':
