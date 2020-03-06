@@ -1,5 +1,9 @@
 import { Token, FactoryOrConstructor } from '@innolens/resolver';
 
+import { ExpendableInventoryStockRecordController, ExpendableInventoryStockRecordControllerImpl } from './expendable-inventory-stock-record';
+import { InventoryController, InventoryControllerImpl } from './inventory';
+import { MachineController, MachineControllerImpl } from './machine';
+import { MachineUsageController, MachineUsageControllerImpl } from './machine-usage';
 import { MemberController, MemberControllerImpl } from './member';
 import { MemberCompositionController, MemberCompositionControllerImpl } from './member-composition';
 import { OAuth2Controller, OAuth2ControllerImpl } from './oauth2';
@@ -18,6 +22,10 @@ export const controllerCreators: ReadonlyArray<readonly [Token<unknown>, Factory
   [ClientAuthenticator, ClientAuthenticatorImpl],
   [UserAuthenticator, UserAuthenticatorImpl],
 
+  [ExpendableInventoryStockRecordController, ExpendableInventoryStockRecordControllerImpl],
+  [InventoryController, InventoryControllerImpl],
+  [MachineController, MachineControllerImpl],
+  [MachineUsageController, MachineUsageControllerImpl],
   [MemberController, MemberControllerImpl],
   [MemberCompositionController, MemberCompositionControllerImpl],
   [OAuth2Controller, OAuth2ControllerImpl],
