@@ -13,6 +13,8 @@ from innolens_simulator.engine import Engine
 from innolens_simulator.components.inno_lens import InnoLensComponent
 from innolens_simulator.components.comp3356_robotics import COMP3356RoboticsComponent
 from innolens_simulator.components.space import SpaceComponent
+from innolens_simulator.components.machine import MachineComponent
+from innolens_simulator.components.inventory import InventoryComponent
 
 
 def add_inno_wing_space(engine: Engine) -> None:
@@ -21,14 +23,29 @@ def add_inno_wing_space(engine: Engine) -> None:
   space.name = 'Inno Wing'
   engine.world.add_object(obj)
 
-def add_machine_room(engine: Engine) -> None:
+def add_space(engine: Engine, space_name: str) -> None:
   obj = engine.create_object()
   space = obj.add_component(SpaceComponent)
-  space.name = 'Machine room'
+  space.name = space_name
   inno_wing = SpaceComponent.find(engine.world, 'Inno Wing')
   assert inno_wing is not None
   inno_wing.attached_object.add_object(obj)
 
+def add_machine(engine: Engine, space_name: str, machine_name: str) -> None:
+  obj = engine.create_object()
+  machine = obj.add_component(MachineComponent)
+  machine.name = machine_name
+  space = SpaceComponent.find(engine.world, space_name)
+  assert space is not None
+  space.attached_object.add_object(obj)
+
+def add_inventory(engine: Engine, space_name: str, inventory_name: str) -> None:
+  obj = engine.create_object()
+  inventory = obj.add_component(InventoryComponent)
+  inventory.name = inventory_name
+  space = SpaceComponent.find(engine.world, space_name)
+  assert space is not None
+  space.attached_object.add_object(obj)
 
 def add_inno_lens_members(engine: Engine) -> None:
   for _ in range(3):
@@ -115,7 +132,9 @@ engine = create_engine(
 )
 
 add_inno_wing_space(engine)
-add_machine_room(engine)
+add_space(engine, 'Machine room')
+add_machine(engine, 'Machine room', 'CNC milling machine')
+add_inventory(engine, 'Inno Wing', 'Copper wire')
 
 add_inno_lens_members(engine)
 add_comp3356_robotics_members(engine)
