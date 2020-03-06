@@ -39,7 +39,7 @@ class InnoLensComponent(Component):
 
   def _on_next_tick(self) -> None:
     curr_time = self.engine.clock.current_time
-    if curr_time.weekday() == 3 and curr_time.hour == 13 and curr_time.minute == 0:
+    if curr_time.weekday() == 2 and curr_time.hour == 13 and curr_time.minute == 0:
       span = 2
       end_time = curr_time + timedelta(hours=span)
       if self.__staying_period is None:

@@ -63,7 +63,7 @@ class COMP3356RoboticsComponent(Component):
     if acrylic_laser_cut_machine is None:
       raise ValueError('Cannot find acrylic laser cut machine')
     self.__acrylic_laser_cut_machine = acrylic_laser_cut_machine
-  
+
     metal_laser_cut_machine = MachineComponent.find(laser_cutting_room.attached_object, 'Metal laser cut machine')
     if metal_laser_cut_machine is None:
       raise ValueError('Cannot find metal laser cut machine')
@@ -77,10 +77,10 @@ class COMP3356RoboticsComponent(Component):
   def _on_next_tick(self) -> None:
     curr_time = self.engine.clock.current_time
     if (
-      curr_time.weekday() == 1 and curr_time.hour == 14 and curr_time.minute == 30
-      or curr_time.weekday() == 4 and curr_time.hour == 13 and curr_time.minute == 30
+      curr_time.weekday() == 0 and curr_time.hour == 14 and curr_time.minute == 30
+      or curr_time.weekday() == 3 and curr_time.hour == 13 and curr_time.minute == 30
     ):
-      if curr_time.weekday() == 1:
+      if curr_time.weekday() == 0:
         span = randint_nd(lower=45, upper=75, mean=60, stddev=5)
       else:
         span = randint_nd(lower=105, upper=135, mean=120, stddev=5)
