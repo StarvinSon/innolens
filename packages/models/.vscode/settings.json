@@ -6,6 +6,7 @@
   "python.linting.mypyEnabled": true,
   "python.linting.mypyArgs": [
     "--config-file", "mypy.ini",
-    "--follow-imports", "silent"
+    "--follow-imports", "silent",
+    "--no-pretty"
   ]
 }
