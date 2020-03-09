@@ -11,15 +11,14 @@ export interface Space {
   readonly _id: ObjectId;
   readonly spaceId: string;
   readonly spaceName: string;
-  readonly floor: number;
+  readonly floor: string;
   readonly indoor: boolean;
 }
 
 
 export interface SpaceCollection extends Collection<Space> {}
 
-export const SpaceCollection =
-  createToken<SpaceCollection>('SpaceCollection');
+export const SpaceCollection = createToken<SpaceCollection>('SpaceCollection');
 
 
 export const createSpaceCollection = decorate(
@@ -52,7 +51,7 @@ export const createSpaceCollection = decorate(
               bsonType: 'string'
             },
             floor: {
-              bsonType: 'int'
+              bsonType: 'string'
             },
             indoor: {
               bsonType: 'bool'

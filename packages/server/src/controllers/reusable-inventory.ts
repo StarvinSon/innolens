@@ -21,7 +21,7 @@ export const ReusableInventoryController =
 
 type PostReusableInventoryBody = ReadonlyArray<{
   readonly inventoryId: string;
-  readonly reusableInventoryId: string;
+  readonly reusableInventoryItemId: string;
   readonly status: string;
 }>;
 
@@ -32,14 +32,14 @@ const PostReusableInventoryBody: object = {
     additionalProperties: false,
     required: [
       'inventoryId',
-      'reusableInventoryId',
+      'reusableInventoryItemId',
       'status'
     ],
     properties: {
       inventoryId: {
         type: 'string'
       },
-      reusableInventoryId: {
+      reusableInventoryItemId: {
         type: 'string'
       },
       status: {
@@ -72,11 +72,11 @@ export class ReusableInventoryControllerImpl implements ReusableInventoryControl
 
   @authenticateUser()
   public async get(ctx: Context): Promise<void> {
-    const reusableInventories = await fromAsync(this._reusableInventoryService.findAll());
-    ctx.body = reusableInventories.map((reusableInventory) => ({
-      inventoryId: reusableInventory.inventoryId,
-      reusableInventoryId: reusableInventory.reusableInventoryId,
-      status: reusableInventory.status
+    const inventories = await fromAsync(this._reusableInventoryService.findAll());
+    ctx.body = inventories.map((inventory) => ({
+      inventoryId: inventory.inventoryId,
+      reusableInventoryItemId: inventory.reusableInventoryItemId,
+      status: inventory.status
     }));
   }
 
@@ -84,8 +84,8 @@ export class ReusableInventoryControllerImpl implements ReusableInventoryControl
   @parseBody()
   @validateBody(PostReusableInventoryBody)
   public async post(ctx: Context): Promise<void> {
-    const reusableInventories = getValidatedBody<PostReusableInventoryBody>(ctx);
-    await this._reusableInventoryService.insertMany(reusableInventories);
+    const inventories = getValidatedBody<PostReusableInventoryBody>(ctx);
+    await this._reusableInventoryService.insertMany(inventories);
     ctx.body = null;
   }
 }

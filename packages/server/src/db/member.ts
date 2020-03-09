@@ -9,7 +9,7 @@ import { Db } from './db';
 
 export interface Member {
   readonly _id: ObjectId;
-  readonly uid: string;
+  readonly memberId: string;
   readonly name: string;
   readonly department: string;
   readonly typeOfStudy: string;
@@ -40,7 +40,7 @@ export const createMemberCollection = decorate(
           additionalProperties: false,
           required: [
             '_id',
-            'uid',
+            'memberId',
             'name',
             'department',
             'typeOfStudy',
@@ -53,7 +53,7 @@ export const createMemberCollection = decorate(
             _id: {
               bsonType: 'objectId'
             },
-            uid: {
+            memberId: {
               bsonType: 'string'
             },
             name: {
@@ -82,7 +82,7 @@ export const createMemberCollection = decorate(
       },
       indexes: [
         {
-          key: { uid: 1 },
+          key: { memberId: 1 },
           unique: true
         }
       ]

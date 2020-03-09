@@ -8,9 +8,9 @@ import { MemberController, MemberControllerImpl } from './member';
 import { MemberCompositionController, MemberCompositionControllerImpl } from './member-composition';
 import { OAuth2Controller, OAuth2ControllerImpl } from './oauth2';
 import { ReusableInventoryController, ReusableInventoryControllerImpl } from './reusable-inventory';
-import { ReusableInventoryUsageController, ReusableInventoryUsageControllerImpl } from './reusable-inventory-usage';
+import { ReusableInventoryUsageRecordController, ReusableInventoryUsageRecordControllerImpl } from './reusable-inventory-usage-record';
 import { SpaceController, SpaceControllerImpl } from './space';
-import { SpaceAccessController, SpaceAccessControllerImpl } from './space-access';
+import { SpaceAccessRecordController, SpaceAccessRecordControllerImpl } from './space-access-record';
 import { StaticController, StaticControllerImpl } from './static';
 import { UserController, UserControllerImpl } from './user';
 import { InjectedBodyParserFactory, createInjectedBodyParserFactory } from './utils/body-parser';
@@ -35,8 +35,8 @@ export const controllerCreators: ReadonlyArray<readonly [Token<unknown>, Factory
   [OAuth2Controller, OAuth2ControllerImpl],
   [StaticController, StaticControllerImpl],
   [ReusableInventoryController, ReusableInventoryControllerImpl],
-  [ReusableInventoryUsageController, ReusableInventoryUsageControllerImpl],
+  [ReusableInventoryUsageRecordController, ReusableInventoryUsageRecordControllerImpl],
   [SpaceController, SpaceControllerImpl],
-  [SpaceAccessController, SpaceAccessControllerImpl],
+  [SpaceAccessRecordController, SpaceAccessRecordControllerImpl],
   [UserController, UserControllerImpl]
 ];

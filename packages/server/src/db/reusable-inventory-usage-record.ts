@@ -7,27 +7,28 @@ import { ObjectId, Collection } from 'mongodb';
 import { Db } from './db';
 
 
-export interface SpaceAccess {
+export interface ReusableInventoryUsageRecord {
   _id: ObjectId;
   memberId: string;
-  spaceId: string;
-  startTime: Date;
-  endTime: Date;
+  reusableInventoryItemId: string;
+  time: Date;
+  action: string;
 }
 
 
-export interface SpaceAccessCollection extends Collection<SpaceAccess> {}
+export interface ReusableInventoryUsageRecordCollection
+  extends Collection<ReusableInventoryUsageRecord> {}
 
-export const SpaceAccessCollection =
-  createToken<SpaceAccessCollection>('SpaceAccessCollection');
+export const ReusableInventoryUsageRecordCollection =
+  createToken<ReusableInventoryUsageRecordCollection>('ReusableInventoryUsageRecordCollection');
 
 
-export const createSpaceAccessCollection = decorate(
-  name('createSpaceAccessCollection'),
+export const createReusableInventoryUsageRecordCollection = decorate(
+  name('createReusableInventoryUsageRecordCollection'),
   injectableFactory(Db),
   singleton(),
-  async (db: Db): Promise<SpaceAccessCollection> =>
-    db.defineCollection('spaceAccesses', {
+  async (db: Db): Promise<ReusableInventoryUsageRecordCollection> =>
+    db.defineCollection('reusableInventoryUsageRecords', {
       validationLevel: 'strict',
       validationAction: 'error',
       validator: {
@@ -37,9 +38,9 @@ export const createSpaceAccessCollection = decorate(
           required: [
             '_id',
             'memberId',
-            'spaceId',
-            'startTime',
-            'endTime'
+            'reusableInventoryItemId',
+            'time',
+            'action'
           ],
           properties: {
             _id: {
@@ -48,21 +49,21 @@ export const createSpaceAccessCollection = decorate(
             memberId: {
               bsonType: 'string'
             },
-            spaceId: {
+            reusableInventoryItemId: {
               bsonType: 'string'
             },
-            startTime: {
+            time: {
               bsonType: 'date'
             },
-            endTime: {
-              bsonType: 'date'
+            action: {
+              bsonType: 'string'
             }
           }
         }
       },
       indexes: [
         {
-          key: { spaceId: 1 }
+          key: { reusableInventoryItemId: 1 }
         }
       ]
     })

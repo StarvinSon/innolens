@@ -23,12 +23,12 @@ export const ReusableInventoryService = createToken<ReusableInventoryService>('R
 export class ReusableInventoryServiceImpl implements ReusableInventoryService {
   private readonly _reusableInventoryCollection: ReusableInventoryCollection;
 
-  public constructor(options: {
+  public constructor(deps: {
     reusableInventoryCollection: ReusableInventoryCollection;
   }) {
     ({
       reusableInventoryCollection: this._reusableInventoryCollection
-    } = options);
+    } = deps);
   }
 
   public async *findAll(): AsyncIterable<ReusableInventory> {
@@ -39,19 +39,18 @@ export class ReusableInventoryServiceImpl implements ReusableInventoryService {
     return this._reusableInventoryCollection.findOne({ _id: id });
   }
 
-  public async insertOne(reusableInventory: ReusableInventory): Promise<void> {
-    await this._reusableInventoryCollection.insertOne(reusableInventory);
+  public async insertOne(inventory: ReusableInventory): Promise<void> {
+    await this._reusableInventoryCollection.insertOne(inventory);
   }
 
-  public async insertMany(reusableInventories: ReadonlyArray<Omit<ReusableInventory, '_id'>>): Promise<void> {
-    if (reusableInventories.length === 0) {
+  public async insertMany(inventories: ReadonlyArray<Omit<ReusableInventory, '_id'>>): Promise<void> {
+    if (inventories.length === 0) {
       return;
     }
-    await this._reusableInventoryCollection.insertMany(reusableInventories.map(
-      (reusableInventory) => ({
-        ...reusableInventory,
+    await this._reusableInventoryCollection
+      .insertMany(inventories.map((inventory) => ({
+        ...inventory,
         _id: new ObjectId()
-      })
-    ));
+      })));
   }
 }

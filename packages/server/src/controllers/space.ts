@@ -15,14 +15,13 @@ export interface SpaceController {
   post: Middleware;
 }
 
-export const SpaceController =
-  createToken<SpaceController>('SpaceController');
+export const SpaceController = createToken<SpaceController>('SpaceController');
 
 
 type PostSpaceBody = ReadonlyArray<{
   readonly spaceId: string;
   readonly spaceName: string;
-  readonly floor: number;
+  readonly floor: string;
   readonly indoor: boolean;
 }>;
 
@@ -32,23 +31,23 @@ const PostSpaceBody: object = {
     type: 'object',
     additionalProperties: false,
     required: [
-      'memberId',
       'spaceId',
-      'startTime',
-      'endTime'
+      'spaceName',
+      'floor',
+      'indoor'
     ],
     properties: {
-      memberId: {
-        type: 'string'
-      },
       spaceId: {
         type: 'string'
       },
-      startTime: {
+      spaceName: {
         type: 'string'
       },
-      endTime: {
+      floor: {
         type: 'string'
+      },
+      indoor: {
+        type: 'boolean'
       }
     }
   }
@@ -81,8 +80,8 @@ export class SpaceControllerImpl implements SpaceController {
     ctx.body = spaces.map((space) => ({
       spaceId: space.spaceId,
       spaceName: space.spaceName,
-      startTime: space.floor,
-      endTime: space.indoor
+      floor: space.floor,
+      indoor: space.indoor
     }));
   }
 

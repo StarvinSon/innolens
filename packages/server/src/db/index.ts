@@ -11,9 +11,9 @@ import { createMemberCollection, MemberCollection } from './member';
 import { createMemberCompositionCollection, MemberCompositionCollection } from './member-composition';
 import { createOAuth2Collection, OAuth2Collection } from './oauth2';
 import { createReusableInventoryCollection, ReusableInventoryCollection } from './reusable-inventory';
-import { createReusableInventoryUsageCollection, ReusableInventoryUsageCollection } from './reusable-inventory-usage';
+import { createReusableInventoryUsageRecordCollection, ReusableInventoryUsageRecordCollection } from './reusable-inventory-usage-record';
 import { createSpaceCollection, SpaceCollection } from './space';
-import { createSpaceAccessCollection, SpaceAccessCollection } from './space-access';
+import { createSpaceAccessRecordCollection, SpaceAccessRecordCollection } from './space-access-record';
 import { createUserCollection, UserCollection } from './user';
 
 
@@ -29,8 +29,8 @@ export const dbCreators: ReadonlyArray<readonly [Token<unknown>, FactoryOrConstr
   [MemberCompositionCollection, createMemberCompositionCollection],
   [OAuth2Collection, createOAuth2Collection],
   [ReusableInventoryCollection, createReusableInventoryCollection],
-  [ReusableInventoryUsageCollection, createReusableInventoryUsageCollection],
+  [ReusableInventoryUsageRecordCollection, createReusableInventoryUsageRecordCollection],
   [SpaceCollection, createSpaceCollection],
-  [SpaceAccessCollection, createSpaceAccessCollection],
+  [SpaceAccessRecordCollection, createSpaceAccessRecordCollection],
   [UserCollection, createUserCollection]
 ];

@@ -20,7 +20,7 @@ export const MemberController =
 
 
 type PostMemberBody = ReadonlyArray<{
-  readonly uid: string;
+  readonly memberId: string;
   readonly name: string;
   readonly department: string;
   readonly typeOfStudy: string;
@@ -36,7 +36,7 @@ const PostMemberBody: object = {
     type: 'object',
     additionalProperties: false,
     required: [
-      'uid',
+      'memberId',
       'name',
       'department',
       'typeOfStudy',
@@ -46,7 +46,7 @@ const PostMemberBody: object = {
       'registrationTime'
     ],
     properties: {
-      uid: {
+      memberId: {
         type: 'string'
       },
       name: {
@@ -99,7 +99,7 @@ export class MemberControllerImpl implements MemberController {
   public async get(ctx: Context): Promise<void> {
     const members = await fromAsync(this._memberService.findAll());
     ctx.body = members.map((member) => ({
-      uid: member.uid,
+      memberId: member.memberId,
       name: member.name,
       department: member.department,
       typeOfStudy: member.typeOfStudy,

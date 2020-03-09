@@ -23,12 +23,12 @@ export const SpaceService = createToken<SpaceService>('SpaceService');
 export class SpaceServiceImpl implements SpaceService {
   private readonly _spaceCollection: SpaceCollection;
 
-  public constructor(options: {
+  public constructor(deps: {
     spaceCollection: SpaceCollection;
   }) {
     ({
       spaceCollection: this._spaceCollection
-    } = options);
+    } = deps);
   }
 
   public async *findAll(): AsyncIterable<Space> {
@@ -47,9 +47,10 @@ export class SpaceServiceImpl implements SpaceService {
     if (spaces.length === 0) {
       return;
     }
-    await this._spaceCollection.insertMany(spaces.map<Space>((space) => ({
-      ...space,
-      _id: new ObjectId()
-    })));
+    await this._spaceCollection
+      .insertMany(spaces.map<Space>((space) => ({
+        ...space,
+        _id: new ObjectId()
+      })));
   }
 }

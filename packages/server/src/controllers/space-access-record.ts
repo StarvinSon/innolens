@@ -1,6 +1,6 @@
 import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
 
-import { SpaceAccessService } from '../services/space-access';
+import { SpaceAccessRecordService } from '../services/space-access-record';
 import { fromAsync } from '../utils/array';
 
 import { Context } from './context';
@@ -10,23 +10,23 @@ import { validateBody, getValidatedBody } from './utils/body-validator';
 import { UserAuthenticator, authenticateUser, initializeAuthenticateUser } from './utils/user-authenticator';
 
 
-export interface SpaceAccessController {
+export interface SpaceAccessRecordController {
   get: Middleware;
   post: Middleware;
 }
 
-export const SpaceAccessController =
-  createToken<SpaceAccessController>('SpaceAccessController');
+export const SpaceAccessRecordController =
+  createToken<SpaceAccessRecordController>('SpaceAccessRecordController');
 
 
-type PostSpaceAccessBody = ReadonlyArray<{
+type PostSpaceAccessRecordBody = ReadonlyArray<{
   readonly memberId: string;
   readonly spaceId: string;
-  readonly startTime: Date;
-  readonly endTime: Date;
+  readonly time: Date;
+  readonly action: string;
 }>;
 
-const PostSpaceAccessBody: object = {
+const PostSpaceAccessRecordBody: object = {
   type: 'array',
   items: {
     type: 'object',
@@ -34,8 +34,8 @@ const PostSpaceAccessBody: object = {
     required: [
       'memberId',
       'spaceId',
-      'startTime',
-      'endTime'
+      'time',
+      'action'
     ],
     properties: {
       memberId: {
@@ -44,10 +44,10 @@ const PostSpaceAccessBody: object = {
       spaceId: {
         type: 'string'
       },
-      startTime: {
+      time: {
         type: 'string'
       },
-      endTime: {
+      action: {
         type: 'string'
       }
     }
@@ -55,51 +55,47 @@ const PostSpaceAccessBody: object = {
 };
 
 @injectableConstructor({
-  spaceAccessService: SpaceAccessService,
+  spaceAccessRecordService: SpaceAccessRecordService,
   userAuthenticator: UserAuthenticator,
   injectedBodyParserFactory: InjectedBodyParserFactory
 })
 @singleton()
-export class SpaceAccessControllerImpl implements SpaceAccessController {
-  private readonly _spaceAccessService: SpaceAccessService;
+export class SpaceAccessRecordControllerImpl implements SpaceAccessRecordController {
+  private readonly _spaceAccessRecordService: SpaceAccessRecordService;
 
   public constructor(deps: {
-    spaceAccessService: SpaceAccessService;
+    spaceAccessRecordService: SpaceAccessRecordService;
     userAuthenticator: UserAuthenticator;
     injectedBodyParserFactory: InjectedBodyParserFactory
   }) {
     ({
-      spaceAccessService: this._spaceAccessService
+      spaceAccessRecordService: this._spaceAccessRecordService
     } = deps);
-    initializeAuthenticateUser(SpaceAccessControllerImpl, this, deps.userAuthenticator);
-    initializeParseBody(SpaceAccessControllerImpl, this, deps.injectedBodyParserFactory);
+    initializeAuthenticateUser(SpaceAccessRecordControllerImpl, this, deps.userAuthenticator);
+    initializeParseBody(SpaceAccessRecordControllerImpl, this, deps.injectedBodyParserFactory);
   }
 
   @authenticateUser()
   public async get(ctx: Context): Promise<void> {
-    const spaceAccesses = await fromAsync(
-      this._spaceAccessService.findAll()
-    );
-    ctx.body = spaceAccesses.map((spaceAccess) => ({
+    const records = await fromAsync(this._spaceAccessRecordService.findAll());
+    ctx.body = records.map((spaceAccess) => ({
       memberId: spaceAccess.memberId,
       spaceId: spaceAccess.spaceId,
-      startTime: spaceAccess.startTime.toISOString(),
-      endTime: spaceAccess.endTime.toISOString()
+      time: spaceAccess.time.toISOString(),
+      action: spaceAccess.action
     }));
   }
 
   @authenticateUser()
   @parseBody()
-  @validateBody(PostSpaceAccessBody)
+  @validateBody(PostSpaceAccessRecordBody)
   public async post(ctx: Context): Promise<void> {
-    const spaceAccesses = getValidatedBody<PostSpaceAccessBody>(ctx);
-    await this._spaceAccessService.insertMany(spaceAccesses.map(
-      (spaceAccess) => ({
-        ...spaceAccess,
-        startTime: new Date(spaceAccess.startTime),
-        endTime: new Date(spaceAccess.endTime)
-      })
-    ));
+    const records = getValidatedBody<PostSpaceAccessRecordBody>(ctx);
+    await this._spaceAccessRecordService
+      .insertMany(records.map((record) => ({
+        ...record,
+        time: new Date(record.time)
+      })));
     ctx.body = null;
   }
 }

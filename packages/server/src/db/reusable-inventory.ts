@@ -10,7 +10,7 @@ import { Db } from './db';
 export interface ReusableInventory {
   readonly _id: ObjectId;
   readonly inventoryId: string;
-  readonly reusableInventoryId: string;
+  readonly reusableInventoryItemId: string;
   readonly status: string;
 }
 
@@ -36,7 +36,7 @@ export const createReusableInventoryCollection = decorate(
           required: [
             '_id',
             'inventoryId',
-            'reusableInventoryId',
+            'reusableInventoryItemId',
             'status'
           ],
           properties: {
@@ -46,7 +46,7 @@ export const createReusableInventoryCollection = decorate(
             inventoryId: {
               bsonType: 'string'
             },
-            reusableInventoryId: {
+            reusableInventoryItemId: {
               bsonType: 'string'
             },
             status: {
@@ -57,7 +57,7 @@ export const createReusableInventoryCollection = decorate(
       },
       indexes: [
         {
-          key: { reusableInventoryId: 1 },
+          key: { reusableInventoryItemId: 1 },
           unique: true
         }
       ]
