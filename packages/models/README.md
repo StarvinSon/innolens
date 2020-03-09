@@ -25,17 +25,17 @@ $env:CUDA_VISIBLE_DEVICES='-1'
 
 Preprocess:
 ```shell
-python -m innolens_models access_record preprocess --input ../simulator/simulation_result/inno_wing_access_records.csv --output ./preprocessed/inno_wing_access_records.csv --start-time "2019-09-01T00:00+08:00" --end-time "2019-12-01T00:00+08:00" --time-step "minutes=30"
+python -m innolens_models access_record preprocess --input ../simulator/simulation_result/inno_wing_access_records.csv --training-data ./preprocessed/inno_wing_access_records_training.csv --evaluation-data ./preprocessed/inno_wing_access_records_evaluation.csv --start-time "2019-09-01T00:00+08:00" --end-time "2019-12-01T00:00+08:00" --time-step "minutes=30"
 ```
 
 Train:
 ```shell
-python -m innolens_models access_record train --model-dir ./tensorflow_models/access_record_dnn_0 --input ./preprocessed/inno_wing_access_records.csv --evaluation-input ./preprocessed/inno_wing_access_records.csv --evaluation-output ./access_record_evaluation.csv
+python -m innolens_models access_record train --model-dir ./tensorflow_models/access_record_dnn_0 --training-data ./preprocessed/inno_wing_access_records_training.csv --evaluation-data ./preprocessed/inno_wing_access_records_evaluation.csv --evaluation-prediction ./access_record_evaluation_prediction.csv
 ```
 
 Evaluate:
 ```shell
-python -m innolens_models access_record evaluate --model-dir ./tensorflow_models/access_record_dnn_0 --input ./preprocessed/inno_wing_access_records.csv --output ./access_record_evaluation.csv
+python -m innolens_models access_record evaluate --model-dir ./tensorflow_models/access_record_dnn_0 --data ./preprocessed/inno_wing_access_records_evaluation.csv --prediction ./access_record_evaluation_prediction.csv
 ```
 
 ## 4. Notes

@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from argparse import ArgumentParser, Namespace
-from datetime import datetime, timedelta
-from typing import MutableSequence, Iterator, Mapping, Any, Optional, Iterator, Sequence, Callable, TypeVar
+from datetime import datetime, timedelta, timezone
+from typing import MutableSequence, Iterator, Mapping, Any, Optional, Iterable, Iterator, Sequence, Callable, TypeVar
 from typing_extensions import Final
 from pathlib import Path
 from logging import INFO
 from pprint import pprint
+from math import floor
 
+import numpy as np
 import tensorflow as tf
 import pandas as pd
 
@@ -51,8 +53,13 @@ class AccessRecordPreprocessorCli(Cli):
       required=True
     )
     parser.add_argument(
-      '--output',
-      help='Path to the output data csv',
+      '--training-data',
+      help='Path to the training data csv',
+      required=True
+    )
+    parser.add_argument(
+      '--evaluation-data',
+      help='Path to the evaluation data csv',
       required=True
     )
     parser.add_argument(
@@ -73,20 +80,29 @@ class AccessRecordPreprocessorCli(Cli):
       type=rename('timedelta', lambda s: timedelta(**eval(f'dict({s})'))),
       required=True
     )
+    parser.add_argument(
+      '--evaluation-fraction',
+      help='Fraction of data to be the evaluation data',
+      type=float
+    )
 
   def handle(self, args: Namespace) -> None:
     input_path: str = args.input
-    output_path: str = args.output
+    training_data_path: str = args.training_data
+    evaluation_data_path: str = args.evaluation_data
     start_time: datetime = args.start_time
     end_time: datetime = args.end_time
     time_step: timedelta = args.time_step
+    evaluation_fraction: Optional[float] = args.evaluation_fraction
 
     preprocess(
       input_path=input_path,
-      output_path=output_path,
+      training_data_path=training_data_path,
+      evaluation_data_path=evaluation_data_path,
       start_time=start_time,
       end_time=end_time,
-      time_step=time_step
+      time_step=time_step,
+      evaluation_fraction=evaluation_fraction
     )
 
 class AccessRecordModelTrainingCli(Cli):
@@ -99,7 +115,7 @@ class AccessRecordModelTrainingCli(Cli):
       required=True
     )
     parser.add_argument(
-      '--input',
+      '--training-data',
       help='Path to the training data csv',
       required=True
     )
@@ -129,35 +145,35 @@ class AccessRecordModelTrainingCli(Cli):
       type=int
     )
     parser.add_argument(
-      '--evaluation-input',
+      '--evaluation-data',
       help='Path to the evaluation data csv'
     )
     parser.add_argument(
-      '--evaluation-output',
-      help='Path to the evaluation result csv'
+      '--evaluation-prediction',
+      help='Path to the evaluation prediction csv'
     )
 
   def handle(self, args: Namespace) -> None:
     model_dir_path: str = args.model_dir
-    input_path: str = args.input
+    training_data_path: str = args.training_data
     learning_rate: Optional[int] = args.learning_rate
     # l1: Optional[float] = args.l1
     # l2: Optional[float] = args.l2
     steps: Optional[int] = args.steps
     log_steps: Optional[int] = args.log_steps
-    evaluation_input_path: Optional[str] = args.evaluation_input
-    evaluation_output_path: Optional[str] = args.evaluation_output
+    evaluation_data_path: Optional[str] = args.evaluation_data
+    evaluation_prediction_path: Optional[str] = args.evaluation_prediction
 
     train_or_evaluate_model(
       model_dir_path=model_dir_path,
-      training_input_path=input_path,
+      training_data_path=training_data_path,
       training_learning_rate=learning_rate,
       # training_l1=l1,
       # training_l2=l2,
       training_steps=steps,
       training_log_steps=log_steps,
-      evaluation_input_path=evaluation_input_path,
-      evaluation_output_path=evaluation_output_path
+      evaluation_data_path=evaluation_data_path,
+      evaluation_prediction_path=evaluation_prediction_path
     )
 
 class AccessRecordModelEvaluationCli(Cli):
@@ -170,34 +186,38 @@ class AccessRecordModelEvaluationCli(Cli):
       required=True
     )
     parser.add_argument(
-      '--input',
+      '--data',
       help='Path to the training data csv',
       required=True
     ),
     parser.add_argument(
-      '--output',
-      help='Path to the output data csv'
+      '--prediction',
+      help='Path to the prediction csv'
     )
 
   def handle(self, args: Namespace) -> None:
     model_dir_path: str = args.model_dir
-    input_path: str = args.input
-    output_path: Optional[str] = args.output
+    data_path: str = args.data
+    prediction_path: Optional[str] = args.prediction
 
     train_or_evaluate_model(
       model_dir_path=model_dir_path,
-      evaluation_input_path=input_path,
-      evaluation_output_path=output_path
+      evaluation_data_path=data_path,
+      evaluation_prediction_path=prediction_path
     )
 
 
 def preprocess(
   input_path: str,
-  output_path: str,
+  training_data_path: str,
+  evaluation_data_path: str,
   start_time: datetime,
   end_time: datetime,
-  time_step: timedelta
+  time_step: timedelta,
+  evaluation_fraction: Optional[float] = None
 ) -> None:
+  if evaluation_fraction is None:
+    evaluation_fraction = 0.2
 
   def load_access_records(path: str) -> pd.DataFrame:
     df = pd.read_csv(
@@ -308,6 +328,35 @@ def preprocess(
       period_start_time = period_end_time
       period_end_time = period_start_time + time_step
 
+  def to_data_frame(rows: Sequence[Mapping[str, Any]]) -> pd.DataFrame:
+
+    def time_columns(prefix: str) -> Mapping[str, Any]:
+      return {
+        prefix: pd.DatetimeTZDtype(tz=timezone(timedelta(hours=8))),
+        f'{prefix}_year': np.uint16,
+        f'{prefix}_month': pd.CategoricalDtype(range(1, 13), ordered=True),
+        f'{prefix}_day': pd.CategoricalDtype(range(1, 32), ordered=True),
+        f'{prefix}_weekday': pd.CategoricalDtype(range(0, 7), ordered=True),
+        f'{prefix}_hour': pd.CategoricalDtype(range(0, 24), ordered=True),
+        f'{prefix}_minute': pd.CategoricalDtype(range(0, 60), ordered=True)
+      }
+
+    return pd.DataFrame({
+      name: pd.Series((
+        item[name]
+        for item in rows
+      ), dtype=dtype)
+      for name, dtype in {
+        **time_columns('start_time'),
+        **time_columns('end_time'),
+        'enter_count': np.uint16,
+        'unique_enter_count': np.uint16,
+        'exit_count': np.uint16,
+        'unique_exit_count': np.uint16,
+        'stay_count': np.uint16,
+        'unique_stay_count': np.uint16
+      }.items()
+    })
 
   input_df = load_access_records(input_path)
   spans = list(iterate_spans(
@@ -316,29 +365,39 @@ def preprocess(
     end_time=end_time,
     time_step=time_step
   ))
-  output_df = pd.DataFrame.from_records(iterate_rows(
+  rows = list(iterate_rows(
     spans=spans,
     start_time=start_time,
     end_time=end_time,
     time_step=time_step
   ))
+  df = to_data_frame(rows)
+  assert df.notna().all(axis=None)
 
-  output_path_obj = Path(output_path).resolve(strict=False)
-  output_path_obj.parent.mkdir(parents=True, exist_ok=True)
-  output_df.to_csv(str(output_path_obj), index=False)
+  evaluation_start_idx = floor(df.shape[0] * (1 - evaluation_fraction))
+  training_df = df.iloc[:evaluation_start_idx]
+  evaluation_df = df.iloc[evaluation_start_idx:]
+
+  for output_path, output_df in {
+    training_data_path: training_df,
+    evaluation_data_path: evaluation_df
+  }.items():
+    output_path_obj = Path(output_path).resolve(strict=False)
+    output_path_obj.parent.mkdir(parents=True, exist_ok=True)
+    output_df.to_csv(str(output_path_obj), index=False)
 
 
 def train_or_evaluate_model(
   *,
   model_dir_path: str,
-  training_input_path: Optional[str] = None,
+  training_data_path: Optional[str] = None,
   training_learning_rate: Optional[int] = None,
   # training_l1: Optional[float] = None,
   # training_l2: Optional[float] = None,
   training_steps: Optional[int] = None,
   training_log_steps: Optional[int] = None,
-  evaluation_input_path: Optional[str] = None,
-  evaluation_output_path: Optional[str] = None
+  evaluation_data_path: Optional[str] = None,
+  evaluation_prediction_path: Optional[str] = None
 ) -> None:
   tf.get_logger().setLevel(INFO)
 
@@ -350,14 +409,14 @@ def train_or_evaluate_model(
     log_steps=training_log_steps
   )
 
-  if training_input_path is not None:
-    model.train(training_input_path, steps=training_steps)
+  if training_data_path is not None:
+    model.train(training_data_path, steps=training_steps)
 
-  if evaluation_input_path is not None:
-    result = model.evaluate(evaluation_input_path, dataset=evaluation_output_path is not None)
+  if evaluation_data_path is not None:
+    result = model.evaluate(evaluation_data_path, dataset=evaluation_prediction_path is not None)
     if 'dataset' in result:
       df = pd.DataFrame.from_records(result['dataset'].as_numpy_iterator())
-      df.to_csv(evaluation_output_path, index=False)
+      df.to_csv(evaluation_prediction_path, index=False)
     pprint(result['metrics'])
 
 class AccessRecordModel:
