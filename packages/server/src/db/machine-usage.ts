@@ -9,17 +9,16 @@ import { Db } from './db';
 
 export interface MachineUsage {
   readonly _id: ObjectId;
-  readonly memberId: string;
   readonly machineId: string;
-  readonly startTime: Date;
-  readonly endTime: Date;
+  readonly memberId: string;
+  readonly time: Date;
+  readonly action: string;
 }
 
 
 export interface MachineUsageCollection extends Collection<MachineUsage> {}
 
-export const MachineUsageCollection =
-  createToken<MachineUsageCollection>('MachineUsageCollection');
+export const MachineUsageCollection = createToken<MachineUsageCollection>('MachineUsageCollection');
 
 
 export const createMachineUsageCollection = decorate(
@@ -36,25 +35,25 @@ export const createMachineUsageCollection = decorate(
           additionalProperties: false,
           required: [
             '_id',
-            'memberId',
             'machineId',
-            'startTime',
-            'endTime'
+            'memberId',
+            'time',
+            'action'
           ],
           properties: {
             _id: {
               bsonType: 'objectId'
             },
-            memberId: {
-              bsonType: 'string'
-            },
             machineId: {
               bsonType: 'string'
             },
-            startTime: {
+            memberId: {
               bsonType: 'string'
             },
-            endTime: {
+            time: {
+              bsonType: 'date'
+            },
+            action: {
               bsonType: 'string'
             }
           }
@@ -62,8 +61,7 @@ export const createMachineUsageCollection = decorate(
       },
       indexes: [
         {
-          key: { machineId: 1 },
-          unique: true
+          key: { machineId: 1 }
         }
       ]
     })

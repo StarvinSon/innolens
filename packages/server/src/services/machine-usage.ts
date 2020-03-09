@@ -23,12 +23,12 @@ export const MachineUsageService = createToken<MachineUsageService>('MachineUsag
 export class MachineUsageServiceImpl implements MachineUsageService {
   private readonly _machineUsageCollection: MachineUsageCollection;
 
-  public constructor(options: {
+  public constructor(deps: {
     machineUsageCollection: MachineUsageCollection;
   }) {
     ({
       machineUsageCollection: this._machineUsageCollection
-    } = options);
+    } = deps);
   }
 
   public async *findAll(): AsyncIterable<MachineUsage> {
@@ -39,17 +39,18 @@ export class MachineUsageServiceImpl implements MachineUsageService {
     return this._machineUsageCollection.findOne({ _id: id });
   }
 
-  public async insertOne(machineUsage: MachineUsage): Promise<void> {
-    await this._machineUsageCollection.insertOne(machineUsage);
+  public async insertOne(usage: MachineUsage): Promise<void> {
+    await this._machineUsageCollection.insertOne(usage);
   }
 
-  public async insertMany(machineUsageList: ReadonlyArray<Omit<MachineUsage, '_id'>>): Promise<void> {
-    if (machineUsageList.length === 0) {
+  public async insertMany(usageList: ReadonlyArray<Omit<MachineUsage, '_id'>>): Promise<void> {
+    if (usageList.length === 0) {
       return;
     }
-    await this._machineUsageCollection.insertMany(machineUsageList.map<MachineUsage>((machineUsage) => ({
-      ...machineUsage,
-      _id: new ObjectId()
-    })));
+    await this._machineUsageCollection
+      .insertMany(usageList.map<MachineUsage>((machineUsage) => ({
+        ...machineUsage,
+        _id: new ObjectId()
+      })));
   }
 }

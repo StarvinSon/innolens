@@ -20,36 +20,39 @@ export const ExpendableInventoryStockRecordService = createToken<ExpendableInven
   expendableInventoryStockRecordCollection: ExpendableInventoryStockRecordCollection
 })
 @singleton()
+// eslint-disable-next-line max-len
 export class ExpendableInventoryStockRecordServiceImpl implements ExpendableInventoryStockRecordService {
-  private readonly eExpendableInventoryStockRecordCollection: ExpendableInventoryStockRecordCollection;
+  // eslint-disable-next-line max-len
+  private readonly _expendableInventoryStockRecordCollection: ExpendableInventoryStockRecordCollection;
 
-  public constructor(options: {
+  public constructor(deps: {
     expendableInventoryStockRecordCollection: ExpendableInventoryStockRecordCollection;
   }) {
     ({
-      expendableInventoryStockRecordCollection: this.eExpendableInventoryStockRecordCollection
-    } = options);
+      expendableInventoryStockRecordCollection: this._expendableInventoryStockRecordCollection
+    } = deps);
   }
 
   public async *findAll(): AsyncIterable<ExpendableInventoryStockRecord> {
-    yield* this.eExpendableInventoryStockRecordCollection.find({});
+    yield* this._expendableInventoryStockRecordCollection.find({});
   }
 
   public async findOneById(id: ObjectId): Promise<ExpendableInventoryStockRecord | null> {
-    return this.eExpendableInventoryStockRecordCollection.findOne({ _id: id });
+    return this._expendableInventoryStockRecordCollection.findOne({ _id: id });
   }
 
-  public async insertOne(expendableInventoryStockRecord: ExpendableInventoryStockRecord): Promise<void> {
-    await this.eExpendableInventoryStockRecordCollection.insertOne(expendableInventoryStockRecord);
+  public async insertOne(record: ExpendableInventoryStockRecord): Promise<void> {
+    await this._expendableInventoryStockRecordCollection.insertOne(record);
   }
 
-  public async insertMany(expendableInventoryStockRecords: ReadonlyArray<Omit<ExpendableInventoryStockRecord, '_id'>>): Promise<void> {
-    if (expendableInventoryStockRecords.length === 0) {
+  public async insertMany(records: ReadonlyArray<Omit<ExpendableInventoryStockRecord, '_id'>>): Promise<void> {
+    if (records.length === 0) {
       return;
     }
-    await this.eExpendableInventoryStockRecordCollection.insertMany(expendableInventoryStockRecords.map<ExpendableInventoryStockRecord>((expendableInventoryStockRecord) => ({
-      ...expendableInventoryStockRecord,
-      _id: new ObjectId()
-    })));
+    await this._expendableInventoryStockRecordCollection
+      .insertMany(records.map<ExpendableInventoryStockRecord>((record) => ({
+        ...record,
+        _id: new ObjectId()
+      })));
   }
 }

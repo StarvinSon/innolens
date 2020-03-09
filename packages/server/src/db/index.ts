@@ -3,9 +3,6 @@ import { Token, FactoryOrConstructor } from '@innolens/resolver';
 import { ClientCollection, createClientCollection } from './client';
 import { Db, DbImpl } from './db';
 import { createDbClient, DbClient } from './db-client';
-import { createEquipmentBookingCollection, EquipmentBookingCollection } from './equipment-booking';
-import { createEquipmentLoginRecordCollection, EquipmentLoginRecordCollection } from './equipment-login-record';
-import { createEquipmentLogoutRecordCollection, EquipmentLogoutRecordCollection } from './equipment-logout-record';
 import { createExpendableInventoryStockRecordCollection, ExpendableInventoryStockRecordCollection } from './expendable-inventory-stock-record';
 import { createInventoryCollection, InventoryCollection } from './inventory';
 import { createMachineCollection, MachineCollection } from './machine';
@@ -20,9 +17,6 @@ export const dbCreators: ReadonlyArray<readonly [Token<unknown>, FactoryOrConstr
   [ClientCollection, createClientCollection],
   [Db, DbImpl],
   [DbClient, createDbClient],
-  [EquipmentBookingCollection, createEquipmentBookingCollection],
-  [EquipmentLoginRecordCollection, createEquipmentLoginRecordCollection],
-  [EquipmentLogoutRecordCollection, createEquipmentLogoutRecordCollection],
   [ExpendableInventoryStockRecordCollection, createExpendableInventoryStockRecordCollection],
   [InventoryCollection, createInventoryCollection],
   [MachineCollection, createMachineCollection],

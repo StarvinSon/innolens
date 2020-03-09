@@ -17,8 +17,7 @@ export interface Machine {
 
 export interface MachineCollection extends Collection<Machine> {}
 
-export const MachineCollection =
-  createToken<MachineCollection>('MachineCollection');
+export const MachineCollection = createToken<MachineCollection>('MachineCollection');
 
 
 export const createMachineCollection = decorate(

@@ -9,13 +9,14 @@ import { Db } from './db';
 
 export interface ExpendableInventoryStockRecord {
   readonly _id: ObjectId;
-  readonly quantity: number;
-  readonly date: Date;
   readonly inventoryId: string;
+  readonly time: Date;
+  readonly quantity: number;
 }
 
 
-export interface ExpendableInventoryStockRecordCollection extends Collection<ExpendableInventoryStockRecord> {}
+export interface ExpendableInventoryStockRecordCollection
+  extends Collection<ExpendableInventoryStockRecord> {}
 
 export const ExpendableInventoryStockRecordCollection =
   createToken<ExpendableInventoryStockRecordCollection>('ExpendableInventoryStockRecordCollection');
@@ -35,31 +36,28 @@ export const createExpendableInventoryStockRecordCollection = decorate(
           additionalProperties: false,
           required: [
             '_id',
-            'quantity',
-            'date',
-            'inventoryId'
+            'inventoryId',
+            'time',
+            'quantity'
           ],
           properties: {
             _id: {
               bsonType: 'objectId'
             },
-            quantity: {
-              bsonType: 'double'
-            },
-            date: {
-              bsonType: 'date'
-            },
             inventoryId: {
               bsonType: 'string'
+            },
+            time: {
+              bsonType: 'date'
+            },
+            quantity: {
+              bsonType: 'int'
             }
           }
         }
       },
       indexes: [
-        {
-          key: { inventoryId: 1 },
-          unique: true
-        }
+        { key: { inventoryId: 1 } }
       ]
     })
 );

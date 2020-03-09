@@ -1,16 +1,21 @@
 import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
 import { ObjectId } from 'mongodb';
 
-import { Inventory, InventoryCollection } from '../db/inventory';
+import {
+  Inventory, InventoryCollection, ExpendableInventory,
+  ReusableInventory
+} from '../db/inventory';
 
 
 export { Inventory };
+
+export type InventoryWithoutId = Omit<ExpendableInventory, '_id'> | Omit<ReusableInventory, '_id'>;
 
 export interface InventoryService {
   findAll(): AsyncIterable<Inventory>;
   findOneById(id: ObjectId): Promise<Inventory | null>;
   insertOne(inventory: Inventory): Promise<void>;
-  insertMany(inventories: ReadonlyArray<Omit<Inventory, '_id'>>): Promise<void>
+  insertMany(inventories: ReadonlyArray<InventoryWithoutId>): Promise<void>
 }
 
 export const InventoryService = createToken<InventoryService>('InventoryService');
@@ -23,12 +28,12 @@ export const InventoryService = createToken<InventoryService>('InventoryService'
 export class InventoryServiceImpl implements InventoryService {
   private readonly _inventoryCollection: InventoryCollection;
 
-  public constructor(options: {
+  public constructor(deps: {
     inventoryCollection: InventoryCollection;
   }) {
     ({
       inventoryCollection: this._inventoryCollection
-    } = options);
+    } = deps);
   }
 
   public async *findAll(): AsyncIterable<Inventory> {
@@ -43,13 +48,14 @@ export class InventoryServiceImpl implements InventoryService {
     await this._inventoryCollection.insertOne(inventory);
   }
 
-  public async insertMany(inventories: ReadonlyArray<Omit<Inventory, '_id'>>): Promise<void> {
+  public async insertMany(inventories: ReadonlyArray<InventoryWithoutId>): Promise<void> {
     if (inventories.length === 0) {
       return;
     }
-    await this._inventoryCollection.insertMany(inventories.map<Inventory>((inventory) => ({
-      ...inventory,
-      _id: new ObjectId()
-    })));
+    await this._inventoryCollection
+      .insertMany(inventories.map<Inventory>((inventory) => ({
+        ...inventory,
+        _id: new ObjectId()
+      })));
   }
 }

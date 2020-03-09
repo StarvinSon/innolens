@@ -20,10 +20,10 @@ export const MachineUsageController =
 
 
 type PostMachineUsageBody = ReadonlyArray<{
-  readonly memberId: string;
   readonly machineId: string;
-  readonly startTime: Date;
-  readonly endTime: Date;
+  readonly memberId: string;
+  readonly time: Date;
+  readonly action: string;
 }>;
 
 const PostMachineUsageBody: object = {
@@ -32,23 +32,23 @@ const PostMachineUsageBody: object = {
     type: 'object',
     additionalProperties: false,
     required: [
-      'memberId',
       'machineId',
-      'startTime',
-      'endTime'
+      'memberId',
+      'time',
+      'action'
     ],
     properties: {
-      memberId: {
-        type: 'string'
-      },
       machineId: {
         type: 'string'
       },
-      startTime: {
-        type: 'date'
+      memberId: {
+        type: 'string'
       },
-      endTime: {
-        type: 'date'
+      time: {
+        type: 'string'
+      },
+      action: {
+        type: 'string'
       }
     }
   }
@@ -79,10 +79,10 @@ export class MachineUsageControllerImpl implements MachineUsageController {
   public async get(ctx: Context): Promise<void> {
     const machineUsageList = await fromAsync(this._machineUsageService.findAll());
     ctx.body = machineUsageList.map((machineUsage) => ({
-      memberId: machineUsage.memberId,
       machineId: machineUsage.machineId,
-      startTime: machineUsage.startTime.toISOString(),
-      endTime: machineUsage.endTime.toISOString()
+      memberId: machineUsage.memberId,
+      time: machineUsage.time.toISOString(),
+      action: machineUsage.action
     }));
   }
 
@@ -91,11 +91,11 @@ export class MachineUsageControllerImpl implements MachineUsageController {
   @validateBody(PostMachineUsageBody)
   public async post(ctx: Context): Promise<void> {
     const machineUsageList = getValidatedBody<PostMachineUsageBody>(ctx);
-    await this._machineUsageService.insertMany(machineUsageList.map((machineUsage) => ({
-      ...machineUsage,
-      startTime: new Date(machineUsage.startTime),
-      endTime: new Date(machineUsage.endTime)
-    })));
+    await this._machineUsageService
+      .insertMany(machineUsageList.map((machineUsage) => ({
+        ...machineUsage,
+        time: new Date(machineUsage.time)
+      })));
     ctx.body = null;
   }
 }

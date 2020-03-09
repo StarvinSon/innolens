@@ -36,10 +36,17 @@ const getCreators = (
 
 const start = async (options: ServerOptions): Promise<void> => {
   try {
+    const creators = getCreators(options);
     const resolver = createResolver();
-    for (const [token, creator] of getCreators(options)) {
+    for (const [token, creator] of creators) {
       resolver.register(token, creator);
     }
+
+    // Uncomment to test all dependencies:
+    // for (const [token] of creators) {
+    //   // eslint-disable-next-line no-await-in-loop
+    //   await resolver.resolve(token);
+    // }
 
     const [userService, app, logger] =
       await resolver.resolve([UserService, App, Logger] as const);

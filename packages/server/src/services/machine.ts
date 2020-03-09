@@ -23,12 +23,12 @@ export const MachineService = createToken<MachineService>('MachineService');
 export class MachineServiceImpl implements MachineService {
   private readonly _machineCollection: MachineCollection;
 
-  public constructor(options: {
+  public constructor(deps: {
     machineCollection: MachineCollection;
   }) {
     ({
       machineCollection: this._machineCollection
-    } = options);
+    } = deps);
   }
 
   public async *findAll(): AsyncIterable<Machine> {
@@ -47,9 +47,10 @@ export class MachineServiceImpl implements MachineService {
     if (machines.length === 0) {
       return;
     }
-    await this._machineCollection.insertMany(machines.map<Machine>((machine) => ({
-      ...machine,
-      _id: new ObjectId()
-    })));
+    await this._machineCollection
+      .insertMany(machines.map<Machine>((machine) => ({
+        ...machine,
+        _id: new ObjectId()
+      })));
   }
 }

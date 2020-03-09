@@ -15,52 +15,92 @@ export interface InventoryController {
   post: Middleware;
 }
 
-export const InventoryController =
-  createToken<InventoryController>('InventoryController');
+export const InventoryController = createToken<InventoryController>('InventoryController');
 
 
 type PostInventoryBody = ReadonlyArray<{
   readonly inventoryId: string;
   readonly inventoryName: string;
-  readonly isReusable: boolean;
-  readonly type: string;
-  readonly inventories: Array<{
-    reusableInventoryId: string;
-    status: string;
+} & ({
+  readonly type: 'expendable';
+} | {
+  readonly type: 'reusable';
+  readonly items: ReadonlyArray<{
+    readonly itemId: string;
   }>;
-}>;
+})>;
 
-const PostInventoryBody: object = {
-  type: 'array',
-  items: {
+const PostInventoryBody = ((): object => {
+  const base = {
     type: 'object',
     additionalProperties: false,
     required: [
       'inventoryId',
-      'inventoryName',
-      'isReusable',
-      'type',
-      'inventories'
+      'inventoryName'
     ],
     properties: {
       inventoryId: {
-        bsonType: 'string'
+        type: 'string'
       },
       inventoryName: {
-        bsonType: 'string'
-      },
-      isReusable: {
-        bsonType: 'bool'
-      },
-      type: {
-        bsonType: 'string'
-      },
-      inventories: {
-        bsonType: 'array'
+        type: 'string'
       }
     }
-  }
-};
+  };
+
+  const expendable = {
+    ...base,
+    required: [
+      ...base.required,
+      'type'
+    ],
+    properties: {
+      ...base.properties,
+      type: {
+        const: 'expendable'
+      }
+    }
+  };
+
+  const reusable = {
+    ...base,
+    required: [
+      ...base.required,
+      'type'
+    ],
+    properties: {
+      ...base.properties,
+      type: {
+        const: 'reusable'
+      },
+      items: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'itemId'
+          ],
+          properties: {
+            itemId: {
+              type: 'string'
+            }
+          }
+        }
+      }
+    }
+  };
+
+  return {
+    type: 'array',
+    items: {
+      oneOf: [
+        expendable,
+        reusable
+      ]
+    }
+  };
+})();
 
 @injectableConstructor({
   inventoryService: InventoryService,
@@ -89,9 +129,14 @@ export class InventoryControllerImpl implements InventoryController {
     ctx.body = inventories.map((inventory) => ({
       inventoryId: inventory.inventoryId,
       inventoryName: inventory.inventoryName,
-      isReusable: inventory.isReusable,
       type: inventory.type,
-      inventories: inventory.inventories
+      ...inventory.type === 'expendable'
+        ? {}
+        : {
+          items: inventory.items.map((item) => ({
+            itemId: item.itemId
+          }))
+        }
     }));
   }
 
