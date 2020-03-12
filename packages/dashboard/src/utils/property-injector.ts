@@ -10,22 +10,6 @@ export const injectableProperty = (resolvable: Resolvable): PropertyDecorator =>
     if (keys === undefined) {
       keys = [];
       Reflect.defineMetadata(injectableKeysSym, keys, prototype);
-      for (
-        let target = Reflect.getPrototypeOf(prototype);
-        target !== null;
-        target = Reflect.getPrototypeOf(target)
-      ) {
-        const parentKeys: ReadonlyArray<PropertyKey> | undefined =
-          Reflect.getOwnMetadata(injectableKeysSym, target);
-        if (parentKeys !== undefined) {
-          for (const parentKey of parentKeys) {
-            if (!keys.includes(parentKey)) {
-              keys.push(parentKey);
-            }
-          }
-          break;
-        }
-      }
     }
 
     if (!keys.includes(propertyKey)) {
@@ -72,8 +56,8 @@ const getPropertyDependencies =
   };
 
 
-const injectingInfos: WeakMap<object, readonly [Resolver, Promise<void>]> = new WeakMap();
 const injectedTargets: WeakSet<object> = new WeakSet();
+const injectingInfos: WeakMap<object, readonly [Resolver, Promise<void>]> = new WeakMap();
 
 export const injectProperties = async (target: object, resolver: Resolver): Promise<void> => {
   if (injectedTargets.has(target)) {
@@ -92,6 +76,7 @@ export const injectProperties = async (target: object, resolver: Resolver): Prom
 
   const deps = getPropertyDependencies(target);
   if (deps === undefined) {
+    injectedTargets.add(target);
     return;
   }
 

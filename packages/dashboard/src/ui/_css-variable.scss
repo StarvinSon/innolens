@@ -1,0 +1,46 @@
+@use 'sass:string';
+
+
+@function _trim($str) {
+  @while string.slice($str, 1, 1) == ' ' {
+    $str: string.slice($str, 2, -1);
+  }
+  @while string.slice($str, -1, -1) == ' ' {
+    $str: string.slice($str, 1, -2);
+  }
+  @return $str;
+}
+
+@function _parse($var) {
+  $start-token: 'var(';
+  $sep-token: ',';
+  $end-token: ')';
+  $name-prefix: '--';
+
+  $var: _trim($var);
+  @if string.slice($var, 1, str.length($start-token)) != $start-token {
+    @return null;
+  }
+  @if string.slice($var, -str.length($end-token), -1) != $end-token {
+    @return null;
+  }
+
+  $sep-idx: string.index($var, $sep-token);
+  @if $sep-idx == null {
+    $name: _trim(string.slice($var, str.length($start-token) + 1, -1 - string.length($end-token)));
+    $fallback: null;
+  } @else {
+    $name: _trim(string.slice($var, str.length($start-token) + 1, $sep-idx - 1));
+    $fallback: _trim(string.slice($var, $sep-idx + 1, -1 - string.length($end-token)));
+  }
+
+  @if string.slice($name, 1, str-length($name-prefix)) != $name-prefix {
+    @return null;
+  }
+  $name: string.slice($name, str-length($name-prefix) + 1);
+
+  @return (
+    'name': $name,
+    'fallback': $fallback
+  );
+}

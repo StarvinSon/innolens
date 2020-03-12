@@ -1,0 +1,45 @@
+@use 'sass:map';
+@use 'sass:meta';
+
+
+@function isinstance($value) {
+  @return meta.type-of($value) == 'map';
+}
+
+@function create($name, $base, $props) {
+  @if $name != null and meta.type-of($name) != 'string' {
+    @error '$name is not null nor a string, got #{meta.inspect($name)}';
+  } @else if $base != null and not isinstance($base) {
+    @error '$base is not null nor is a css mixin, got #{meta.inspect($base)}';
+  } @else if meta.type-of($props) != 'map' {
+    @error '$props is not a map, got #{meta.inspect($props)}';
+  }
+
+  $mixin: ();
+
+  @if $base != null {
+    @each $base-prop, $base-value in $base {
+      $mixin: map.merge($mixin, (
+        $base-prop: if($name == null, $base-value, var(--#{$name}-#{$base-prop}, $base-value))
+      ));
+    }
+  }
+
+  @each $prop, $value in $props {
+    $mixin: map.merge($mixin, (
+      $prop: if($name == null, $value, var(--#{$name}-#{$prop}, $value))
+    ));
+  }
+
+  @return $mixin;
+}
+
+@mixin apply($mixin) {
+  @if not isinstance($mixin) {
+    @error '$mixin is not a css mixin, got #{meta.inspect($mixin)}';
+  }
+
+  @each $prop, $value in $mixin {
+    #{$prop}: $value;
+  }
+}

@@ -25,12 +25,12 @@ export const OAuth2Service = createToken<OAuth2Service>('OAuth2Service');
 
 export interface OAuth2PasswordCredentialsUIAdapter {
   requestCredentials(
-    request: AskPasswordCredentialsRequest
+    request: OAuth2PasswordCredentialsRequest
   ): Promise<OAuth2PasswordCredentialsResponse>;
   close(): void;
 }
 
-export interface AskPasswordCredentialsRequest {
+export interface OAuth2PasswordCredentialsRequest {
   readonly username: string;
   readonly password: string;
   readonly errorMessage: string | null;

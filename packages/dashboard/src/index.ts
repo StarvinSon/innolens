@@ -1,6 +1,6 @@
 /// <reference types="reflect-metadata" />
 
-import './components/app';
+import './ui/app';
 import {
   createResolver, Token, FactoryOrConstructor,
   decorate, injectableFactory, singleton, name
@@ -9,11 +9,11 @@ import { supportsAdoptingStyleSheets } from 'lit-element';
 import { render, html } from 'lit-html';
 import { installRouter } from 'pwa-helpers/router';
 
-import { injectElementProperties } from './components/utils/element-property-injector';
 import { DashboardOptions } from './dashboard-options';
-import { styleCss, styleClasses } from './index.scss';
+import { css, classes } from './index.scss';
 import { serviceCreators } from './services';
 import { PathService } from './services/path';
+import { injectTemplate } from './ui/utils/element-property-injector';
 
 
 const getCreators = (
@@ -42,18 +42,18 @@ const start = async (options: DashboardOptions): Promise<void> => {
   if (supportsAdoptingStyleSheets) {
     document.adoptedStyleSheets = [
       ...document.adoptedStyleSheets,
-      styleCss.styleSheet!
+      css.styleSheet!
     ];
   } else {
     const styleElem = document.createElement('style');
-    styleElem.textContent = styleCss.cssText;
+    styleElem.textContent = css.cssText;
     document.head.appendChild(styleElem);
   }
 
   render(
-    html`${injectElementProperties(resolver, html`
-      <inno-app class="${styleClasses.app}" ></inno-app>
-    `)}`,
+    injectTemplate(resolver, html`
+      <inno-app class="${classes.app}" ></inno-app>
+    `),
     document.body
   );
 };

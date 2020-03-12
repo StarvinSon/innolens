@@ -1,7 +1,8 @@
 import '../login-dialog';
+import '../top-bar';
 
 import {
-  customElement, LitElement, html, TemplateResult, property, query
+  customElement, LitElement, TemplateResult, property, query
 } from 'lit-element';
 
 import { MemberCompositionService, MemberCompositionState } from '../../services/member-composition';
@@ -10,7 +11,7 @@ import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
 import { PropertyInjectorElement } from '../utils/element-property-injector';
 
-import { styleCss } from './app.scss';
+import { css } from './app.scss';
 
 
 const TAG_NAME = 'inno-app';
@@ -23,7 +24,7 @@ declare global {
 
 @customElement(TAG_NAME)
 export class App extends PropertyInjectorElement(LitElement) {
-  public static readonly styles = styleCss;
+  public static readonly styles = css;
 
   @injectableProperty(MemberCompositionService)
   @observeProperty('updateListeners')
@@ -66,12 +67,11 @@ export class App extends PropertyInjectorElement(LitElement) {
 
   protected render(): TemplateResult {
     const { memberComposition } = this;
-    return html`
+    return this.html`
+      <inno-top-bar></inno-top-bar>
       <button @click="${this.onUpdateButtonClick}">Update</button>
       <pre>${JSON.stringify(memberComposition, undefined, 2)}</pre>
-      ${this.inject(html`
-        <inno-login-dialog></inno-login-dialog>
-      `)}
+      <inno-login-dialog></inno-login-dialog>
     `;
   }
 

@@ -49,10 +49,10 @@ module.exports = (env, { publicPath = '/static' }) => {
   const scssUse = [
     ...jsUse,
     {
-      loader: require.resolve('./loaders/lit-css-loader')
+      loader: require.resolve('./tools/lit-css-loader')
     },
     {
-      loader: require.resolve('./loaders/convert-css-locals')
+      loader: require.resolve('./tools/convert-css-locals-loader')
     },
     {
       loader: 'css-loader',

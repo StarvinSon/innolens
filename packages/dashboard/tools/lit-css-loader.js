@@ -15,12 +15,12 @@ const pitchLoader = function(remainingRequest, precedingRequest) {
   return (
   // eslint-disable-next-line @typescript-eslint/indent
 `
-import { css, unsafeCSS } from 'lit-element';
+import { css as cssTemplate, unsafeCSS } from 'lit-element';
 import info from ${stringifyRequest(this, `!!${precedingRequest}!${remainingRequest}`)};
 
-export const styleCss = css\`\${unsafeCSS(info.toString())}\`;
+export const css = cssTemplate\`\${unsafeCSS(info.toString())}\`;
 
-export const styleClasses = info.locals;
+export const classes = info.locals;
 `);
 };
 

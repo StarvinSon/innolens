@@ -1,4 +1,4 @@
 declare module '*.scss' {
-  export const styleCss: import('lit-element').CSSResult;
-  export const styleClasses: Readonly<Record<string, string>>;
+  export const css: import('lit-element').CSSResult;
+  export const classes: Readonly<Record<string, string>>;
 }

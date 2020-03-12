@@ -1,13 +1,23 @@
+@use './ui/theme';
+
+
 html {
   width: 100%;
-  font-family: monospace;
+  height: 100%;
+  background: theme.$background;
+  // For debug purpose:
+  // All content will be visible on black background by default, and
+  // it is easier to find out what has not been styled yet.
+  color: orange;
 }
 
 body {
   width: 100%;
+  height: 100%;
   margin: 0rem;;
 }
 
 .app {
   width: 100%;
+  height: 100%;
 }

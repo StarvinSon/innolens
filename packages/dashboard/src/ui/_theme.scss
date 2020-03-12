@@ -1,0 +1,16 @@
+@use './css-variable';
+
+
+@function _var($name, $fallback) {
+  @return var(--inno-theme-#{$name}, $fallback);
+}
+
+
+// See: https://material.io/design/color/dark-theme.html
+$background: _var('background', #121212);
+$on-background: _var('on-background', white);
+
+$primary: _var('primary', #0080FF);
+$on-primary: _var('on-primary', white);
+
+$separator: _var('separator', white);
