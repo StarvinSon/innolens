@@ -9,7 +9,7 @@ import { MemberCompositionService, MemberCompositionState } from '../../services
 import { autoBind } from '../../utils/method-binder';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
-import { PropertyInjectorElement } from '../utils/element-property-injector';
+import { PropertyInjectorElement } from '../element-property-injector';
 
 import { css } from './app.scss';
 

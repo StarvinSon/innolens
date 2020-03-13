@@ -5,7 +5,7 @@ import {
   html, AttributePart, PropertyPart
 } from 'lit-html';
 
-import { injectProperties, injectableProperty } from '../../utils/property-injector';
+import { injectProperties, injectableProperty } from '../utils/property-injector';
 
 
 const injectElementProperty =

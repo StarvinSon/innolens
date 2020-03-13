@@ -21,7 +21,6 @@
   width: 100%;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
-  pointer-events: auto;
 
   &--hide {
     display: none;
@@ -37,6 +36,10 @@
 
   &--hide {
     display: none;
+  }
+
+  &--freeze {
+    pointer-events: none;
   }
 }
 

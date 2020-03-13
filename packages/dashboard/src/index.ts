@@ -13,7 +13,7 @@ import { DashboardOptions } from './dashboard-options';
 import { css, classes } from './index.scss';
 import { serviceCreators } from './services';
 import { PathService } from './services/path';
-import { injectTemplate } from './ui/utils/element-property-injector';
+import { injectTemplate } from './ui/element-property-injector';
 
 
 const getCreators = (
