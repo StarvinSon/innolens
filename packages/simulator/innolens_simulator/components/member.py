@@ -4997,6 +4997,15 @@ _types_of_study: Sequence[str] = (
 def rand_type_of_study() -> str:
   return rand_element(_types_of_study)
 
+_study_programme: Sequence[str] = (
+  'JS6963',
+  'JS6951',
+  'JS6925',
+  'JS6248'
+)
+
+def rand_study_programme() -> str:
+  return rand_element(_study_programme)
 
 _years_of_study: Sequence[int] = tuple(range(7))
 
@@ -5028,6 +5037,7 @@ class MemberComponent(Component):
   name: str
   department: str
   type_of_study: str
+  study_programme: str
   year_of_study: int
   affiliated_student_interest_group: str
 
@@ -5036,6 +5046,7 @@ class MemberComponent(Component):
     *,
     department_choices: Optional[Sequence[str]] = None,
     type_of_study_choices: Optional[Sequence[str]] = None,
+    study_programme_choices: Optional[Sequence[str]] = None,
     year_of_study_choices: Optional[Sequence[int]] = None,
     affiliated_student_interest_groups_choices: Optional[Sequence[str]] = None
   ) -> None:
@@ -5043,5 +5054,6 @@ class MemberComponent(Component):
     self.name = rand_name()
     self.department = rand_department() if department_choices is None else rand_element(department_choices)
     self.type_of_study = rand_type_of_study() if type_of_study_choices is None else rand_element(type_of_study_choices)
+    self.study_programme = rand_study_programme() if study_programme_choices is None else rand_element(study_programme_choices)
     self.year_of_study = rand_year_of_study() if year_of_study_choices is None else rand_element(year_of_study_choices)
     self.affiliated_student_interest_group = rand_affiliated_student_interest_group() if affiliated_student_interest_groups_choices is None else rand_element(affiliated_student_interest_groups_choices)

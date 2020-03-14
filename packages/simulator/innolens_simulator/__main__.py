@@ -54,6 +54,7 @@ def add_inno_lens_members(engine: Engine) -> None:
     memberComp.randomize_fields(
       department_choices=['Computer Science'],
       type_of_study_choices=['Undergraduate'],
+      study_programme_choices=['JS6963','JS6951'],
       year_of_study_choices=[4],
       affiliated_student_interest_groups_choices=['Project InnoLens and InnoIris (Supervisor: Dr. C.K. Chui [CS])']
     )
@@ -71,6 +72,7 @@ def add_comp3356_robotics_members(engine: Engine) -> None:
         'Electrical and Electronic Engineering'
       ],
       type_of_study_choices=['Undergraduate'],
+      study_programme_choices=['JS6963','JS6951'],
       year_of_study_choices=[3, 4],
       affiliated_student_interest_groups_choices=['COMP3356 Robotics']
     )
@@ -85,6 +87,7 @@ def get_member_df(engine: Engine) -> pd.DataFrame:
       'Name': member.name,
       'Department': member.department,
       'Type of Study': member.type_of_study,
+      'Study Programme': member.study_programme,
       'Year of Study': member.year_of_study,
       'Affiliated Student Interest Group': member.affiliated_student_interest_group
     }

@@ -3,6 +3,7 @@ from __future__ import annotations
 from argparse import ArgumentParser
 
 from innolens_models.models.access_record import AccessRecordCli
+from innolens_models.models.user_count import UserCountCli
 
 
 parser = ArgumentParser(
@@ -16,6 +17,7 @@ subparsers = parser.add_subparsers(
 )
 for sub_cli in (
   AccessRecordCli(),
+  UserCountCli()
 ):
   subparser = subparsers.add_parser(name=sub_cli.name)
   sub_cli.configure_parser(subparser)

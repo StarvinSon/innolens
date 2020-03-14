@@ -17,8 +17,8 @@ from innolens_models.cli import Cli
 from innolens_models.models.utils.estimator_metrics import to_estimator_metrics
 
 
-class AccessRecordCli(Cli):
-  name: Final[str] = 'access_record'
+class UserCountCli(Cli):
+  name: Final[str] = 'user_count'
 
   def configure_parser(self, parser: ArgumentParser) -> None:
     subparsers = parser.add_subparsers(
@@ -27,18 +27,18 @@ class AccessRecordCli(Cli):
       dest='action'
     )
     for sub_cli in (
-      AccessRecordPreprocessorCli(),
-      AccessRecordModelTrainingCli(),
-      AccessRecordModelEvaluationCli()
+      UserCountPreprocessorCli(),
+      UserCountModelTrainingCli(),
+      UserCountModelEvaluationCli()
     ):
       subparser = subparsers.add_parser(name=sub_cli.name)
       sub_cli.configure_parser(subparser)
-      subparser.set_defaults(_AccessRecordCli__handler=sub_cli.handle)
+      subparser.set_defaults(_UserCountCli__handler=sub_cli.handle)
 
   def handle(self, args: Namespace) -> None:
-    args._AccessRecordCli__handler(args)
+    args._UserCountCli__handler(args)
 
-class AccessRecordPreprocessorCli(Cli):
+class UserCountPreprocessorCli(Cli):
   name: Final[str] = 'preprocess'
 
   def configure_parser(self, parser: ArgumentParser) -> None:
@@ -53,6 +53,11 @@ class AccessRecordPreprocessorCli(Cli):
       required=True
     )
     parser.add_argument(
+      '--member-data',
+      help='Path to the member data csv',
+      required=True
+    )
+    parser.add_argument(
       '--training-data',
       help='Path to the training data csv',
       required=True
@@ -60,6 +65,11 @@ class AccessRecordPreprocessorCli(Cli):
     parser.add_argument(
       '--evaluation-data',
       help='Path to the evaluation data csv',
+      required=True
+    )
+    parser.add_argument(
+      '--category-length',
+      help='Path to the csv storing how many departments and affiliated student interest groups there are',
       required=True
     )
     parser.add_argument(
@@ -75,15 +85,15 @@ class AccessRecordPreprocessorCli(Cli):
       required=True
     )
     parser.add_argument(
+      '--is-space',
+      help='Whether the access records belongs to a space or something else',
+      action="store_true"
+    )
+    parser.add_argument(
       '--time-step',
       help='Time step',
       type=rename('timedelta', lambda s: timedelta(**eval(f'dict({s})'))),
       required=True
-    )
-    parser.add_argument(
-      '--is-space',
-      help='Whether the access records belongs to a space or something else',
-      action="store_true"
     )
     parser.add_argument(
       '--evaluation-fraction',
@@ -94,8 +104,10 @@ class AccessRecordPreprocessorCli(Cli):
   def handle(self, args: Namespace) -> None:
     input_path: str = args.input
     is_space: bool = args.is_space
+    member_data_path: str = args.member_data
     training_data_path: str = args.training_data
     evaluation_data_path: str = args.evaluation_data
+    category_length_path: str = args.category_length
     start_time: datetime = args.start_time
     end_time: datetime = args.end_time
     time_step: timedelta = args.time_step
@@ -104,15 +116,17 @@ class AccessRecordPreprocessorCli(Cli):
     preprocess(
       input_path=input_path,
       is_space=is_space,
+      member_data_path=member_data_path,
       training_data_path=training_data_path,
       evaluation_data_path=evaluation_data_path,
+      category_length_path=category_length_path,
       start_time=start_time,
       end_time=end_time,
       time_step=time_step,
       evaluation_fraction=evaluation_fraction
     )
 
-class AccessRecordModelTrainingCli(Cli):
+class UserCountModelTrainingCli(Cli):
   name: Final[str] = 'train'
 
   def configure_parser(self, parser: ArgumentParser) -> None:
@@ -124,6 +138,11 @@ class AccessRecordModelTrainingCli(Cli):
     parser.add_argument(
       '--training-data',
       help='Path to the training data csv',
+      required=True
+    )
+    parser.add_argument(
+      '--category-length',
+      help='Path to the csv storing how many departments and affiliated student interest groups there are',
       required=True
     )
     parser.add_argument(
@@ -162,6 +181,7 @@ class AccessRecordModelTrainingCli(Cli):
 
   def handle(self, args: Namespace) -> None:
     model_dir_path: str = args.model_dir
+    category_length_path: str = args.category_length
     training_data_path: str = args.training_data
     learning_rate: Optional[int] = args.learning_rate
     # l1: Optional[float] = args.l1
@@ -173,6 +193,7 @@ class AccessRecordModelTrainingCli(Cli):
 
     train_or_evaluate_model(
       model_dir_path=model_dir_path,
+      category_length_path=category_length_path,
       training_data_path=training_data_path,
       training_learning_rate=learning_rate,
       # training_l1=l1,
@@ -183,7 +204,7 @@ class AccessRecordModelTrainingCli(Cli):
       evaluation_prediction_path=evaluation_prediction_path
     )
 
-class AccessRecordModelEvaluationCli(Cli):
+class UserCountModelEvaluationCli(Cli):
   name: Final[str] = 'evaluate'
 
   def configure_parser(self, parser: ArgumentParser) -> None:
@@ -196,7 +217,12 @@ class AccessRecordModelEvaluationCli(Cli):
       '--data',
       help='Path to the training data csv',
       required=True
-    ),
+    )
+    parser.add_argument(
+      '--category-length',
+      help='Path to the csv storing how many departments and affiliated student interest groups there are',
+      required=True
+    )
     parser.add_argument(
       '--prediction',
       help='Path to the prediction csv'
@@ -204,11 +230,13 @@ class AccessRecordModelEvaluationCli(Cli):
 
   def handle(self, args: Namespace) -> None:
     model_dir_path: str = args.model_dir
+    category_length_path: str = args.category_length
     data_path: str = args.data
     prediction_path: Optional[str] = args.prediction
 
     train_or_evaluate_model(
       model_dir_path=model_dir_path,
+      category_length_path=category_length_path,
       evaluation_data_path=data_path,
       evaluation_prediction_path=prediction_path
     )
@@ -217,15 +245,61 @@ class AccessRecordModelEvaluationCli(Cli):
 def preprocess(
   input_path: str,
   is_space: bool,
+  member_data_path:str,
   training_data_path: str,
   evaluation_data_path: str,
+  category_length_path: str,
   start_time: datetime,
   end_time: datetime,
   time_step: timedelta,
   evaluation_fraction: Optional[float] = None
 ) -> None:
+  departments: MutableSequence[str] = []
+  types_of_study = [
+    'Undergraduate',
+    'Taught Postgraduate',
+    'Research Postgraduate'
+  ]
+  study_programmes = ['JS6963', 'JS6951', 'JS6925', 'JS6248']
+  years_of_study = [1, 2, 3, 4, 5, 6]
+  affiliated_student_interest_groups: MutableSequence[str] = []
+
   if evaluation_fraction is None:
     evaluation_fraction = 0.2
+
+  def generate_member_groups() -> pd.DataFrame:
+    index = pd.MultiIndex.from_product([
+      departments,
+      types_of_study,
+      study_programmes,
+      years_of_study,
+      affiliated_student_interest_groups
+    ], names = ['Department', 'Type of Study', 'Study Programme', 'Year of Study', 'Affiliated Student Interest Group'])
+    return pd.DataFrame(index = index).reset_index()
+
+  def load_member_data(path: str) -> pd.DataFrame:
+    df = pd.read_csv(
+      path,
+      dtype={
+        'UID': str,
+        'Name': str,
+        'Department': str,
+        'Type of Study': pd.CategoricalDtype(types_of_study),
+        'Study Programme': pd.CategoricalDtype(study_programmes),
+        'Year of Study': pd.CategoricalDtype(years_of_study),
+        'Affiliated Student Interest Group': str,
+      }
+    )
+    assert df.columns.to_list() == [
+      'UID',
+      'Name',
+      'Department',
+      'Type of Study',
+      'Study Programme',
+      'Year of Study',
+      'Affiliated Student Interest Group'
+    ]
+    return df
 
   def load_access_records(path: str) -> pd.DataFrame:
     df = pd.read_csv(
@@ -233,7 +307,7 @@ def preprocess(
       parse_dates=['Time'],
       dtype={
         'UID': str,
-        'Action': pd.CategoricalDtype(['enter', 'exit']) if is_space else pd.CategoricalDtype(['acquire', 'release'])
+        'Action': pd.CategoricalDtype(['enter', 'exit'])
       }
     )
     assert df.columns.to_list() == ['Time', 'UID', 'Action']
@@ -241,17 +315,30 @@ def preprocess(
 
   def iterate_spans(
     df: pd.DataFrame,
+    member_df: pd.DataFrame,
     start_time: pd.Timestamp,
     end_time: pd.Timestamp,
     time_step: pd.Timedelta
   ) -> Iterator[Mapping[str, Any]]:
     df = df.sort_values('Time')
+    df = pd.merge(df, member_df, on='UID')
 
     staying_uids = {}
     for _, row in df.iterrows():
       time = row['Time']
       uid = row['UID']
+      department = row['Department']
+      type_of_study = row['Type of Study']
+      study_programme = row['Study Programme']
+      year_of_study = row['Year of Study']
+      affiliated_student_interest_group = row['Affiliated Student Interest Group']
       action = row['Action']
+
+      if department not in departments:
+        departments.append(department)
+      if affiliated_student_interest_group not in affiliated_student_interest_groups:
+        affiliated_student_interest_groups.append(affiliated_student_interest_group)
+
       if action == 'enter' or action == 'acquire':
         staying_uids[uid] = time
       elif action == 'exit' or action == 'release':
@@ -261,7 +348,12 @@ def preprocess(
             yield {
               'Enter Time': enter_time,
               'Exit Time': time,
-              'UID': uid
+              'UID': uid,
+              'Department': department,
+              'Type of Study': type_of_study,
+              'Study Programme': study_programme,
+              'Year of Study': year_of_study,
+              'Affiliated Student Interest Group': affiliated_student_interest_group
             }
           del staying_uids[uid]
 
@@ -294,39 +386,60 @@ def preprocess(
           curr_spans.append(spans[i])
         i += 1
 
-      enter_count = sum(
-        span['Enter Time'] >= period_start_time
-        for span in curr_spans
-      )
-      unique_enter_count = len(set(
-        span['UID']
-        for span in curr_spans
-        if span['Enter Time'] >= period_start_time
-      ))
-      exit_count = sum(
-        span['Exit Time'] <= period_end_time
-        for span in curr_spans
-      )
-      unique_exit_count = len(set(
-        span['UID']
-        for span in curr_spans
-        if span['Exit Time'] <= period_end_time
-      ))
-      stay_count = len(curr_spans)
-      unique_stay_count = len(set(
-        span['UID']
-        for span in curr_spans
-      ))
-      yield {
-        **time_components('start_time', period_start_time),
-        **time_components('end_time', period_end_time),
-        'enter_count': enter_count,
-        'unique_enter_count': unique_enter_count,
-        'exit_count': exit_count,
-        'unique_exit_count': unique_exit_count,
-        'stay_count': stay_count,
-        'unique_stay_count': unique_stay_count
-      }
+      groups = generate_member_groups()
+      for _, row in groups.iterrows():
+        department = row['Department']
+        type_of_study = row['Type of Study']
+        study_programme = row['Study Programme']
+        year_of_study = row['Year of Study']
+        affiliated_student_interest_group = row['Affiliated Student Interest Group']
+
+        filtered_span = [span for span in curr_spans if (
+          span['Department'] == department and
+          span['Type of Study'] == type_of_study and
+          span['Study Programme'] == study_programme and
+          span['Year of Study'] == year_of_study and
+          span['Affiliated Student Interest Group'] == affiliated_student_interest_group
+        )]
+
+        enter_count = sum(
+          span['Enter Time'] >= period_start_time
+          for span in curr_spans
+        )
+        unique_enter_count = len(set(
+          span['UID']
+          for span in curr_spans
+          if span['Enter Time'] >= period_start_time
+        ))
+        exit_count = sum(
+          span['Exit Time'] <= period_end_time
+          for span in curr_spans
+        )
+        unique_exit_count = len(set(
+          span['UID']
+          for span in curr_spans
+          if span['Exit Time'] <= period_end_time
+        ))
+        stay_count = len(curr_spans)
+        unique_stay_count = len(set(
+          span['UID']
+          for span in curr_spans
+        ))
+        yield {
+          **time_components('start_time', period_start_time),
+          **time_components('end_time', period_end_time),
+          'department': department,
+          'type_of_study': type_of_study,
+          'study_programme': study_programme,
+          'year_of_study': year_of_study,
+          'affiliated_student_interest_group': affiliated_student_interest_group,
+          'enter_count': enter_count,
+          'unique_enter_count': unique_enter_count,
+          'exit_count': exit_count,
+          'unique_exit_count': unique_exit_count,
+          'stay_count': stay_count,
+          'unique_stay_count': unique_stay_count
+        }
 
       curr_spans = [
         span
@@ -357,6 +470,11 @@ def preprocess(
       for name, dtype in {
         **time_columns('start_time'),
         **time_columns('end_time'),
+        'department': pd.CategoricalDtype(departments),
+        'type_of_study': pd.CategoricalDtype(types_of_study),
+        'study_programme': pd.CategoricalDtype(study_programmes),
+        'year_of_study': pd.CategoricalDtype(years_of_study),
+        'affiliated_student_interest_group': pd.CategoricalDtype(affiliated_student_interest_groups),
         'enter_count': np.uint16,
         'unique_enter_count': np.uint16,
         'exit_count': np.uint16,
@@ -366,9 +484,11 @@ def preprocess(
       }.items()
     })
 
+  member_df = load_member_data(member_data_path)
   input_df = load_access_records(input_path)
   spans = list(iterate_spans(
     df=input_df,
+    member_df=member_df,
     start_time=start_time,
     end_time=end_time,
     time_step=time_step
@@ -385,19 +505,21 @@ def preprocess(
   evaluation_start_idx = floor(df.shape[0] * (1 - evaluation_fraction))
   training_df = df.iloc[:evaluation_start_idx]
   evaluation_df = df.iloc[evaluation_start_idx:]
+  category_length_df = pd.DataFrame({'feature': ['department', 'affiliated_student_interest_group'], 'category_length': [len(departments), len(affiliated_student_interest_groups)]})
 
   for output_path, output_df in {
     training_data_path: training_df,
-    evaluation_data_path: evaluation_df
+    evaluation_data_path: evaluation_df,
+    category_length_path: category_length_df
   }.items():
     output_path_obj = Path(output_path).resolve(strict=False)
     output_path_obj.parent.mkdir(parents=True, exist_ok=True)
     output_df.to_csv(str(output_path_obj), index=False)
 
-
 def train_or_evaluate_model(
   *,
   model_dir_path: str,
+  category_length_path: str,
   training_data_path: Optional[str] = None,
   training_learning_rate: Optional[int] = None,
   # training_l1: Optional[float] = None,
@@ -409,8 +531,9 @@ def train_or_evaluate_model(
 ) -> None:
   tf.get_logger().setLevel(INFO)
 
-  model = AccessRecordModel(
+  model = UserCountModel(
     model_dir_path=model_dir_path,
+    category_length_path=category_length_path,
     learning_rate=training_learning_rate,
     # l1=training_l1,
     # l2=training_l2,
@@ -427,13 +550,14 @@ def train_or_evaluate_model(
       df.to_csv(evaluation_prediction_path, index=False)
     pprint(result['metrics'])
 
-class AccessRecordModel:
+class UserCountModel:
   __tf_model: Final[Any]
 
   def __init__(
     self,
     *,
     model_dir_path: str,
+    category_length_path:str,
     learning_rate: Optional[float] = None,
     # l1: Optional[float] = None,
     # l2: Optional[float] = None,
@@ -450,6 +574,18 @@ class AccessRecordModel:
     if log_steps is None:
       log_steps = 100
 
+    category_length = pd.read_csv(
+      category_length_path,
+      dtype={
+        'feature': str,
+        'category_length': np.uint16,
+      }
+    )
+    assert category_length.columns.to_list() == [
+      'feature',
+      'category_length'
+    ]
+
     weekday_feature_column = tf.feature_column.categorical_column_with_identity(
       key='start_time_weekday',
       num_buckets=7
@@ -463,6 +599,26 @@ class AccessRecordModel:
       vocabulary_list=[0, 30],
       num_oov_buckets=0
     )
+    department_feature_column = tf.feature_column.categorical_column_with_hash_bucket(
+      key='department',
+      hash_bucket_size=category_length.loc[category_length['feature'] == 'department']['category_length'].to_list()[0]
+    )
+    type_of_study_feature_column = tf.feature_column.categorical_column_with_hash_bucket(
+      key='type_of_study',
+      hash_bucket_size=3
+    )
+    study_programme_feature_column = tf.feature_column.categorical_column_with_hash_bucket(
+      key='study_programme',
+      hash_bucket_size=4
+    )
+    year_of_study_feature_column = tf.feature_column.categorical_column_with_identity(
+      key='year_of_study',
+      num_buckets=6
+    )
+    affiliated_student_interest_group_feature_column = tf.feature_column.categorical_column_with_hash_bucket(
+      key='affiliated_student_interest_group',
+      hash_bucket_size=category_length.loc[category_length['feature'] == 'affiliated_student_interest_group']['category_length'].to_list()[0]
+    )
     # crossed_column = tf.feature_column.crossed_column(
     #   keys=(weekday_feature_column, hour_feature_column, minute_feature_column),
     #   hash_bucket_size=1000
@@ -474,6 +630,11 @@ class AccessRecordModel:
         tf.feature_column.indicator_column(weekday_feature_column),
         tf.feature_column.indicator_column(hour_feature_column),
         tf.feature_column.indicator_column(minute_feature_column),
+        tf.feature_column.indicator_column(department_feature_column),
+        tf.feature_column.indicator_column(type_of_study_feature_column),
+        tf.feature_column.indicator_column(study_programme_feature_column),
+        tf.feature_column.indicator_column(year_of_study_feature_column),
+        tf.feature_column.indicator_column(affiliated_student_interest_group_feature_column),
         # crossed_column,
       ),
       model_dir=model_dir_path,
@@ -532,6 +693,11 @@ class AccessRecordModel:
           'start_time_weekday': tf.int32,
           'start_time_hour': tf.int32,
           'start_time_minute': tf.int32,
+          'department': tf.string,
+          'type_of_study': tf.string,
+          'study_programme': tf.string,
+          'year_of_study': tf.int32,
+          'affiliated_student_interest_group': tf.string,
           'label': tf.int32,
           'prediction': tf.float32
         },
@@ -539,6 +705,11 @@ class AccessRecordModel:
           'start_time_weekday': tf.TensorShape([]),
           'start_time_hour': tf.TensorShape([]),
           'start_time_minute': tf.TensorShape([]),
+          'department': tf.TensorShape([]),
+          'type_of_study': tf.TensorShape([]),
+          'study_programme': tf.TensorShape([]),
+          'year_of_study': tf.TensorShape([]),
+          'affiliated_student_interest_group': tf.TensorShape([]),
           'label': tf.TensorShape([]),
           'prediction': tf.TensorShape([])
         }
@@ -554,9 +725,14 @@ class AccessRecordModel:
         'start_time_weekday',
         'start_time_hour',
         'start_time_minute',
+        'department',
+        'type_of_study',
+        'study_programme',
+        'year_of_study',
+        'affiliated_student_interest_group',
         'unique_stay_count'
       ],
-      column_defaults=[tf.int32, tf.int32, tf.int32, tf.int32],
+      column_defaults=[tf.int32, tf.int32, tf.int32, tf.string, tf.string, tf.string, tf.int32, tf.string, tf.int32],
       label_name='unique_stay_count',
       shuffle=False,
       batch_size=1,

@@ -25,17 +25,29 @@ $env:CUDA_VISIBLE_DEVICES='-1'
 
 Preprocess:
 ```shell
-python -m innolens_models access_record preprocess --input ../simulator/simulation_result/inno_wing_access_records.csv --training-data ./preprocessed/inno_wing_access_records_training.csv --evaluation-data ./preprocessed/inno_wing_access_records_evaluation.csv --start-time "2019-09-01T00:00+08:00" --end-time "2019-12-01T00:00+08:00" --time-step "minutes=30"
+# For access record
+python -m innolens_models access_record preprocess --input ../simulator/simulation_result/inno_wing_access_records.csv --training-data ./preprocessed/inno_wing_access_records_training.csv --evaluation-data ./preprocessed/inno_wing_access_records_evaluation.csv --start-time "2019-09-01T00:00+08:00" --end-time "2019-12-01T00:00+08:00" --time-step "minutes=30" --is-space
+
+# For user count
+python -m innolens_models user_count preprocess --input ../simulator/simulation_result/inno_wing_access_records.csv --member-data ../simulator/simulation_result/members.csv --training-data ./preprocessed/inno_wing_user_count_training.csv --evaluation-data ./preprocessed/inno_wing_user_count_evaluation.csv --category-length ./preprocessed/inno_wing_user_count_category.csv --start-time "2019-09-01T00:00+08:00" --end-time "2019-12-01T00:00+08:00" --time-step "minutes=30" --is-space
 ```
 
 Train:
 ```shell
+# For access record
 python -m innolens_models access_record train --model-dir ./tensorflow_models/access_record_dnn_0 --training-data ./preprocessed/inno_wing_access_records_training.csv --evaluation-data ./preprocessed/inno_wing_access_records_evaluation.csv --evaluation-prediction ./access_record_evaluation_prediction.csv
+
+# For user count
+python -m innolens_models user_count train --model-dir ./tensorflow_models/user_count_dnn_0 --training-data ./preprocessed/inno_wing_user_count_training.csv --category-length ./preprocessed/inno_wing_user_count_category.csv --evaluation-data ./preprocessed/inno_wing_user_count_evaluation.csv --evaluation-prediction ./access_user_count_prediction.csv
 ```
 
 Evaluate:
 ```shell
+# For access record
 python -m innolens_models access_record evaluate --model-dir ./tensorflow_models/access_record_dnn_0 --data ./preprocessed/inno_wing_access_records_evaluation.csv --prediction ./access_record_evaluation_prediction.csv
+
+# For user count
+python -m innolens_models user_count evaluate --model-dir ./tensorflow_models/user_count_dnn_0 --data ./preprocessed/inno_wing_user_count_evaluation.csv --category-length ./preprocessed/inno_wing_user_count_category.csv --prediction ./access_user_count_prediction.csv
 ```
 
 ## 4. Notes
