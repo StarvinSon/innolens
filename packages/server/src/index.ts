@@ -13,6 +13,7 @@ import { dbCreators } from './db';
 import { Logger, createLogger } from './logger';
 import { ServerOptions } from './server-options';
 import { serviceCreators } from './services';
+import { ClientService, ClientType } from './services/client';
 import { UserService } from './services/user';
 import { utilCreators } from './utils';
 
@@ -48,8 +49,19 @@ const start = async (options: ServerOptions): Promise<void> => {
     //   await resolver.resolve(token);
     // }
 
-    const [userService, app, logger] =
-      await resolver.resolve([UserService, App, Logger] as const);
+    const [clientService, userService, app, logger] =
+      await resolver.resolve([ClientService, UserService, App, Logger] as const);
+
+    const defaultClient = await clientService.findByPublicId('default');
+    if (defaultClient === null) {
+      await clientService.insert({
+        _id: new ObjectId(),
+        name: 'Default Public Client',
+        publicId: 'default',
+        type: ClientType.PUBLIC,
+        secret: ''
+      });
+    }
 
     const rootUser = await userService.findByUsername('root');
     if (rootUser === null) {
