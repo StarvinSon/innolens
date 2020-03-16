@@ -1,0 +1,25 @@
+@use '../theme';
+@use './ripple-variables' as vars;
+
+
+:host {
+  display: block;
+  position: absolute;
+  border-radius: 50%;
+  overflow: hidden;
+  pointer-events: none;
+  contain: strict;
+}
+
+:host(:not([show])),
+:host([hidden]) {
+  display: none;
+}
+
+.background {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-color: var(vars.$color, var(theme.$primary));
+  opacity: 0.4;
+}

@@ -1,28 +1,16 @@
-import { DirectiveFn, directive, AttributePart } from 'lit-html';
+import { DirectiveFn, AttributePart } from 'lit-html';
 
-import { wrapMethod } from '../utils/method-wrapper';
+import { directiveMethod } from './directive-method';
 
-
-const directiveMethod = (): MethodDecorator => wrapMethod((method) => {
-  const invoke = directive((target: object, args: ReadonlyArray<unknown>) =>
-    Reflect.apply(method, target, args));
-
-  const wrapped = function(this: object, ...args: ReadonlyArray<unknown>): unknown {
-    return invoke(this, args);
-  };
-  return wrapped;
-});
-
-
-export interface AnimationFactory<K extends string> {
-  (elem: Element, key: K | undefined): Animation;
-}
 
 export type AnimationDirection = 'forwards' | 'backwards';
 
+export interface AnimationFactory<K extends string> {
+  (direction: AnimationDirection, key: K, elem: Element): Animation;
+}
+
 export class ElementAnimator<K extends string = string> extends EventTarget {
-  public readonly forwardAnimationFactory: AnimationFactory<K>;
-  public readonly backwardAnimationFactory: AnimationFactory<K>;
+  public readonly animationFactory: AnimationFactory<K>;
 
   private _direction: AnimationDirection = 'backwards';
 
@@ -43,13 +31,9 @@ export class ElementAnimator<K extends string = string> extends EventTarget {
   private readonly _animationsToCancel: Array<Animation> = [];
 
 
-  public constructor(
-    forwardAnimationFactory: AnimationFactory<K>,
-    backwardAnimationFactory: AnimationFactory<K>
-  ) {
+  public constructor(animationFactory: AnimationFactory<K>) {
     super();
-    this.forwardAnimationFactory = forwardAnimationFactory;
-    this.backwardAnimationFactory = backwardAnimationFactory;
+    this.animationFactory = animationFactory;
     this._onAnimationFinished = this._onAnimationFinished.bind(this);
   }
 
@@ -102,7 +86,7 @@ export class ElementAnimator<K extends string = string> extends EventTarget {
               || currAnimationState.animations[key] === undefined
             )
           ) {
-            const animation = this.forwardAnimationFactory(element, key);
+            const animation = this.animationFactory('forwards', key, element);
             nextAnimationState = {
               type: 'forwarding',
               animations: {
@@ -124,7 +108,7 @@ export class ElementAnimator<K extends string = string> extends EventTarget {
               || currAnimationState.animations[key] === undefined
             )
           ) {
-            const animation = this.backwardAnimationFactory(element, key);
+            const animation = this.animationFactory('backwards', key, element);
             nextAnimationState = {
               type: 'backwarding',
               animations: {

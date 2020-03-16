@@ -1,10 +1,11 @@
-import '../login-dialog';
-import '../top-bar';
-
 import {
-  customElement, LitElement, TemplateResult, property, query
+  customElement, LitElement, TemplateResult, property, query, html
 } from 'lit-element';
 
+import '../button';
+import '../drawer';
+import '../login-dialog';
+import '../top-bar';
 import { MemberCompositionService, MemberCompositionState } from '../../services/member-composition';
 import { autoBind } from '../../utils/method-binder';
 import { injectableProperty } from '../../utils/property-injector';
@@ -32,6 +33,9 @@ export class App extends PropertyInjectorElement(LitElement) {
 
   @property({ attribute: false })
   protected memberComposition: MemberCompositionState = null;
+
+  @property({ attribute: false })
+  private _showDrawer = false;
 
   @query('inno-login-dialog')
   protected readonly loginDialogElement!: import('../login-dialog').LoginDialog;
@@ -66,13 +70,31 @@ export class App extends PropertyInjectorElement(LitElement) {
   }
 
   protected render(): TemplateResult {
-    const { memberComposition } = this;
-    return this.html`
-      <inno-top-bar></inno-top-bar>
-      <button @click="${this.onUpdateButtonClick}">Update</button>
+    const {
+      _showDrawer: showDrawer,
+      memberComposition
+    } = this;
+
+    return this.inject(html`
+      <inno-top-bar
+        @drawer-toggled="${this._onTopBarDrawerToggled}"></inno-top-bar>
+      <inno-drawer
+        .show="${showDrawer}"
+        @request-close="${this._onDrawerRequestClose}"></inno-drawer>
+      <inno-button
+        theme="raised"
+        @click="${this.onUpdateButtonClick}">Update</inno-button>
       <pre>${JSON.stringify(memberComposition, undefined, 2)}</pre>
       <inno-login-dialog></inno-login-dialog>
-    `;
+    `);
+  }
+
+  private _onTopBarDrawerToggled(): void {
+    this._showDrawer = !this._showDrawer;
+  }
+
+  private _onDrawerRequestClose(): void {
+    this._showDrawer = false;
   }
 
   protected onUpdateButtonClick(): void {

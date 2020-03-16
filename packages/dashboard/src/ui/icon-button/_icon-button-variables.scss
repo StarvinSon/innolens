@@ -1,0 +1,5 @@
+@function _name($name) {
+  @return --inno-icon-button-#{$name};
+}
+
+$ripple-color: _name('ripple-color');

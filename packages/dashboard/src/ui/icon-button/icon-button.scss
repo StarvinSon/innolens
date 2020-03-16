@@ -1,0 +1,56 @@
+@use '../theme';
+@use '../ripple';
+@use './icon-button-variables' as vars;
+
+
+:host {
+  display: inline-flex;
+  position: relative;
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+:host(:focus) {
+  outline: none;
+}
+
+.button {
+  display: flex;
+  position: relative;
+  box-sizing: border-box;
+  border: none;
+  padding: 0.5rem;
+  flex-basis: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: transparent;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+  }
+
+  & > * {
+    pointer-events: none;
+  }
+
+  &__ripple {
+    position: absolute;
+    left: 0rem;
+    top: 0rem;
+    width: 100%;
+    height: 100%;
+    #{ripple.$color}: var(vars.$ripple-color, var(theme.$on-background));
+  }
+}
+
+::slotted(*) {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}

@@ -21,12 +21,11 @@ module.exports = (api) => {
         regenerator: true,
         useESModules: true
       }],
-      ['./tools/babel-plugin-template-html-minifier', {
-        tags: [
-          'html',
-          'svg',
-          'this.html'
-        ],
+      ['babel-plugin-template-html-minifier', {
+        modules: {
+          'lit-html': ['html', 'svg'],
+          'lit-element': ['html', 'svg']
+        },
         htmlMinifier: {
           caseSensitive: true,
           collapseWhitespace: true,

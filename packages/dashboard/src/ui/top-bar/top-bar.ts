@@ -3,6 +3,12 @@ import {
   customElement
 } from 'lit-element';
 
+import '../icon-button';
+import '../theme';
+import '../typography';
+import '../elevation';
+import { menuIcon } from '../icons/menu';
+
 import { css, classes } from './top-bar.scss';
 
 
@@ -14,14 +20,25 @@ declare global {
   }
 }
 
+/**
+ * @event drawer-toggled
+ */
 @customElement(TAG_NAME)
 export class TopBar extends LitElement {
   public static readonly styles = css;
 
   protected render(): TemplateResult {
     return html`
+      <inno-icon-button
+        class="${classes.drawerIcon}"
+        @click="${this._onDrawerButtonClick}">
+        ${menuIcon(classes.drawerIcon_svg)}
+      </inno-icon-button>
       <h1 class="${classes.logo}">InnoLens</h1>
     `;
   }
 
+  private _onDrawerButtonClick(): void {
+    this.dispatchEvent(new Event('drawer-toggled'));
+  }
 }

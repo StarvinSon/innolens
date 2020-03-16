@@ -4,7 +4,7 @@ import { Action, AnyAction } from './state-types';
 import { Store } from './store';
 
 
-export interface PathService {
+export interface PathService extends EventTarget {
   readonly path: string;
   set(path: string): void;
 }
@@ -30,10 +30,11 @@ const KEY = 'path';
 
 @injectableConstructor(Store)
 @singleton()
-export class PathServiceImpl implements PathService {
+export class PathServiceImpl extends EventTarget implements PathService {
   private readonly _store: Store;
 
   public constructor(store: Store) {
+    super();
     this._store = store;
     store.addReducer(KEY, this._reduce.bind(this));
   }
@@ -43,10 +44,13 @@ export class PathServiceImpl implements PathService {
   }
 
   public set(path: string): void {
-    this._store.dispatch({
-      type: 'path/SET',
-      path
-    });
+    if (this.path !== path) {
+      this._store.dispatch({
+        type: 'path/SET',
+        path
+      });
+      this.dispatchEvent(new Event('path-changed'));
+    }
   }
 
   private _reduce(state: string = '', action: AnyAction): string {

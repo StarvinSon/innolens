@@ -1,0 +1,13 @@
+@use './theme-variables' as vars;
+
+
+:root {
+  // See: https://material.io/design/color/dark-theme.html
+  #{vars.$background}: #121212;
+  #{vars.$on-background}: white;
+
+  #{vars.$primary}: #0080FF;
+  #{vars.$on-primary}: white;
+
+  #{vars.$separator}: white;
+}

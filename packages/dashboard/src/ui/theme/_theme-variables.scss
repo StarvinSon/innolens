@@ -1,0 +1,12 @@
+@function _name($name) {
+  @return --inno-theme-#{$name};
+}
+
+
+$background: _name('background');
+$on-background: _name('on-background');
+
+$primary: _name('primary');
+$on-primary: _name('on-primary');
+
+$separator: _name('separator');

@@ -21,5 +21,4 @@ export class Template extends LitElement {
   protected render(): TemplateResult {
     return html``;
   }
-
 }

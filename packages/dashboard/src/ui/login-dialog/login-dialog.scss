@@ -1,3 +1,7 @@
+@use '../theme';
+@use '../elevation';
+
+
 :host {
   display: flex;
   position: fixed;
@@ -7,7 +11,7 @@
   height: 100%;
   justify-content: center;
   align-items: center;
-  pointer-events: none;
+  z-index: 24;
 }
 
 :host([hidden]) {
@@ -20,23 +24,19 @@
   top: 0rem;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-
-  &--hide {
-    display: none;
-  }
+  background-color: rgba(0, 0, 0, 0.8);
+  // backdrop-filter: blur(2px);
 }
 
 .dialog {
+  @include elevation.box-shadow(24);
+
+  display: flex;
   position: relative;
   padding: 1rem;
-  background: white;
+  flex-direction: column;
+  background-color: var(elevation.$background-color-24dp);
   border-radius: 1rem;
-  pointer-events: auto;
-
-  &--hide {
-    display: none;
-  }
 
   &--freeze {
     pointer-events: none;
@@ -48,8 +48,13 @@
   grid-auto-rows: 1fr;
   grid-gap: 0.5rem;
 
-  &__submit-button {
-    justify-self: end;
+  &__buttons {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  &__button:not(:first-child) {
+    margin-left: 0.25rem;
   }
 }
 

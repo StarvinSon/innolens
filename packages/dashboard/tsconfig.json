@@ -6,6 +6,10 @@
       {
         "name": "ts-lit-plugin",
         "strict": true,
+        "htmlTemplateTags": [
+          "html",
+          "svg"
+        ],
         "rules": {
           "no-unknown-event": "warning"
         }

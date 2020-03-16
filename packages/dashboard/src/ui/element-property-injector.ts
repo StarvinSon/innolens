@@ -2,7 +2,7 @@ import { Resolver } from '@innolens/resolver';
 import { UpdatingElement } from 'lit-element';
 import {
   directive, DirectiveFn, TemplateResult,
-  html, AttributePart, PropertyPart
+  AttributePart, PropertyPart
 } from 'lit-html';
 
 import { injectProperties, injectableProperty } from '../utils/property-injector';
@@ -42,13 +42,13 @@ export const injectTemplate = (
 
     let attrNamePlaceholder: string;
     do {
-      attrNamePlaceholder = `attr-name-holder-${Math.random().toString().slice(2)}`;
+      attrNamePlaceholder = `inject-${Math.random().toString().slice(2)}`;
     // eslint-disable-next-line no-loop-func
     } while (tempResult.strings.some((s) => s.includes(attrNamePlaceholder)));
 
     let attrValuePlaceholder: string;
     do {
-      attrValuePlaceholder = `{{attr-value-holder-${Math.random().toString().slice(2)}}}`;
+      attrValuePlaceholder = `{{inject-${Math.random().toString().slice(2)}}}`;
     // eslint-disable-next-line no-loop-func
     } while (tempResult.strings.some((s) => s.includes(attrValuePlaceholder)));
 
@@ -78,15 +78,16 @@ export const injectTemplate = (
     const injectedStrings: Array<string> = [];
     const injectedValIdxs: Array<number> = [];
     for (const string of tempElem.innerHTML.split(valPlaceholder)) {
-      const [beforeAttrString, afterAttrString] = string.split(attrValuePlaceholder);
-      injectedStrings.push(beforeAttrString);
-      if (afterAttrString !== undefined) {
-        injectedValIdxs.push(-1);
-        injectedStrings.push(afterAttrString);
-      }
-      if (valIdx < tempResult.values.length) {
-        injectedValIdxs.push(valIdx);
-        valIdx += 1;
+      const substrings = string.split(attrValuePlaceholder);
+      for (let i = 0; i < substrings.length; i += 1) {
+        const substring = substrings[i];
+        injectedStrings.push(substring);
+        if (i < substrings.length - 1) {
+          injectedValIdxs.push(-1);
+        } else if (valIdx < tempResult.values.length) {
+          injectedValIdxs.push(valIdx);
+          valIdx += 1;
+        }
       }
     }
 
@@ -137,11 +138,8 @@ export const PropertyInjectorElement = <T extends (new (...args: Array<any>) => 
     /**
      * Inject element properties.
      */
-    protected html(
-      strings: TemplateStringsArray,
-      ...values: ReadonlyArray<unknown>
-    ): TemplateResult {
-      return injectTemplate(this.resolver, html(strings, ...values));
+    protected inject(result: TemplateResult): TemplateResult {
+      return injectTemplate(this.resolver, result);
     }
   }
 

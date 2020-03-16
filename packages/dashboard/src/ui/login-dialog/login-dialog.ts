@@ -1,9 +1,12 @@
 import {
   customElement, LitElement, TemplateResult,
-  html, property, query
+  html, property, query, PropertyValues
 } from 'lit-element';
 import { classMap } from 'lit-html/directives/class-map';
 
+import '../button';
+import '../elevation';
+import '../theme';
 import {
   OAuth2PasswordCredentialsUIAdapter, OAuth2Service, OAuth2PasswordCredentialsRequest,
   OAuth2PasswordCredentialsResponse
@@ -50,91 +53,107 @@ export class LoginDialog extends LitElement {
   @query(`.${classes.form}`)
   private readonly _formElement!: HTMLFormElement;
 
+  @query(`.${classes.form} [name="username"]`)
+  private readonly _usernameInputElement!: HTMLInputElement;
+
+  @query(`.${classes.form} [name="password"]`)
+  private readonly _passwordInputElement!: HTMLInputElement;
+
+  @query(`.${classes.form} [type="submit"]`)
+  private readonly _nativeSubmitButton!: HTMLButtonElement;
+
 
   @observeProperty('_updateAnimator')
   private readonly _animator = new ElementAnimator<'background' | 'dialog'>(
-    (elem, key) => {
-      const commonOpts: KeyframeEffectOptions = {
-        duration: 300
-      };
-      switch (key) {
-        case 'background': return new Animation(
-          new KeyframeEffect(
-            elem,
-            [{
-              opacity: 0
-            }, {
-              opacity: 1
-            }],
-            {
-              ...commonOpts
+    (direction, key, elem) => {
+      switch (direction) {
+        case 'forwards': {
+          switch (key) {
+            case 'background': return new Animation(
+              new KeyframeEffect(
+                elem,
+                [{
+                  opacity: 0
+                }, {
+                  opacity: 1
+                }],
+                {
+                  duration: 100,
+                  fill: 'forwards'
+                }
+              ),
+              document.timeline
+            );
+            case 'dialog': return new Animation(
+              new KeyframeEffect(
+                elem,
+                [{
+                  opacity: 0,
+                  transform: 'scale(0)'
+                }, {
+                  opacity: 1,
+                  transform: 'scale(1)'
+                }],
+                {
+                  duration: 300,
+                  fill: 'forwards',
+                  easing: 'cubic-bezier(.68,1.6,.6,1)'
+                }
+              ),
+              document.timeline
+            );
+            default: {
+              throw new Error(`Unexpected key: ${key}`);
             }
-          ),
-          document.timeline
-        );
-        case 'dialog': return new Animation(
-          new KeyframeEffect(
-            elem,
-            [{
-              opacity: 0,
-              transform: 'scale(0)'
-            }, {
-              opacity: 1,
-              transform: 'scale(1)'
-            }],
-            {
-              ...commonOpts,
-              easing: 'cubic-bezier(.68,1.6,.6,1)'
-            }
-          ),
-          document.timeline
-        );
-        default: {
-          throw new Error(`Unexpected key: ${key}`);
+          }
         }
-      }
-    },
-    (elem, key) => {
-      const commonOpts: KeyframeEffectOptions = {
-        duration: 300
-      };
-      switch (key) {
-        case 'background': return new Animation(
-          new KeyframeEffect(
-            elem,
-            [{
-              opacity: 1
-            }, {
-              opacity: 0
-            }],
-            {
-              ...commonOpts
+        case 'backwards': {
+          switch (key) {
+            case 'background': return new Animation(
+              new KeyframeEffect(
+                elem,
+                [{
+                  opacity: 1
+                }, {
+                  opacity: 0
+                }],
+                {
+                  duration: 100,
+                  fill: 'forwards'
+                }
+              ),
+              document.timeline
+            );
+            case 'dialog': return new Animation(
+              new KeyframeEffect(
+                elem,
+                [{
+                  opacity: 1,
+                  transform: 'scale(1)'
+                }, {
+                  opacity: 0,
+                  transform: 'scale(0)'
+                }],
+                {
+                  duration: 200,
+                  fill: 'forwards'
+                }
+              ),
+              document.timeline
+            );
+            default: {
+              throw new Error(`Unexpected key: ${key}`);
             }
-          ),
-          document.timeline
-        );
-        case 'dialog': return new Animation(
-          new KeyframeEffect(
-            elem,
-            [{
-              opacity: 1,
-              transform: 'scale(1)'
-            }, {
-              opacity: 0,
-              transform: 'scale(0)'
-            }],
-            {
-              ...commonOpts
-            }
-          ),
-          document.timeline
-        );
+          }
+        }
         default: {
-          throw new Error(`Unexpected key: ${key}`);
+          throw new Error(`Unexpected direction: ${direction}`);
         }
       }
     }
   );
+
+  private _lastInteractable = false;
 
 
   @observeProperty('_updateServiceAdapter')
@@ -163,6 +182,7 @@ export class LoginDialog extends LitElement {
     this._open = true;
     this._username = req.username;
     this._password = req.password;
+    this._errorMessage = req.errorMessage;
     if (this._requestCrendentialPromise === null) {
       let resolve!: (val: OAuth2PasswordCredentialsResponse) => void;
       const promise = new Promise<OAuth2PasswordCredentialsResponse>((rs) => {
@@ -194,20 +214,24 @@ export class LoginDialog extends LitElement {
     this._updateServiceAdapter();
   }
 
+
   private _updateServiceAdapter(): void {
     if (this.oauth2Service === undefined || this._passwordCredentialsUIAdpater === undefined) {
       return;
     }
 
-    if (this.isConnected && this.oauth2Service !== null) {
-      this.oauth2Service.passwordCredentialsUIAdapter = this._passwordCredentialsUIAdpater;
+    if (this.isConnected) {
+      if (this.oauth2Service !== null) {
+        this.oauth2Service.passwordCredentialsUIAdapter = this._passwordCredentialsUIAdpater;
+      }
     } else if (
-      this.oauth2Service?.passwordCredentialsUIAdapter
-      === this._passwordCredentialsUIAdpater
+      this.oauth2Service !== null
+      && this.oauth2Service.passwordCredentialsUIAdapter === this._passwordCredentialsUIAdpater
     ) {
       this.oauth2Service.passwordCredentialsUIAdapter = null;
     }
   }
+
 
   private _updateAnimator(): void {
     if (this._open === undefined || this._animator === undefined) {
@@ -216,6 +240,7 @@ export class LoginDialog extends LitElement {
 
     this._animator.direction = this._open ? 'forwards' : 'backwards';
   }
+
 
   protected render(): TemplateResult {
     const {
@@ -226,23 +251,41 @@ export class LoginDialog extends LitElement {
     /* eslint-disable @typescript-eslint/indent */
     return html`
       <div
-        class="${classMap({
-          [classes.background]: true,
-          [classes.background_$hide]: !animator.visible
-        })}"
+        class="${classes.background}"
         data-animator-control=${animator.control('background')}></div>
       <div
         class="${classMap({
           [classes.dialog]: true,
-          [classes.dialog_$hide]: !animator.visible,
           [classes.dialog_$freeze]: !animator.interactable
         })}"
         data-animator-control=${animator.control('dialog')}>
         <div class="${classes.dialog_content}">
-          <form class="${classes.form}" @submit="${this.onFormSubmit}">
-            <input class="${classes.form_input}" name="username" required placeholder="username">
-            <input class="${classes.form_input}" name="password" type="password" required placeholder="password">
-            <button class="${classes.form_submitButton}" type="submit">Log in</button>
+          <form
+            class="${classes.form}"
+            @submit="${this.onFormSubmit}">
+            <input
+              class="${classes.form_input}"
+              name="username"
+              required
+              placeholder="username">
+            <input
+              class="${classes.form_input}"
+              name="password"
+              type="password"
+              required
+              placeholder="password">
+            <div class="${classes.form_buttons}">
+              <inno-button
+                class="${classes.form_button}"
+                @click="${this._onCancelButtonClick}">Cancel</inno-button>
+              <button
+                type="submit"
+                hidden></button>
+              <inno-button
+                class="${classes.form_button}"
+                theme="raised"
+                @click="${this._onSubmitButtonClick}">Log in</inno-button>
+            </div>
           </form>
           <pre
             class="${classMap({
@@ -255,15 +298,42 @@ export class LoginDialog extends LitElement {
     /* eslint-enable @typescript-eslint/indent */
   }
 
+  protected updated(changedProps: PropertyValues): void {
+    super.updated(changedProps);
+
+    if (this._animator.visible) {
+      this.removeAttribute('hidden');
+    } else {
+      this.setAttribute('hidden', '');
+    }
+
+    if (this._lastInteractable !== this._animator.interactable) {
+      this._lastInteractable = this._animator.interactable;
+      if (this._lastInteractable) {
+        this._usernameInputElement.focus();
+      }
+    }
+  }
+
   protected onFormSubmit(event: Event): void {
     event.preventDefault();
-    const { _formElement: formElement } = this;
-    const username = (formElement.elements.namedItem('username') as HTMLInputElement).value;
-    const password = (formElement.elements.namedItem('password') as HTMLInputElement).value;
+
+    const username = this._usernameInputElement.value;
+    const password = this._passwordInputElement.value;
     this._responseCredentials({
       type: 'ENTER',
       username,
       password
     });
+  }
+
+  private _onCancelButtonClick(): void {
+    this._responseCredentials({
+      type: 'CANCEL'
+    });
+  }
+
+  private _onSubmitButtonClick(): void {
+    this._nativeSubmitButton.click();
   }
 }

@@ -1,0 +1,25 @@
+@use './ui/theme';
+
+
+html {
+  width: 100%;
+  height: 100%;
+  background: var(theme.$background);
+}
+
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0rem;
+
+  // For debug purpose:
+  // All content will be visible on black background by default, and
+  // it is easier to find out what has not been styled yet.
+  font-family: serif;
+  color: orange;
+}
+
+.app {
+  width: 100%;
+  height: 100%;
+}
