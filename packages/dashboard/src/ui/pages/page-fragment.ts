@@ -1,0 +1,87 @@
+import { Resolver } from '@innolens/resolver';
+import { TemplateResult, html } from 'lit-html';
+import { classMap } from 'lit-html/directives/class-map';
+
+import { injectTemplate } from '../element-property-injector';
+import { Fragment, FragmentAnimationType } from '../fragment';
+
+import { classes } from './pages.scss';
+
+
+interface TemplateCache {
+  readonly strings: TemplateStringsArray;
+}
+
+
+export class PageFragment extends Fragment {
+  public readonly tagName: keyof HTMLElementTagNameMap;
+  public readonly getResolver: () => Resolver | null;
+
+  private _templateCache: TemplateCache | null = null;
+
+  public constructor(tagName: keyof HTMLElementTagNameMap, getResolver: () => Resolver | null) {
+    super();
+    this.tagName = tagName;
+    this.getResolver = getResolver;
+  }
+
+  protected render(): TemplateResult {
+    /* eslint-disable @typescript-eslint/indent */
+    return this._processTemplate(html`
+      <!-- @ts-ignore -->
+      <TAG
+        class="${classMap({
+          [classes.page]: true,
+          [classes.page_$hide]: !this.visible,
+          [classes.page_$freeze]: !this.interactable
+        })}"></TAG>
+    `);
+    /* eslint-enable @typescript-eslint/indent */
+  }
+
+  private _processTemplate(result: TemplateResult): TemplateResult {
+    return injectTemplate(this.getResolver(), this._injectTag(result));
+  }
+
+  private _injectTag(result: TemplateResult): TemplateResult {
+    if (this._templateCache === null) {
+      const strings = result.strings.map((s) => s.replace(/TAG/g, this.tagName));
+      this._templateCache = {
+        strings: Object.freeze(Object.assign(strings.slice(), {
+          raw: Object.freeze(strings.slice())
+        })) as TemplateStringsArray
+      };
+    }
+
+    return new TemplateResult(
+      this._templateCache.strings,
+      result.values,
+      result.type,
+      result.processor
+    );
+  }
+
+  protected makeAnimations(type: FragmentAnimationType): ReadonlyArray<Animation> {
+    const pageElem = this.getRootElement();
+    if (pageElem !== null && type === 'showing') {
+      return [
+        new Animation(
+          new KeyframeEffect(
+            pageElem,
+            [
+              { opacity: 0, transform: 'translateY(10%)', zIndex: 1 },
+              { opacity: 1, transform: 'translateY(0%)', zIndex: 1 }
+            ],
+            {
+              duration: 300,
+              fill: 'forwards',
+              easing: 'cubic-bezier(0.33, 1, 0.68, 1)'
+            }
+          ),
+          document.timeline
+        )
+      ];
+    }
+    return [];
+  }
+}

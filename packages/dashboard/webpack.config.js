@@ -19,7 +19,7 @@ const outPath = resolve(rootPath, 'out');
  * @param {Arguments} args
  * @returns {import('webpack').Configuration}
  */
-module.exports = (env, { publicPath = '/static' }) => {
+module.exports = (env, { publicPath = '/static/' }) => {
 
   /** @type {import('webpack').RuleSetUse} */
   const jsUse = [

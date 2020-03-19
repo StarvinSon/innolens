@@ -1,3 +1,4 @@
+import { UpdatingElement } from 'lit-element';
 import { DirectiveFn, AttributePart } from 'lit-html';
 
 import { directiveMethod } from './directive-method';
@@ -11,6 +12,7 @@ export interface AnimationFactory<K extends string> {
 
 export class ElementAnimator<K extends string = string> extends EventTarget {
   public readonly animationFactory: AnimationFactory<K>;
+  public readonly host: UpdatingElement | null;
 
   private _direction: AnimationDirection = 'backwards';
 
@@ -31,9 +33,10 @@ export class ElementAnimator<K extends string = string> extends EventTarget {
   private readonly _animationsToCancel: Array<Animation> = [];
 
 
-  public constructor(animationFactory: AnimationFactory<K>) {
+  public constructor(animationFactory: AnimationFactory<K>, host: UpdatingElement | null = null) {
     super();
     this.animationFactory = animationFactory;
+    this.host = host;
     this._onAnimationFinished = this._onAnimationFinished.bind(this);
   }
 
@@ -159,6 +162,7 @@ export class ElementAnimator<K extends string = string> extends EventTarget {
   }
 
   private _requestUpdate(): void {
+    this.host?.requestUpdate();
     this.dispatchEvent(new Event('request-update'));
   }
 }

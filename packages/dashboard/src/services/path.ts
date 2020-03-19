@@ -49,7 +49,7 @@ export class PathServiceImpl extends EventTarget implements PathService {
         type: 'path/SET',
         path
       });
-      this.dispatchEvent(new Event('path-changed'));
+      this.dispatchEvent(new Event('path-updated'));
     }
   }
 

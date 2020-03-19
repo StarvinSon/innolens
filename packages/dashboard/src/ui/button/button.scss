@@ -66,8 +66,11 @@
   &__content {
     @include typography.button();
 
+    display: flex;
     position: relative;
     flex-basis: 100%;
+    justify-content: center;
+    align-items: center;
     color: var(vars.$foreground-color, var(theme.$on-background));
 
     &--raised {

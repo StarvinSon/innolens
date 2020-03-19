@@ -11,24 +11,10 @@ import { PathService } from '../../services/path';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
 import { ElementAnimator } from '../element-animator';
+import { pageEntries } from '../page-entries';
 
 import './item';
 import { css, classes } from './drawer.scss';
-
-
-const links: ReadonlyArray<{
-  readonly href: string;
-  readonly name: string;
-}> = [
-  {
-    href: '/',
-    name: 'Home'
-  },
-  {
-    href: '/about',
-    name: 'About'
-  }
-];
 
 
 const TAG_NAME = 'inno-drawer';
@@ -39,9 +25,6 @@ declare global {
   }
 }
 
-/**
- * @event request-close
- */
 @customElement(TAG_NAME)
 export class Drawer extends LitElement {
   public static readonly styles = css;
@@ -49,17 +32,7 @@ export class Drawer extends LitElement {
 
   @injectableProperty(PathService)
   @observeProperty('_updatePathListener')
-  public pathService: PathService | null = null;
-
-
-  @property({ type: Boolean })
-  public get show(): boolean {
-    return this._animator.direction === 'forwards';
-  }
-
-  public set show(val: boolean) {
-    this._animator.direction = val ? 'forwards' : 'backwards';
-  }
+  public pathService: PathService | null;
 
 
   @property({ attribute: false })
@@ -149,13 +122,15 @@ export class Drawer extends LitElement {
           throw new Error(`Unexpected direction: ${direction}`);
         }
       }
-    }
+    },
+    this
   );
 
 
   public constructor() {
     super();
-    this._animator.addEventListener('request-update', () => this.requestUpdate());
+    this._bindPath = this._bindPath.bind(this);
+    this.pathService = null;
   }
 
 
@@ -174,13 +149,10 @@ export class Drawer extends LitElement {
     if (this.pathService === undefined || this.pathService === null) return;
 
     if (this.isConnected) {
-      if (!Object.prototype.hasOwnProperty.call(this, '_bindPath')) {
-        this._bindPath = this._bindPath.bind(this);
-      }
-      this.pathService.addEventListener('path-changed', this._bindPath);
+      this.pathService.addEventListener('path-updated', this._bindPath);
       this._bindPath();
-    } else if (Object.prototype.hasOwnProperty.call(this, '_bindPath')) {
-      this.pathService.removeEventListener('path-changed', this._bindPath);
+    } else {
+      this.pathService.removeEventListener('path-updated', this._bindPath);
     }
   }
 
@@ -188,6 +160,19 @@ export class Drawer extends LitElement {
     if (this.pathService !== null) {
       this._path = this.pathService.path;
     }
+  }
+
+
+  public toggle(): void {
+    this._animator.direction = this._animator.direction === 'forwards' ? 'backwards' : 'forwards';
+  }
+
+  public show(): void {
+    this._animator.direction = 'forwards';
+  }
+
+  public hide(): void {
+    this._animator.direction = 'backwards';
   }
 
 
@@ -210,10 +195,10 @@ export class Drawer extends LitElement {
         })}"
         data-animator-control="${animator.control('drawer')}">
         <div class="${classes.drawer_links}">
-          ${links.map(({ href, name }) => html`
+          ${pageEntries.map(({ href, pathRegExp, name }) => html`
             <inno-drawer-item
               .href="${href}"
-              .highlight="${href === path}">
+              .highlight="${pathRegExp.test(path)}">
               ${name}
             </inno-drawer-item>
           `)}
@@ -230,11 +215,15 @@ export class Drawer extends LitElement {
     } else {
       this.setAttribute('hidden', '');
     }
+
+    if (changedProps.has('_path')) {
+      this.hide();
+    }
   }
 
   private _onBackgroundClick(): void {
     if (this._animator.interactable) {
-      this.dispatchEvent(new Event('request-close'));
+      this.hide();
     }
   }
 }

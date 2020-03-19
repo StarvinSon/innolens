@@ -14,6 +14,7 @@
   "dependencies": {
     "@babel/runtime-corejs3": "^7.8.7",
     "@innolens/resolver": "*",
+    "core-js": "^3.6.4",
     "lit-element": "^2.2.1",
     "lit-html": "^1.1.2",
     "pwa-helpers": "^0.9.1",

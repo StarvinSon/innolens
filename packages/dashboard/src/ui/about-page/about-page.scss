@@ -1,0 +1,27 @@
+@use '../typography';
+@use '../theme';
+
+
+:host {
+  display: block;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.title {
+  @include typography.h1();
+
+  margin: 0rem;
+  text-align: center;
+  color: var(theme.$on-background);
+}
+
+.slogan {
+  @include typography.body();
+
+  margin: 0rem;
+  text-align: center;
+  color: var(theme.$on-background);
+}
