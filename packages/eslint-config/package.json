@@ -5,10 +5,10 @@
   "homepage": "https://i.cs.hku.hk/fyp/2019/fyp19027/",
   "repository": "https://github.com/StarvinSon/innolens/tree/develop/packages/eslint-config",
   "dependencies": {
-    "@typescript-eslint/eslint-plugin": "^2.23.0",
-    "@typescript-eslint/parser": "2.23.0",
+    "@typescript-eslint/eslint-plugin": "^2.24.0",
+    "@typescript-eslint/parser": "2.24.0",
     "eslint": "*",
-    "eslint-config-airbnb-typescript": "^7.0.0",
+    "eslint-config-airbnb-typescript": "^7.2.0",
     "eslint-plugin-import": "2.20.0",
     "typescript": "^3.8.3"
   },
