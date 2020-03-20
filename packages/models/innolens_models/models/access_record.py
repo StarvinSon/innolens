@@ -53,6 +53,11 @@ class AccessRecordPreprocessorCli(Cli):
       required=True
     )
     parser.add_argument(
+      '--space',
+      help='Whether the access records belongs to a space or something else',
+      action="store_true"
+    )
+    parser.add_argument(
       '--training-data',
       help='Path to the training data csv',
       required=True
@@ -81,11 +86,6 @@ class AccessRecordPreprocessorCli(Cli):
       required=True
     )
     parser.add_argument(
-      '--is-space',
-      help='Whether the access records belongs to a space or something else',
-      action="store_true"
-    )
-    parser.add_argument(
       '--evaluation-fraction',
       help='Fraction of data to be the evaluation data',
       type=float
@@ -93,7 +93,7 @@ class AccessRecordPreprocessorCli(Cli):
 
   def handle(self, args: Namespace) -> None:
     input_path: str = args.input
-    is_space: bool = args.is_space
+    is_space: bool = args.space
     training_data_path: str = args.training_data
     evaluation_data_path: str = args.evaluation_data
     start_time: datetime = args.start_time

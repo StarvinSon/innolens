@@ -4997,6 +4997,7 @@ _types_of_study: Sequence[str] = (
 def rand_type_of_study() -> str:
   return rand_element(_types_of_study)
 
+
 _study_programme: Sequence[str] = (
   'JS6963',
   'JS6951',
@@ -5006,6 +5007,7 @@ _study_programme: Sequence[str] = (
 
 def rand_study_programme() -> str:
   return rand_element(_study_programme)
+
 
 _years_of_study: Sequence[int] = tuple(range(7))
 

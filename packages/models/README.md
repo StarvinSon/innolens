@@ -26,10 +26,10 @@ $env:CUDA_VISIBLE_DEVICES='-1'
 Preprocess:
 ```shell
 # For access record
-python -m innolens_models access_record preprocess --input ../simulator/simulation_result/inno_wing_access_records.csv --training-data ./preprocessed/inno_wing_access_records_training.csv --evaluation-data ./preprocessed/inno_wing_access_records_evaluation.csv --start-time "2019-09-01T00:00+08:00" --end-time "2019-12-01T00:00+08:00" --time-step "minutes=30" --is-space
+python -m innolens_models access_record preprocess --input ../simulator/simulation_result/inno_wing_access_records.csv --training-data ./preprocessed/inno_wing_access_records_training.csv --evaluation-data ./preprocessed/inno_wing_access_records_evaluation.csv --start-time "2019-09-01T00:00+08:00" --end-time "2019-12-01T00:00+08:00" --time-step "minutes=30" --space
 
 # For user count
-python -m innolens_models user_count preprocess --input ../simulator/simulation_result/inno_wing_access_records.csv --member-data ../simulator/simulation_result/members.csv --training-data ./preprocessed/inno_wing_user_count_training.csv --evaluation-data ./preprocessed/inno_wing_user_count_evaluation.csv --category-length ./preprocessed/inno_wing_user_count_category.csv --start-time "2019-09-01T00:00+08:00" --end-time "2019-12-01T00:00+08:00" --time-step "minutes=30" --is-space
+python -m innolens_models user_count preprocess --input ../simulator/simulation_result/inno_wing_access_records.csv --member-data ../simulator/simulation_result/members.csv --training-data ./preprocessed/inno_wing_user_count_training.csv --evaluation-data ./preprocessed/inno_wing_user_count_evaluation.csv --category-length ./preprocessed/inno_wing_user_count_category.csv --start-time "2019-09-01T00:00+08:00" --end-time "2019-12-01T00:00+08:00" --time-step "minutes=30" --space
 ```
 
 Train:
