@@ -1,0 +1,69 @@
+@use '../theme';
+@use '../svg-typography';
+
+
+:host {
+  display: block;
+  width: 30rem;
+  height: 22.5rem;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.chart {
+  width: 100%;
+  height: 100%;
+
+  &__ref-line {
+    stroke: var(theme.$on-background);
+    stroke-opacity: 0.2;
+  }
+
+  &__bar {
+    fill: var(theme.$on-background);
+
+    &--0 {
+      fill: var(theme.$chart-0);
+    }
+
+    &--1 {
+      fill: var(theme.$chart-1);
+    }
+
+    &--2 {
+      fill: var(theme.$chart-2);
+    }
+
+    &--3 {
+      fill: var(theme.$chart-3);
+    }
+
+    &--4 {
+      fill: var(theme.$chart-4);
+    }
+  }
+
+  &__axis {
+    fill: none;
+    stroke: var(theme.$on-background);
+  }
+
+  &__tick {
+    @include svg-typography.base();
+
+    font-size: 16px;
+    fill: var(theme.$on-background);
+
+    &--x {
+      text-anchor: middle;
+      dominant-baseline: hanging;
+    }
+
+    &--y {
+      text-anchor: end;
+      dominant-baseline: middle;
+    }
+  }
+}

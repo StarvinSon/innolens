@@ -4,11 +4,13 @@ import {
 } from 'lit-element';
 
 import '../button';
+import '../bar-chart';// eslint-disable-line import/no-duplicates
 import '../line-chart'; // eslint-disable-line import/no-duplicates
 import '../pie-chart'; // eslint-disable-line import/no-duplicates
 import { MemberCompositionService, MemberCompositionState } from '../../services/member-composition';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
+import { BarChartData } from '../bar-chart'; // eslint-disable-line import/no-duplicates
 import { LineChartData } from '../line-chart'; // eslint-disable-line import/no-duplicates
 import { PieChartData } from '../pie-chart'; // eslint-disable-line import/no-duplicates
 
@@ -35,6 +37,31 @@ export class HomePage extends LitElement {
   @property({ attribute: false })
   private _memberComposition: MemberCompositionState = null;
 
+
+  private readonly _sampleBarChartData: BarChartData = {
+    bars: [
+      {
+        name: 'Bar 1',
+        value: 1
+      },
+      {
+        name: 'Bar 2',
+        value: 4
+      },
+      {
+        name: 'Bar 3',
+        value: 10
+      },
+      {
+        name: 'Bar 4',
+        value: 3
+      },
+      {
+        name: 'Bar 5',
+        value: 6
+      }
+    ]
+  };
 
   private readonly _sampleLineChartData: LineChartData = {
     labels: [...Array(51)].map((_, i) => String(i)),
@@ -126,6 +153,9 @@ export class HomePage extends LitElement {
     const { _memberComposition: memberComposition } = this;
 
     return html`
+      <h4>Bar Chart Sample</h4>
+      <inno-bar-chart
+        .data="${this._sampleBarChartData}"></inno-bar-chart>
       <h4>Line Chart Sample</h4>
       <inno-line-chart
         .data="${this._sampleLineChartData}"></inno-line-chart>
