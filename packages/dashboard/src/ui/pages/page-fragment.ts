@@ -28,13 +28,15 @@ export class PageFragment extends Fragment {
   protected render(): TemplateResult {
     /* eslint-disable @typescript-eslint/indent */
     return this._processTemplate(html`
-      <!-- @ts-ignore -->
-      <TAG
+      <div
         class="${classMap({
           [classes.page]: true,
           [classes.page_$hide]: !this.visible,
           [classes.page_$freeze]: !this.interactable
-        })}"></TAG>
+        })}">
+        <!-- @ts-ignore -->
+        <TAG class="${classes.page_content}"></TAG>
+      </div>
     `);
     /* eslint-enable @typescript-eslint/indent */
   }
@@ -63,14 +65,29 @@ export class PageFragment extends Fragment {
 
   protected makeAnimations(type: FragmentAnimationType): ReadonlyArray<Animation> {
     const pageElem = this.getRootElement();
-    if (pageElem !== null && type === 'showing') {
+    const pageContentElem = pageElem?.querySelector(this.tagName) ?? null;
+    if (pageElem !== null && pageContentElem !== null && type === 'showing') {
       return [
         new Animation(
           new KeyframeEffect(
             pageElem,
             [
-              { opacity: 0, transform: 'translateY(10%)', zIndex: 1 },
-              { opacity: 1, transform: 'translateY(0%)', zIndex: 1 }
+              { opacity: 0, zIndex: 1 },
+              { opacity: 1, zIndex: 1 }
+            ],
+            {
+              duration: 150,
+              fill: 'forwards'
+            }
+          ),
+          document.timeline
+        ),
+        new Animation(
+          new KeyframeEffect(
+            pageContentElem,
+            [
+              { transform: 'translateY(10%)' },
+              { transform: 'translateY(0%)' }
             ],
             {
               duration: 300,
