@@ -1,0 +1,19 @@
+@use '../elevation';
+@use '../theme';
+@use '../typography';
+
+:host {
+  @include elevation.box-shadow(3);
+
+  display: block;
+  margin-bottom: 1rem;
+  padding: 4rem;
+  background: var(elevation.$background-color-3dp);
+  text-align: center;
+}
+
+.text {
+  @include typography.body();
+
+  color: var(theme.$on-background);
+}
