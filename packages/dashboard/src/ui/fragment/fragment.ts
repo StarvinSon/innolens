@@ -299,8 +299,8 @@ export abstract class Fragment extends EventTarget {
   protected getRootElement(): Element | null {
     if (this._part !== null) {
       for (
-        let node: Node | null = this._part.startNode;
-        node !== null;
+        let node = this._part.startNode.nextSibling;
+        node !== null && node !== this._part.endNode;
         node = node.nextSibling
       ) {
         if (node instanceof Element) return node;

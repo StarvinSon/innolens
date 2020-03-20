@@ -26,16 +26,21 @@ export class PageFragment extends Fragment {
   }
 
   protected render(): TemplateResult {
+    const { visible, interactable } = this;
+
     /* eslint-disable @typescript-eslint/indent */
     return this._processTemplate(html`
       <div
         class="${classMap({
           [classes.page]: true,
-          [classes.page_$hide]: !this.visible,
-          [classes.page_$freeze]: !this.interactable
+          [classes.page_$hide]: !visible,
+          [classes.page_$freeze]: !interactable
         })}">
         <!-- @ts-ignore -->
-        <TAG class="${classes.page_content}"></TAG>
+        <TAG
+          class="${classes.page_content}"
+          .visible="${visible}"
+          .interactable="${interactable}"></TAG>
       </div>
     `);
     /* eslint-enable @typescript-eslint/indent */

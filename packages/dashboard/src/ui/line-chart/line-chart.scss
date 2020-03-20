@@ -1,0 +1,101 @@
+@use '../theme';
+@use '../svg-typography';
+
+
+:host {
+  display: block;
+  position: relative;
+  width: 30rem;
+  height: 22.5rem;
+}
+
+:host([hidden]) {
+  display: block;
+}
+
+.chart {
+  width: 100%;
+  height: 100%;
+
+  &__ref-line {
+    stroke: var(theme.$on-background);
+    stroke-opacity: 0.2;
+  }
+
+  &__line {
+    fill: none;
+    stroke: var(theme.$on-background);
+
+    &--0 {
+      stroke: var(theme.$chart-0);
+    }
+
+    &--1 {
+      stroke: var(theme.$chart-1);
+    }
+
+    &--2 {
+      stroke: var(theme.$chart-2);
+    }
+
+    &--3 {
+      stroke: var(theme.$chart-3);
+    }
+
+    &--4 {
+      stroke: var(theme.$chart-4);
+    }
+  }
+
+  &__axis {
+    fill: none;
+    stroke: var(theme.$on-background);
+  }
+
+  &__tick {
+    @include svg-typography.base();
+
+    font-size: 16px;
+    fill: var(theme.$on-background);
+
+    &--x {
+      text-anchor: middle;
+      dominant-baseline: hanging;
+    }
+
+    &--y {
+      text-anchor: end;
+      dominant-baseline: middle;
+    }
+  }
+
+  &__legend-dot {
+    &--0 {
+      fill: var(theme.$chart-0);
+    }
+
+    &--1 {
+      fill: var(theme.$chart-1);
+    }
+
+    &--2 {
+      fill: var(theme.$chart-2);
+    }
+
+    &--3 {
+      fill: var(theme.$chart-3);
+    }
+
+    &--4 {
+      fill: var(theme.$chart-4);
+    }
+  }
+
+  &__legend-text {
+    @include svg-typography.base();
+
+    dominant-baseline: middle;
+    font-size: 16px;
+    fill: var(theme.$on-background);
+  }
+}

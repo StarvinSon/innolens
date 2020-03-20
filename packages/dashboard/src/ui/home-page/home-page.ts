@@ -1,13 +1,14 @@
 import {
   customElement, LitElement, TemplateResult,
-  html,
-  property
+  html, property
 } from 'lit-element';
 
 import '../button';
+import '../line-chart'; // eslint-disable-line import/no-duplicates
 import { MemberCompositionService, MemberCompositionState } from '../../services/member-composition';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
+import { LineChartData } from '../line-chart'; // eslint-disable-line import/no-duplicates
 
 import { css } from './home-page.scss';
 
@@ -31,6 +32,33 @@ export class HomePage extends LitElement {
 
   @property({ attribute: false })
   private _memberComposition: MemberCompositionState = null;
+
+
+  private readonly _sampleLineChartData: LineChartData = {
+    x: [...Array(51)].map((_, i) => String(i)),
+    lines: [
+      {
+        name: 'Line 1',
+        y: [...Array(51)].map((_, i) => 2 + 2 * Math.sin(i))
+      },
+      {
+        name: 'Line 2',
+        y: [...Array(51)].map((_, i) => 10 - (i - 5) ** 2)
+      },
+      {
+        name: 'Line 3',
+        y: [...Array(51)].map((_, i) => 4 + 2 * Math.sin(i))
+      },
+      {
+        name: 'Line 4',
+        y: [...Array(51)].map((_, i) => 8 - (i - 5) ** 2)
+      },
+      {
+        name: 'Line 5',
+        y: [...Array(51)].map((_, i) => 2 + 1 * Math.sin(i))
+      }
+    ]
+  };
 
 
   public constructor() {
@@ -71,6 +99,9 @@ export class HomePage extends LitElement {
     const { _memberComposition: memberComposition } = this;
 
     return html`
+      <h4>Line Chart Sample</h4>
+      <inno-line-chart
+        .data="${this._sampleLineChartData}"></inno-line-chart>
       <inno-button
         theme="raised"
         @click="${this._onUpdateButtonClick}">Update</inno-button>
