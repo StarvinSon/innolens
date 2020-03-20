@@ -13,12 +13,12 @@ import { css, classes } from './line-chart.scss';
 
 export interface LineChartData {
   readonly lines: ReadonlyArray<LineChartLineData>;
-  readonly x: ReadonlyArray<string>;
+  readonly labels: ReadonlyArray<string>;
 }
 
 export interface LineChartLineData {
   readonly name: string;
-  readonly y: ReadonlyArray<number>;
+  readonly values: ReadonlyArray<number>;
 }
 
 
@@ -79,10 +79,10 @@ export class LineChart extends LitElement {
     const chartContentWidth = chartWidth - chartPaddingLeft - chartPaddingRight;
     const chartContentHeight = chartHeight - chartPaddingTop - chartPaddingBottom;
 
-    const vMax = max(data.lines.flatMap((l) => l.y))!;
+    const vMax = max(data.lines.flatMap((l) => l.values))!;
 
     const iToX = scaleLinear()
-      .domain([0, data.x.length - 1])
+      .domain([0, data.labels.length - 1])
       .range([0, chartContentWidth]);
 
     const vToY = scaleLinear()
@@ -98,7 +98,7 @@ export class LineChart extends LitElement {
         class="${classes.chart}"
         viewBox="0 0 ${chartWidth} ${chartHeight}">
         <clipPath id="content-clip-path">
-          <rect x="0" y="0" width="${chartContentWidth}" height="${chartContentHeight}" />
+          <rect x="0" y="0" width="${chartContentWidth}" height="${chartContentHeight}"></rect>
         </clipPath>
         <g transform="translate(${chartPaddingLeft} ${chartPaddingTop})">
           <g clip-path="url(#content-clip-path)">
@@ -106,17 +106,17 @@ export class LineChart extends LitElement {
               <line
                 class="${classes.chart_refLine}"
                 x1="0" y1="${y}"
-                x2="${chartContentWidth}" y2="${y}"/>
+                x2="${chartContentWidth}" y2="${y}"></line>
             `)}
             ${data.lines.map((lineData, lineIdx) => svg`
               <path
                 class="${classes.chart_line} ${classes[`chart_line_$${lineIdx}`]}"
-                d="${computePath(lineData.y.slice())}"/>
+                d="${computePath(lineData.values.slice())}"></path>
             `)}
           </g>
           <polyline
             class="${classes.chart_axis}"
-            points="0,0 0,${chartContentHeight} ${chartContentWidth},${chartContentHeight}"/>
+            points="0,0 0,${chartContentHeight} ${chartContentWidth},${chartContentHeight}"></polyline>
           ${vToY.ticks(5).map((v) => svg`
             <text
               class="${classes.chart_tick} ${classes.chart_tick_$y}"
@@ -125,7 +125,7 @@ export class LineChart extends LitElement {
           ${iToX.ticks(5).map((i) => svg`
             <text
               class="${classes.chart_tick} ${classes.chart_tick_$x}"
-              x="${iToX(i)}" y="${chartContentHeight + 8}">${data.x[i]}</text>
+              x="${iToX(i)}" y="${chartContentHeight + 8}">${data.labels[i]}</text>
           `)}
           <g id="legends" transform="translate(0 ${chartContentHeight + 32})">
             ${data.lines.map((lineData, lineIdx) => svg`

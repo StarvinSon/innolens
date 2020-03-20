@@ -5,10 +5,12 @@ import {
 
 import '../button';
 import '../line-chart'; // eslint-disable-line import/no-duplicates
+import '../pie-chart'; // eslint-disable-line import/no-duplicates
 import { MemberCompositionService, MemberCompositionState } from '../../services/member-composition';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
 import { LineChartData } from '../line-chart'; // eslint-disable-line import/no-duplicates
+import { PieChartData } from '../pie-chart'; // eslint-disable-line import/no-duplicates
 
 import { css } from './home-page.scss';
 
@@ -35,27 +37,52 @@ export class HomePage extends LitElement {
 
 
   private readonly _sampleLineChartData: LineChartData = {
-    x: [...Array(51)].map((_, i) => String(i)),
+    labels: [...Array(51)].map((_, i) => String(i)),
     lines: [
       {
         name: 'Line 1',
-        y: [...Array(51)].map((_, i) => 2 + 2 * Math.sin(i))
+        values: [...Array(51)].map((_, i) => 2 + 2 * Math.sin(i))
       },
       {
         name: 'Line 2',
-        y: [...Array(51)].map((_, i) => 10 - (i - 5) ** 2)
+        values: [...Array(51)].map((_, i) => 10 - (i - 5) ** 2)
       },
       {
         name: 'Line 3',
-        y: [...Array(51)].map((_, i) => 4 + 2 * Math.sin(i))
+        values: [...Array(51)].map((_, i) => 4 + 2 * Math.sin(i))
       },
       {
         name: 'Line 4',
-        y: [...Array(51)].map((_, i) => 8 - (i - 5) ** 2)
+        values: [...Array(51)].map((_, i) => 8 - (i - 5) ** 2)
       },
       {
         name: 'Line 5',
-        y: [...Array(51)].map((_, i) => 2 + 1 * Math.sin(i))
+        values: [...Array(51)].map((_, i) => 2 + 1 * Math.sin(i))
+      }
+    ]
+  };
+
+  private readonly _samplePieChartData: PieChartData = {
+    pies: [
+      {
+        name: 'Pie 1',
+        value: 10
+      },
+      {
+        name: 'Pie 2',
+        value: 2
+      },
+      {
+        name: 'Pie 3',
+        value: 5
+      },
+      {
+        name: 'Pie 4',
+        value: 10
+      },
+      {
+        name: 'Pie 5',
+        value: 11
       }
     ]
   };
@@ -102,6 +129,9 @@ export class HomePage extends LitElement {
       <h4>Line Chart Sample</h4>
       <inno-line-chart
         .data="${this._sampleLineChartData}"></inno-line-chart>
+      <h4>Pie Chart Sample</h4>
+      <inno-pie-chart
+        .data="${this._samplePieChartData}"></inno-pie-chart>
       <inno-button
         theme="raised"
         @click="${this._onUpdateButtonClick}">Update</inno-button>
