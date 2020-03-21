@@ -1,4 +1,5 @@
 export interface PageEntry {
+  readonly type: 'pageEntry';
   readonly name: string;
   readonly href: string;
   readonly pathRegExp: RegExp;
@@ -6,8 +7,15 @@ export interface PageEntry {
   readonly tagName: keyof HTMLElementTagNameMap;
 }
 
-export const pageEntries: ReadonlyArray<PageEntry> = [
+export interface PageGroupEntry {
+  readonly type: 'pageGroupEntry';
+  readonly name: string;
+  readonly pages: ReadonlyArray<PageEntry | PageGroupEntry>;
+}
+
+export const pageEntries: ReadonlyArray<PageEntry | PageGroupEntry> = [
   {
+    type: 'pageEntry',
     name: 'Home',
     href: '/',
     pathRegExp: /^\/$/,
@@ -18,36 +26,58 @@ export const pageEntries: ReadonlyArray<PageEntry> = [
     tagName: 'inno-home-page'
   },
   {
-    name: 'Users',
-    href: '/users',
-    pathRegExp: /^\/users$/,
-    load: async () => void import(
-      /* webpackChunkName: 'users-page' */
-      './users-page'
-    ),
-    tagName: 'inno-users-page'
+    type: 'pageGroupEntry',
+    name: 'User',
+    pages: [
+      {
+        type: 'pageEntry',
+        name: 'Users',
+        href: '/users',
+        pathRegExp: /^\/users$/,
+        load: async () => void import(
+          /* webpackChunkName: 'users-page' */
+          './users-page'
+        ),
+        tagName: 'inno-users-page'
+      }
+    ]
   },
   {
-    name: 'Spaces',
-    href: '/spaces',
-    pathRegExp: /^\/spaces$/,
-    load: async () => void import(
-      /* webpackChunkName: 'spaces-page' */
-      './spaces-page'
-    ),
-    tagName: 'inno-spaces-page'
+    type: 'pageGroupEntry',
+    name: 'Space',
+    pages: [
+      {
+        type: 'pageEntry',
+        name: 'Spaces',
+        href: '/spaces',
+        pathRegExp: /^\/spaces$/,
+        load: async () => void import(
+          /* webpackChunkName: 'spaces-page' */
+          './spaces-page'
+        ),
+        tagName: 'inno-spaces-page'
+      }
+    ]
   },
   {
-    name: 'Machines',
-    href: '/machines',
-    pathRegExp: /^\/machines$/,
-    load: async () => void import(
-      /* webpackChunkName: 'machines-page' */
-      './machines-page'
-    ),
-    tagName: 'inno-machines-page'
+    type: 'pageGroupEntry',
+    name: 'Machine',
+    pages: [
+      {
+        type: 'pageEntry',
+        name: 'Machines',
+        href: '/machines',
+        pathRegExp: /^\/machines$/,
+        load: async () => void import(
+          /* webpackChunkName: 'machines-page' */
+          './machines-page'
+        ),
+        tagName: 'inno-machines-page'
+      }
+    ]
   },
   {
+    type: 'pageEntry',
     name: 'About',
     href: '/about',
     pathRegExp: /^\/about$/,

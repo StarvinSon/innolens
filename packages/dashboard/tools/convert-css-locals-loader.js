@@ -1,6 +1,6 @@
 // @ts-check
 
-const camelCaseRegExp = /-([a-z])/g;
+const camelCaseRegExp = /-([^-])/g;
 
 /**
  * @param {string} string

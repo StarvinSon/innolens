@@ -10,10 +10,12 @@ import '../elevation';
 import { PathService } from '../../services/path';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
+import { ifString } from '../directives/if-string';
 import { ElementAnimator } from '../element-animator';
-import { pageEntries } from '../page-entries';
+import { pageEntries, PageEntry, PageGroupEntry } from '../page-entries';
 
 import './item';
+import './item-group';
 import { css, classes } from './drawer.scss';
 
 
@@ -178,7 +180,6 @@ export class Drawer extends LitElement {
 
   protected render(): TemplateResult {
     const {
-      _path: path,
       _animator: animator
     } = this;
 
@@ -194,18 +195,37 @@ export class Drawer extends LitElement {
           [classes.drawer_$freeze]: !animator.interactable
         })}"
         data-animator-control="${animator.control('drawer')}">
-        <div class="${classes.drawer_links}">
-          ${pageEntries.map(({ href, pathRegExp, name }) => html`
-            <inno-drawer-item
-              .href="${href}"
-              .highlight="${pathRegExp.test(path)}">
-              ${name}
-            </inno-drawer-item>
-          `)}
+        <div class="${classes.drawer_items}">
+          ${this._renderPageOrPageGroupEntries(0, pageEntries)}
         </div>
       </div>
     `;
     /* eslint-enable @typescript-eslint/indent */
+  }
+
+  private _renderPageOrPageGroupEntries(
+    indentation: number,
+    entries: ReadonlyArray<PageEntry | PageGroupEntry>,
+    slotName: string | null = null
+  ): unknown {
+    return entries.map((entry) => entry.type === 'pageEntry'
+      ? html`
+        <inno-drawer-item
+          slot="${ifString(slotName)}"
+          .identation="${indentation}"
+          .href="${entry.href}"
+          .highlight="${entry.pathRegExp.test(this._path)}">
+          ${entry.name}
+        </inno-drawer-item>
+      `
+      : html`
+        <inno-drawer-item-group
+          slot="${ifString(slotName)}"
+          .indentation="${indentation}">
+          ${entry.name}
+          ${this._renderPageOrPageGroupEntries(indentation + 1, entry.pages, 'items')}
+        </inno-drawer-item-group>
+      `);
   }
 
   protected updated(changedProps: PropertyValues): void {

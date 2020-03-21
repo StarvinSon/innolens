@@ -26,6 +26,10 @@ declare global {
 export class DrawerItem extends LitElement {
   public static readonly styles = css;
 
+
+  @property({ type: Number })
+  public identation = 0;
+
   @property({ type: String })
   public href: string | null = null;
 
@@ -44,6 +48,7 @@ export class DrawerItem extends LitElement {
 
   protected render(): TemplateResult {
     const {
+      identation,
       href,
       highlight,
       _rippleController: rippleCtr
@@ -64,7 +69,10 @@ export class DrawerItem extends LitElement {
             [classes.link_ripple_$highlight]: highlight
           })}"
           data-ripple="${rippleCtr.bindRipple()}"></inno-ripple>
-        <div class="${classes.link_content}"><slot></slot></div>
+        <div
+          class="${classes.link_content} ${classes[`link_content_$indent${identation}`]}">
+          <slot></slot>
+        </div>
       </a>
     `;
     /* eslint-enable @typescript-eslint/indent */

@@ -9,7 +9,7 @@ import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
 import { PropertyInjectorElement } from '../element-property-injector';
 import { FragmentManager, Fragment } from '../fragment';
-import { pageEntries } from '../page-entries';
+import { pageEntries, PageEntry, PageGroupEntry } from '../page-entries';
 
 import { PageFragment } from './page-fragment';
 import { css } from './pages.scss';
@@ -91,8 +91,9 @@ export class Pages extends PropertyInjectorElement(LitElement) {
   }
 
   private _updatePageFragment(): void {
-    const matchedEntry = pageEntries.find((entry) => entry.pathRegExp.test(this._path));
-    if (matchedEntry === undefined) {
+    const matchedEntry = this._findMatchedPagEntry();
+
+    if (matchedEntry === null) {
       // TODO: show 404
       this._showPage(null);
       return;
@@ -157,6 +158,20 @@ export class Pages extends PropertyInjectorElement(LitElement) {
         throw new Error(`Unexpected type: ${state!.type}`);
       }
     }
+  }
+
+  private _findMatchedPagEntry(): PageEntry | null {
+    const entryStack: Array<PageEntry | PageGroupEntry> = pageEntries.slice();
+    let entry: PageEntry | PageGroupEntry | undefined;
+    while ((entry = entryStack.pop()) !== undefined) {
+      if (entry.type === 'pageEntry' && entry.pathRegExp.test(this._path)) {
+        return entry;
+      }
+      if (entry.type === 'pageGroupEntry') {
+        entryStack.push(...entry.pages);
+      }
+    }
+    return null;
   }
 
   private _showPage(fm: Fragment | null): void {
