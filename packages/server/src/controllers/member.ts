@@ -1,78 +1,17 @@
-import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
+import { promises as fsPromises } from 'fs';
+
+import { singleton, injectableConstructor } from '@innolens/resolver';
+import { BadRequest } from 'http-errors';
+import { CREATED } from 'http-status-codes';
 
 import { MemberService } from '../services/member';
 import { fromAsync } from '../utils/array';
 
 import { Context } from './context';
-import { Middleware } from './middleware';
-import { parseBody, InjectedBodyParserFactory, initializeParseBody } from './utils/body-parser';
-import { validateBody, getValidatedBody } from './utils/body-validator';
+import { InjectedBodyParserFactory } from './utils/body-parser';
+import { parseFormDataBody, getFormDataBody } from './utils/form-data-body-parser';
 import { UserAuthenticator, authenticateUser, initializeAuthenticateUser } from './utils/user-authenticator';
 
-
-export interface MemberController {
-  get: Middleware;
-  post: Middleware;
-}
-
-export const MemberController =
-  createToken<MemberController>('MemberController');
-
-
-type PostMemberBody = ReadonlyArray<{
-  readonly memberId: string;
-  readonly name: string;
-  readonly department: string;
-  readonly typeOfStudy: string;
-  readonly yearOfStudy: string;
-  readonly studyProgramme: string;
-  readonly affiliatedStudentInterestGroup: string;
-  readonly registrationTime: string;
-}>;
-
-const PostMemberBody: object = {
-  type: 'array',
-  items: {
-    type: 'object',
-    additionalProperties: false,
-    required: [
-      'memberId',
-      'name',
-      'department',
-      'typeOfStudy',
-      'yearOfStudy',
-      'studyProgramme',
-      'affiliatedStudentInterestGroup',
-      'registrationTime'
-    ],
-    properties: {
-      memberId: {
-        type: 'string'
-      },
-      name: {
-        type: 'string'
-      },
-      department: {
-        type: 'string'
-      },
-      typeOfStudy: {
-        type: 'string'
-      },
-      yearOfStudy: {
-        type: 'string'
-      },
-      studyProgramme: {
-        type: 'string'
-      },
-      affiliatedStudentInterestGroup: {
-        type: 'string'
-      },
-      registrationTime: {
-        type: 'string'
-      }
-    }
-  }
-};
 
 @injectableConstructor({
   memberService: MemberService,
@@ -80,7 +19,7 @@ const PostMemberBody: object = {
   injectedBodyParserFactory: InjectedBodyParserFactory
 })
 @singleton()
-export class MemberControllerImpl implements MemberController {
+export class MemberController {
   private readonly _memberService: MemberService;
 
   public constructor(deps: {
@@ -91,8 +30,7 @@ export class MemberControllerImpl implements MemberController {
     ({
       memberService: this._memberService
     } = deps);
-    initializeAuthenticateUser(MemberControllerImpl, this, deps.userAuthenticator);
-    initializeParseBody(MemberControllerImpl, this, deps.injectedBodyParserFactory);
+    initializeAuthenticateUser(MemberController, this, deps.userAuthenticator);
   }
 
   @authenticateUser()
@@ -111,14 +49,16 @@ export class MemberControllerImpl implements MemberController {
   }
 
   @authenticateUser()
-  @parseBody()
-  @validateBody(PostMemberBody)
+  @parseFormDataBody()
   public async post(ctx: Context): Promise<void> {
-    const members = getValidatedBody<PostMemberBody>(ctx);
-    await this._memberService.insertMany(members.map((member) => ({
-      ...member,
-      registrationTime: new Date(member.registrationTime)
-    })));
-    ctx.body = null;
+    const body = getFormDataBody(ctx);
+    const csvFile = body.file?.[0];
+    if (csvFile === undefined || typeof csvFile === 'string') {
+      throw new BadRequest('Require field "file"');
+    }
+
+    await this._memberService.importFromFile(csvFile.path);
+    await fsPromises.unlink(csvFile.path);
+    ctx.status = CREATED;
   }
 }

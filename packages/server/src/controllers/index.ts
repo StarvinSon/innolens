@@ -4,7 +4,6 @@ import { ExpendableInventoryStockRecordController, ExpendableInventoryStockRecor
 import { InventoryController, InventoryControllerImpl } from './inventory';
 import { MachineController, MachineControllerImpl } from './machine';
 import { MachineUsageController, MachineUsageControllerImpl } from './machine-usage';
-import { MemberController, MemberControllerImpl } from './member';
 import { MemberCompositionController, MemberCompositionControllerImpl } from './member-composition';
 import { OAuth2Controller, OAuth2ControllerImpl } from './oauth2';
 import { ReusableInventoryController, ReusableInventoryControllerImpl } from './reusable-inventory';
@@ -30,7 +29,6 @@ export const controllerCreators: ReadonlyArray<readonly [Token<unknown>, Factory
   [InventoryController, InventoryControllerImpl],
   [MachineController, MachineControllerImpl],
   [MachineUsageController, MachineUsageControllerImpl],
-  [MemberController, MemberControllerImpl],
   [MemberCompositionController, MemberCompositionControllerImpl],
   [OAuth2Controller, OAuth2ControllerImpl],
   [StaticController, StaticControllerImpl],

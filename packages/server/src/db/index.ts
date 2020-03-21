@@ -7,7 +7,6 @@ import { createExpendableInventoryStockRecordCollection, ExpendableInventoryStoc
 import { createInventoryCollection, InventoryCollection } from './inventory';
 import { createMachineCollection, MachineCollection } from './machine';
 import { createMachineUsageCollection, MachineUsageCollection } from './machine-usage';
-import { createMemberCollection, MemberCollection } from './member';
 import { createMemberCompositionCollection, MemberCompositionCollection } from './member-composition';
 import { createOAuth2Collection, OAuth2Collection } from './oauth2';
 import { createReusableInventoryCollection, ReusableInventoryCollection } from './reusable-inventory';
@@ -25,7 +24,6 @@ export const dbCreators: ReadonlyArray<readonly [Token<unknown>, FactoryOrConstr
   [InventoryCollection, createInventoryCollection],
   [MachineCollection, createMachineCollection],
   [MachineUsageCollection, createMachineUsageCollection],
-  [MemberCollection, createMemberCollection],
   [MemberCompositionCollection, createMemberCompositionCollection],
   [OAuth2Collection, createOAuth2Collection],
   [ReusableInventoryCollection, createReusableInventoryCollection],

@@ -3,5 +3,5 @@
   "watch": [
     "out"
   ],
-  "verbose": true
+  "delay": 1000
 }

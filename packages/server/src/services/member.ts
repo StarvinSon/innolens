@@ -1,4 +1,7 @@
-import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
+import { createReadStream } from 'fs';
+
+import { singleton, injectableConstructor } from '@innolens/resolver';
+import parseCsv from 'csv-parse';
 import { ObjectId } from 'mongodb';
 
 import { Member, MemberCollection } from '../db/member';
@@ -6,21 +9,12 @@ import { Member, MemberCollection } from '../db/member';
 
 export { Member };
 
-export interface MemberService {
-  findAll(): AsyncIterable<Member>;
-  findOneById(id: ObjectId): Promise<Member | null>;
-  insertOne(member: Member): Promise<void>;
-  insertMany(members: ReadonlyArray<Omit<Member, '_id'>>): Promise<void>
-}
-
-export const MemberService = createToken<MemberService>('MemberService');
-
 
 @injectableConstructor({
   memberCollection: MemberCollection
 })
 @singleton()
-export class MemberServiceImpl implements MemberService {
+export class MemberService {
   private readonly _memberCollection: MemberCollection;
 
   public constructor(options: {
@@ -51,5 +45,38 @@ export class MemberServiceImpl implements MemberService {
       ...member,
       _id: new ObjectId()
     })));
+  }
+
+  public async importFromFile(path: string): Promise<void> {
+    const stream = createReadStream(path)
+      .pipe(parseCsv({
+        columns: true
+      }));
+
+    const importedMembers: Array<Omit<Member, '_id'>> = [];
+    for await (const record of stream) {
+      importedMembers.push({
+        memberId: record.member_id,
+        name: record.name,
+        department: record.department,
+        typeOfStudy: record.type_of_study,
+        studyProgramme: record.study_programme,
+        yearOfStudy: record.year_of_study,
+        affiliatedStudentInterestGroup: record.affiliated_student_interest_group,
+        registrationTime: new Date(record.registration_time)
+      });
+    }
+
+    await this._memberCollection
+      .bulkWrite(
+        importedMembers.map((member) => ({
+          replaceOne: {
+            filter: { memberId: member.memberId },
+            replacement: member,
+            upsert: true
+          }
+        })),
+        { ordered: false }
+      );
   }
 }

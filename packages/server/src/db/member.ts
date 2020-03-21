@@ -1,6 +1,6 @@
 import {
-  createToken, decorate, singleton,
-  name, injectableFactory
+  decorate, singleton, name,
+  injectableFactory
 } from '@innolens/resolver';
 import { ObjectId, Collection } from 'mongodb';
 
@@ -22,12 +22,8 @@ export interface Member {
 
 export interface MemberCollection extends Collection<Member> {}
 
-export const MemberCollection =
-  createToken<MemberCollection>('MemberCollection');
-
-
-export const createMemberCollection = decorate(
-  name('createMemberCollection'),
+export const MemberCollection = decorate(
+  name('MemberCollection'),
   injectableFactory(Db),
   singleton(),
   async (db: Db): Promise<MemberCollection> =>
@@ -44,8 +40,8 @@ export const createMemberCollection = decorate(
             'name',
             'department',
             'typeOfStudy',
-            'yearOfStudy',
             'studyProgramme',
+            'yearOfStudy',
             'affiliatedStudentInterestGroup',
             'registrationTime'
           ],
@@ -65,10 +61,10 @@ export const createMemberCollection = decorate(
             typeOfStudy: {
               bsonType: 'string'
             },
-            yearOfStudy: {
+            studyProgramme: {
               bsonType: 'string'
             },
-            studyProgramme: {
+            yearOfStudy: {
               bsonType: 'string'
             },
             affiliatedStudentInterestGroup: {
