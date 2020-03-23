@@ -13,7 +13,6 @@ import { SpaceAccessRecordController, SpaceAccessRecordControllerImpl } from './
 import { StaticController, StaticControllerImpl } from './static';
 import { UserController, UserControllerImpl } from './user';
 import { InjectedBodyParserFactory, createInjectedBodyParserFactory } from './utils/body-parser';
-import { InjectedBodyValidatorFactory, createInjectedBodyValidatorFactory } from './utils/body-validator';
 import { ClientAuthenticator, ClientAuthenticatorImpl } from './utils/client-authenticator';
 import { UserAuthenticator, UserAuthenticatorImpl } from './utils/user-authenticator';
 
@@ -21,7 +20,6 @@ import { UserAuthenticator, UserAuthenticatorImpl } from './utils/user-authentic
 // eslint-disable-next-line max-len
 export const controllerCreators: ReadonlyArray<readonly [Token<unknown>, FactoryOrConstructor<unknown>]> = [
   [InjectedBodyParserFactory, createInjectedBodyParserFactory],
-  [InjectedBodyValidatorFactory, createInjectedBodyValidatorFactory],
   [ClientAuthenticator, ClientAuthenticatorImpl],
   [UserAuthenticator, UserAuthenticatorImpl],
 

@@ -12,12 +12,14 @@
     "deploy": "pm2 start ./ecosystem.config.js"
   },
   "dependencies": {
+    "@innolens/api": "*",
     "@innolens/resolver": "*",
     "@koa/router": "^8.0.8",
     "ajv": "^6.11.0",
     "bcrypt": "^4.0.1",
     "co-body": "^6.0.0",
     "csv-parse": "^4.8.8",
+    "date-fns": "^2.11.0",
     "deep-equal": "^2.0.1",
     "formidable": "^1.2.2",
     "http-errors": "^1.7.3",

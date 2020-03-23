@@ -6,7 +6,7 @@ import { fromAsync } from '../utils/array';
 import { Context } from './context';
 import { Middleware } from './middleware';
 import { parseBody, InjectedBodyParserFactory, initializeParseBody } from './utils/body-parser';
-import { validateBody, getValidatedBody } from './utils/body-validator';
+import { validateRequestBody, getValidatedRequestBody } from './utils/request-body-validator';
 import { UserAuthenticator, authenticateUser, initializeAuthenticateUser } from './utils/user-authenticator';
 
 
@@ -88,9 +88,9 @@ export class MachineUsageControllerImpl implements MachineUsageController {
 
   @authenticateUser()
   @parseBody()
-  @validateBody(PostMachineUsageBody)
+  @validateRequestBody(PostMachineUsageBody)
   public async post(ctx: Context): Promise<void> {
-    const machineUsageList = getValidatedBody<PostMachineUsageBody>(ctx);
+    const machineUsageList = getValidatedRequestBody<PostMachineUsageBody>(ctx);
     await this._machineUsageService
       .insertMany(machineUsageList.map((machineUsage) => ({
         ...machineUsage,

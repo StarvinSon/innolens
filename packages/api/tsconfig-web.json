@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig-web.json",
+  "compilerOptions": {
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "./web",
+    "rootDir": "./src",
+    "composite": true
+  }
+}

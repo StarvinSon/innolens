@@ -6,7 +6,7 @@ import { fromAsync } from '../utils/array';
 import { Context } from './context';
 import { Middleware } from './middleware';
 import { parseBody, InjectedBodyParserFactory, initializeParseBody } from './utils/body-parser';
-import { validateBody, getValidatedBody } from './utils/body-validator';
+import { validateRequestBody, getValidatedRequestBody } from './utils/request-body-validator';
 import { UserAuthenticator, authenticateUser, initializeAuthenticateUser } from './utils/user-authenticator';
 
 
@@ -85,9 +85,9 @@ export class ExpendableInventoryStockRecordControllerImpl implements ExpendableI
 
   @authenticateUser()
   @parseBody()
-  @validateBody(PostExpendableInventoryStockRecordBody)
+  @validateRequestBody(PostExpendableInventoryStockRecordBody)
   public async post(ctx: Context): Promise<void> {
-    const records = getValidatedBody<PostExpendableInventoryStockRecordBody>(ctx);
+    const records = getValidatedRequestBody<PostExpendableInventoryStockRecordBody>(ctx);
     await this._expendableInventoryStockRecordService
       .insertMany(records.map((record) => ({
         ...record,

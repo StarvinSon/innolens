@@ -6,7 +6,7 @@ import { fromAsync } from '../utils/array';
 import { Context } from './context';
 import { Middleware } from './middleware';
 import { parseBody, InjectedBodyParserFactory, initializeParseBody } from './utils/body-parser';
-import { validateBody, getValidatedBody } from './utils/body-validator';
+import { validateRequestBody, getValidatedRequestBody } from './utils/request-body-validator';
 import { UserAuthenticator, authenticateUser, initializeAuthenticateUser } from './utils/user-authenticator';
 
 
@@ -91,9 +91,9 @@ export class ReusableInventoryUsageRecordControllerImpl implements ReusableInven
 
   @authenticateUser()
   @parseBody()
-  @validateBody(PostReusableInventoryUsageRecordBody)
+  @validateRequestBody(PostReusableInventoryUsageRecordBody)
   public async post(ctx: Context): Promise<void> {
-    const records = getValidatedBody<PostReusableInventoryUsageRecordBody>(ctx);
+    const records = getValidatedRequestBody<PostReusableInventoryUsageRecordBody>(ctx);
     await this._reusableInventoryRecordUsageService
       .insertMany(records.map((record) => ({
         ...record,

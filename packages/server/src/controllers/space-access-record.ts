@@ -6,7 +6,7 @@ import { fromAsync } from '../utils/array';
 import { Context } from './context';
 import { Middleware } from './middleware';
 import { parseBody, InjectedBodyParserFactory, initializeParseBody } from './utils/body-parser';
-import { validateBody, getValidatedBody } from './utils/body-validator';
+import { validateRequestBody, getValidatedRequestBody } from './utils/request-body-validator';
 import { UserAuthenticator, authenticateUser, initializeAuthenticateUser } from './utils/user-authenticator';
 
 
@@ -88,9 +88,9 @@ export class SpaceAccessRecordControllerImpl implements SpaceAccessRecordControl
 
   @authenticateUser()
   @parseBody()
-  @validateBody(PostSpaceAccessRecordBody)
+  @validateRequestBody(PostSpaceAccessRecordBody)
   public async post(ctx: Context): Promise<void> {
-    const records = getValidatedBody<PostSpaceAccessRecordBody>(ctx);
+    const records = getValidatedRequestBody<PostSpaceAccessRecordBody>(ctx);
     await this._spaceAccessRecordService
       .insertMany(records.map((record) => ({
         ...record,

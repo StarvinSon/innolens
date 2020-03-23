@@ -17,15 +17,13 @@ import {
   initializeParseBody
 } from './utils/body-parser';
 import {
-  validateBody, getValidatedBody, BodyValidationError,
-  InjectedBodyValidatorFactory,
-  initializeValidateBody
-} from './utils/body-validator';
-import {
   ClientAuthenticator, authenticateClient, InvalidClientCredentialError,
   InvalidAuthorizationHeaderError, getAuthenticatedClient, initializeAuthenticateClient
 } from './utils/client-authenticator';
 import { mapError } from './utils/error-configurator';
+import {
+  validateRequestBody, getValidatedRequestBody, BodyValidationError
+} from './utils/request-body-validator';
 
 
 class InvalidRequestError extends Error {
@@ -149,8 +147,7 @@ const isError = (val: unknown): val is Error & Readonly<Record<string, unknown>>
   userService: UserService,
   oauth2Service: OAuth2Service,
   clientAuthenticator: ClientAuthenticator,
-  injectedBodyParserFactory: InjectedBodyParserFactory,
-  injectedBodyValidatorFactory: InjectedBodyValidatorFactory
+  injectedBodyParserFactory: InjectedBodyParserFactory
 })
 @singleton()
 export class OAuth2ControllerImpl implements OAuth2Controller {
@@ -164,7 +161,6 @@ export class OAuth2ControllerImpl implements OAuth2Controller {
     oauth2Service: OAuth2Service;
     clientAuthenticator: ClientAuthenticator;
     injectedBodyParserFactory: InjectedBodyParserFactory;
-    injectedBodyValidatorFactory: InjectedBodyValidatorFactory;
   }) {
     ({
       logger: this._logger,
@@ -173,7 +169,6 @@ export class OAuth2ControllerImpl implements OAuth2Controller {
     } = deps);
     initializeAuthenticateClient(OAuth2ControllerImpl, this, deps.clientAuthenticator);
     initializeParseBody(OAuth2ControllerImpl, this, deps.injectedBodyParserFactory);
-    initializeValidateBody(OAuth2ControllerImpl, this, deps.injectedBodyValidatorFactory);
   }
 
   public async handleError(ctx: Context, next: Next): Promise<void> {
@@ -228,9 +223,9 @@ export class OAuth2ControllerImpl implements OAuth2Controller {
   ])
   @authenticateClient()
   @parseBody({ json: false, form: true })
-  @validateBody(PostTokenBody)
+  @validateRequestBody(PostTokenBody)
   public async postToken(ctx: Context): Promise<void> {
-    const body = getValidatedBody<PostTokenBody>(ctx);
+    const body = getValidatedRequestBody<PostTokenBody>(ctx);
     switch (body.grant_type) {
       case 'password': {
         return this._handlePasswordGrant(ctx);
@@ -244,11 +239,11 @@ export class OAuth2ControllerImpl implements OAuth2Controller {
     }
   }
 
-  @validateBody(PostPasswordGrantBody)
+  @validateRequestBody(PostPasswordGrantBody)
   private async _handlePasswordGrant(ctx: Context): Promise<void> {
     const client = getAuthenticatedClient(ctx);
 
-    const body = getValidatedBody<PostPasswordGrantBody>(ctx);
+    const body = getValidatedRequestBody<PostPasswordGrantBody>(ctx);
     const { username, password } = body;
 
     const scopes = parseScope(body.scope);
@@ -279,9 +274,9 @@ export class OAuth2ControllerImpl implements OAuth2Controller {
     };
   }
 
-  @validateBody(PostRefreshTokenGrantBody)
+  @validateRequestBody(PostRefreshTokenGrantBody)
   private async _handleRefreshTokenGrant(ctx: Context): Promise<void> {
-    const body = getValidatedBody<PostRefreshTokenGrantBody>(ctx);
+    const body = getValidatedRequestBody<PostRefreshTokenGrantBody>(ctx);
     const { refresh_token: refreshToken } = body;
 
     const scopes = parseScope(body.scope);

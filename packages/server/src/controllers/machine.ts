@@ -6,7 +6,7 @@ import { fromAsync } from '../utils/array';
 import { Context } from './context';
 import { Middleware } from './middleware';
 import { parseBody, InjectedBodyParserFactory, initializeParseBody } from './utils/body-parser';
-import { validateBody, getValidatedBody } from './utils/body-validator';
+import { validateRequestBody, getValidatedRequestBody } from './utils/request-body-validator';
 import { UserAuthenticator, authenticateUser, initializeAuthenticateUser } from './utils/user-authenticator';
 
 
@@ -82,9 +82,9 @@ export class MachineControllerImpl implements MachineController {
 
   @authenticateUser()
   @parseBody()
-  @validateBody(PostMachineBody)
+  @validateRequestBody(PostMachineBody)
   public async post(ctx: Context): Promise<void> {
-    const machines = getValidatedBody<PostMachineBody>(ctx);
+    const machines = getValidatedRequestBody<PostMachineBody>(ctx);
     await this._machineService.insertMany(machines);
     ctx.body = null;
   }

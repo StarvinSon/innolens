@@ -1,5 +1,6 @@
 import { promises as fsPromises } from 'fs';
 
+import * as Api from '@innolens/api';
 import { singleton, injectableConstructor } from '@innolens/resolver';
 import { BadRequest } from 'http-errors';
 import { CREATED } from 'http-status-codes';
@@ -10,6 +11,7 @@ import { fromAsync } from '../utils/array';
 import { Context } from './context';
 import { InjectedBodyParserFactory } from './utils/body-parser';
 import { parseFormDataBody, getFormDataBody } from './utils/form-data-body-parser';
+import { validateResponseBody } from './utils/response-body-validator';
 import { UserAuthenticator, authenticateUser, initializeAuthenticateUser } from './utils/user-authenticator';
 
 
@@ -44,13 +46,46 @@ export class MemberController {
       yearOfStudy: member.yearOfStudy,
       studyProgramme: member.studyProgramme,
       affiliatedStudentInterestGroup: member.affiliatedStudentInterestGroup,
-      registrationTime: member.registrationTime.toISOString()
+      registrationStartTime: member.membershipStartTime.toISOString(),
+      registrationEndTime: member.membershipEndTime.toISOString()
     }));
   }
 
   @authenticateUser()
+  @validateResponseBody(Api.Member.GetHistory.Response)
+  public async getHistory(ctx: Context<Api.Member.GetHistory.Response>): Promise<void> {
+    const { category, range } = ctx.query as Record<string, string>;
+    if (
+      category !== 'department'
+      && category !== 'typeOfStudy'
+      && category !== 'studyProgramme'
+      && category !== 'yearOfStudy'
+      && category !== 'affiliatedStudentInterestGroup'
+    ) {
+      throw new BadRequest('Invalid query param "category"');
+    }
+    if (
+      range !== 'past7Days'
+      && range !== 'past30Days'
+      && range !== 'past6Months'
+      && range !== 'past12Months'
+    ) {
+      throw new BadRequest('Invalid query param "range"');
+    }
+
+    const history = await this._memberService.getHistory(category, range);
+    ctx.body = {
+      ...history,
+      records: history.records.map((record) => ({
+        ...record,
+        time: record.time.toISOString()
+      }))
+    };
+  }
+
+  @authenticateUser()
   @parseFormDataBody()
-  public async post(ctx: Context): Promise<void> {
+  public async postImport(ctx: Context): Promise<void> {
     const body = getFormDataBody(ctx);
     const csvFile = body.file?.[0];
     if (csvFile === undefined || typeof csvFile === 'string') {

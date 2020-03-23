@@ -6,7 +6,7 @@ import { MemberCompositionService, MemberCompositionPerspective } from '../servi
 import { Context } from './context';
 import { Middleware } from './middleware';
 import { parseBody, InjectedBodyParserFactory, initializeParseBody } from './utils/body-parser';
-import { getValidatedBody, validateBody } from './utils/body-validator';
+import { getValidatedRequestBody, validateRequestBody } from './utils/request-body-validator';
 import { UserAuthenticator, authenticateUser, initializeAuthenticateUser } from './utils/user-authenticator';
 
 
@@ -117,9 +117,9 @@ export class MemberCompositionControllerImpl implements MemberCompositionControl
 
   @authenticateUser()
   @parseBody()
-  @validateBody(PostBody)
+  @validateRequestBody(PostBody)
   public async post(ctx: Context): Promise<void> {
-    const body = getValidatedBody<PostBody>(ctx);
+    const body = getValidatedRequestBody<PostBody>(ctx);
     await this._memberCompositionService.insertOne({
       ...body,
       time: new Date(body.time)

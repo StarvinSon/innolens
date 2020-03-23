@@ -1,7 +1,3 @@
-import {
-  createToken, decorate, name,
-  singleton, injectableFactory
-} from '@innolens/resolver';
 import Ajv, { Ajv as AjvInstance, ValidateFunction as AjvValidateFunction } from 'ajv';
 
 
@@ -13,13 +9,7 @@ export class ValidationError extends Error {
 }
 
 
-export interface Validator<T> {
-  readonly lastValidationError: string;
-  validate(val: unknown): val is T;
-  assert(val: unknown): asserts val is T;
-}
-
-export class ValidatorImpl<T> implements Validator<T> {
+export class Validator<T> {
   private readonly _ajv: AjvInstance;
   private readonly _validationFunc: AjvValidateFunction;
 
@@ -42,7 +32,7 @@ export class ValidatorImpl<T> implements Validator<T> {
       this._lastValidationError = '';
       return true;
     }
-    this._lastValidationError = this._ajv.errorsText(this._validationFunc.errors, { dataVar: '' });
+    this._lastValidationError = this._ajv.errorsText(this._validationFunc.errors, { dataVar: 'obj' });
     return false;
   }
 
@@ -52,18 +42,3 @@ export class ValidatorImpl<T> implements Validator<T> {
     }
   }
 }
-
-
-export interface InjectedValidatorFactory {
-  <T>(schema: object): Validator<T>;
-}
-
-export const InjectedValidatorFactory =
-  createToken<InjectedValidatorFactory>('InjectedValidatorFactory');
-
-export const createInjectedValidatorFactory = decorate(
-  name('createInjectedValidatorFactory'),
-  injectableFactory(),
-  singleton(),
-  (): InjectedValidatorFactory => (schema) => new ValidatorImpl(schema)
-);

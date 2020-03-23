@@ -16,7 +16,8 @@ export interface Member {
   readonly yearOfStudy: string;
   readonly studyProgramme: string;
   readonly affiliatedStudentInterestGroup: string;
-  readonly registrationTime: Date;
+  readonly membershipStartTime: Date;
+  readonly membershipEndTime: Date;
 }
 
 
@@ -43,7 +44,8 @@ export const MemberCollection = decorate(
             'studyProgramme',
             'yearOfStudy',
             'affiliatedStudentInterestGroup',
-            'registrationTime'
+            'membershipStartTime',
+            'membershipEndTime'
           ],
           properties: {
             _id: {
@@ -70,7 +72,10 @@ export const MemberCollection = decorate(
             affiliatedStudentInterestGroup: {
               bsonType: 'string'
             },
-            registrationTime: {
+            membershipStartTime: {
+              bsonType: 'date'
+            },
+            membershipEndTime: {
               bsonType: 'date'
             }
           }
@@ -80,6 +85,9 @@ export const MemberCollection = decorate(
         {
           key: { memberId: 1 },
           unique: true
+        },
+        {
+          key: { membershipStartTime: 1, membershipEndTime: 1 }
         }
       ]
     })
