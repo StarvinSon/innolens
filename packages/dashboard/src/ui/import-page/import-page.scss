@@ -1,0 +1,91 @@
+@use '../theme';
+@use '../typography';
+@use '../layout';
+@use '../elevation-shadow';
+
+
+@mixin _card-title() {
+  @include typography.h4();
+}
+
+@mixin _card-message() {
+  font-family: monospace;
+}
+
+@mixin _form-label() {
+  @include typography.base();
+}
+
+@mixin _form-file-input() {
+  @include typography.base();
+}
+
+
+:host {
+  display: block;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.content {
+  box-sizing: border-box;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 1rem;
+  max-width: layout.$max-width;
+}
+
+.card {
+  @include elevation-shadow.box-shadow(1);
+  box-sizing: border-box;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  background-color: var(theme.$background-elevation-1dp);
+  overflow: hidden;
+
+  &__title {
+    @include _card-title();
+    margin: 0rem;
+    color: var(theme.$on-background);
+  }
+
+  &__form {
+    margin-top: 2rem;
+  }
+
+  &__message {
+    @include _card-message();
+    margin: 0rem;
+    margin-top: 2rem;
+    color: var(theme.$on-background);
+
+    &--hide {
+      display: none;
+    }
+  }
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+
+  &__label {
+    @include _form-label();
+    color: var(theme.$on-background);
+
+    &:not(:first-child) {
+      margin-top: 1rem;
+    }
+  }
+
+  &__file-input {
+    @include _form-file-input();
+    color: var(theme.$on-background);
+  }
+
+  &__submit-button {
+    align-self: flex-end;
+  }
+}

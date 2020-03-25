@@ -27,3 +27,11 @@
   font-size: (96rem / 16);
   letter-spacing: (-1.5rem / 16);
 }
+
+@mixin h4() {
+  @include base();
+
+  font-weight: 400;
+  font-size: (34rem / 16);
+  letter-spacing: (0.25rem / 16);
+}

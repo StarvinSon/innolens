@@ -131,6 +131,15 @@ export class MembersService extends EventTarget {
     }
   }
 
+  public async importData(file: File): Promise<void> {
+    const form = new FormData();
+    form.set('file', file);
+    await this._serverClient.fetchOk(Api.Members.PostImport.path, {
+      method: 'POST',
+      body: form
+    });
+  }
+
   private _reduce(
     state: MemberServiceState = {
       countHistoryCategory: null,
