@@ -157,7 +157,7 @@ export class LineChart extends LitElement {
                     <span
                       class="${classes.tick} ${classes.tick_$x}"
                       style="${styleMap({
-                        left: `${(1 - (i / (data.labels.length - 1))) * 100}%`
+                        left: `${(i / (data.labels.length - 1)) * 100}%`
                       })}">
                       ${(data.formatLabel ?? String)(data.labels[i])}
                     </span>
