@@ -6,7 +6,6 @@ import {
 import '../icon-button';
 import '../theme';
 import '../typography';
-import '../elevation';
 import { menuIcon } from '../icons/menu';
 
 import { css, classes } from './top-bar.scss';

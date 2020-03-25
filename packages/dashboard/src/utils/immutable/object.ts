@@ -1,35 +1,46 @@
-const getOwnPropertyValue = <T extends object, K extends keyof T>(
-  obj: T,
-  key: K
-): T[K] | undefined => {
-  const descriptor = Reflect.getOwnPropertyDescriptor(obj, key);
-  if (descriptor !== undefined) {
-    if ('value' in descriptor) {
-      return descriptor.value;
-    }
-    if ('get' in descriptor) {
-      return Reflect.apply(descriptor.get!, obj, []);
-    }
-  }
-  return undefined;
-};
-
-
 export interface MergeObject {
-  <T extends object>(target: T | undefined | null, source: T): T;
-  <T extends object>(target: T, source: Partial<T>): T;
+  <T extends object>(
+    target: T | undefined | null,
+    source: T,
+    mergeValue?: (
+      targetVal: T[keyof T] | undefined,
+      sourceVal: T[keyof T],
+      key: keyof T
+    ) => T[keyof T]
+  ): T;
+  <T extends object>(
+    target: T,
+    source: Partial<T>,
+    mergeValue?: (
+      targetVal: T[keyof T] | undefined,
+      sourceVal: T[keyof T],
+      key: keyof T
+    ) => T[keyof T]
+  ): T;
 }
 
 export const mergeObject: MergeObject = <T extends object>(
   target: T | undefined | null,
-  source: T | null
+  source: T | null,
+  mergeValue?: (
+    targetVal: T[keyof T] | undefined,
+    sourceVal: T[keyof T],
+    key: keyof T
+  ) => T[keyof T]
 ) => {
   if (target === source) {
     return target;
   }
 
   if (target === undefined || target === null) {
-    return source === null ? null : { ...source };
+    if (source === null) {
+      return null;
+    }
+    if (mergeValue === undefined) {
+      return { ...source };
+    }
+    return Object.fromEntries((Reflect.ownKeys(source) as Array<keyof T>)
+      .map((key) => [key, mergeValue(undefined, source[key], key)]));
   }
 
   if (source === null) {
@@ -43,13 +54,18 @@ export const mergeObject: MergeObject = <T extends object>(
 
   let result: T | null | undefined;
   for (const key of keys) {
-    const targetVal = getOwnPropertyValue(target, key);
-    const sourceVal = getOwnPropertyValue(source, key);
+    const targetVal = target[key];
+    const sourceVal = source[key];
     if (sourceVal !== undefined && targetVal !== sourceVal) {
-      if (result === undefined) {
-        result = { ...target };
+      const resultVal = mergeValue === undefined
+        ? sourceVal
+        : mergeValue(targetVal, sourceVal, key);
+      if (resultVal !== undefined && targetVal !== resultVal) {
+        if (result === undefined) {
+          result = { ...target };
+        }
+        (result as any)[key] = sourceVal;
       }
-      (result as any)[key] = sourceVal;
     }
   }
 

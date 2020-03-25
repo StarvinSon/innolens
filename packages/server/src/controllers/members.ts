@@ -1,12 +1,11 @@
 import { promises as fsPromises } from 'fs';
 
-import * as Api from '@innolens/api';
+import * as Api from '@innolens/api/node';
 import { singleton, injectableConstructor } from '@innolens/resolver';
 import { BadRequest } from 'http-errors';
 import { CREATED } from 'http-status-codes';
 
-import { MemberService } from '../services/member';
-import { fromAsync } from '../utils/array';
+import { MembersService } from '../services/members';
 
 import { Context } from './context';
 import { InjectedBodyParserFactory } from './utils/body-parser';
@@ -16,44 +15,28 @@ import { UserAuthenticator, authenticateUser, initializeAuthenticateUser } from 
 
 
 @injectableConstructor({
-  memberService: MemberService,
+  memberService: MembersService,
   userAuthenticator: UserAuthenticator,
   injectedBodyParserFactory: InjectedBodyParserFactory
 })
 @singleton()
-export class MemberController {
-  private readonly _memberService: MemberService;
+export class MembersController {
+  private readonly _membersService: MembersService;
 
   public constructor(deps: {
-    memberService: MemberService;
+    memberService: MembersService;
     userAuthenticator: UserAuthenticator;
     injectedBodyParserFactory: InjectedBodyParserFactory
   }) {
     ({
-      memberService: this._memberService
+      memberService: this._membersService
     } = deps);
-    initializeAuthenticateUser(MemberController, this, deps.userAuthenticator);
+    initializeAuthenticateUser(MembersController, this, deps.userAuthenticator);
   }
 
   @authenticateUser()
-  public async get(ctx: Context): Promise<void> {
-    const members = await fromAsync(this._memberService.findAll());
-    ctx.body = members.map((member) => ({
-      memberId: member.memberId,
-      name: member.name,
-      department: member.department,
-      typeOfStudy: member.typeOfStudy,
-      yearOfStudy: member.yearOfStudy,
-      studyProgramme: member.studyProgramme,
-      affiliatedStudentInterestGroup: member.affiliatedStudentInterestGroup,
-      registrationStartTime: member.membershipStartTime.toISOString(),
-      registrationEndTime: member.membershipEndTime.toISOString()
-    }));
-  }
-
-  @authenticateUser()
-  @validateResponseBody(Api.Member.GetHistory.Response)
-  public async getHistory(ctx: Context<Api.Member.GetHistory.Response>): Promise<void> {
+  @validateResponseBody(Api.Members.GetCountHistory.Response)
+  public async getCountHistory(ctx: Context): Promise<void> {
     const { category, range } = ctx.query as Record<string, string>;
     if (
       category !== 'department'
@@ -73,14 +56,8 @@ export class MemberController {
       throw new BadRequest('Invalid query param "range"');
     }
 
-    const history = await this._memberService.getHistory(category, range);
-    ctx.body = {
-      ...history,
-      records: history.records.map((record) => ({
-        ...record,
-        time: record.time.toISOString()
-      }))
-    };
+    const history = await this._membersService.getHistory(category, range);
+    ctx.body = Api.Members.GetCountHistory.stringifyResponse(history);
   }
 
   @authenticateUser()
@@ -92,7 +69,7 @@ export class MemberController {
       throw new BadRequest('Require field "file"');
     }
 
-    await this._memberService.importFromFile(csvFile.path);
+    await this._membersService.importFromFile(csvFile.path);
     await fsPromises.unlink(csvFile.path);
     ctx.status = CREATED;
   }

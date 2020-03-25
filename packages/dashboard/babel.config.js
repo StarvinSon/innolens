@@ -8,6 +8,7 @@ module.exports = (api) => {
 
   return {
     plugins: [
+      ['@babel/plugin-proposal-export-namespace-from'],
       ['@babel/plugin-proposal-optional-chaining'],
       ['@babel/plugin-proposal-class-properties', {
         loose: true // Not compatible with TypeScript decorator

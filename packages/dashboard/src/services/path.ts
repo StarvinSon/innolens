@@ -1,15 +1,7 @@
-import { createToken, injectableConstructor, singleton } from '@innolens/resolver';
+import { injectableConstructor, singleton } from '@innolens/resolver';
 
 import { Action, AnyAction } from './state-types';
 import { Store } from './store';
-
-
-export interface PathService extends EventTarget {
-  readonly path: string;
-  set(path: string): void;
-}
-
-export const PathService = createToken<PathService>('PathService');
 
 
 const SET_PATH_ACTION_TYPE = 'path/SET';
@@ -30,7 +22,7 @@ const KEY = 'path';
 
 @injectableConstructor(Store)
 @singleton()
-export class PathServiceImpl extends EventTarget implements PathService {
+export class PathService extends EventTarget {
   private readonly _store: Store;
 
   public constructor(store: Store) {

@@ -1,13 +1,15 @@
-@use '../elevation';
+@use '../theme';
+@use '../elevation-shadow';
+
 
 :host {
-  @include elevation.box-shadow(3);
+  @include elevation-shadow.box-shadow(3);
 
   display: flex;
   justify-content: center;
   margin-bottom: 1rem;
   padding: .5rem;
-  background: var(elevation.$background-color-3dp);
+  background: var(theme.$background-elevation-3dp);
 }
 
 inno-button {

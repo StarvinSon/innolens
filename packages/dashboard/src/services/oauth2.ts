@@ -1,5 +1,5 @@
 import {
-  createToken, injectableConstructor, singleton,
+  injectableConstructor, singleton,
   map
 } from '@innolens/resolver';
 
@@ -9,19 +9,6 @@ import { mergeObject } from '../utils/immutable/object';
 import { Action, AnyAction } from './state-types';
 import { Store } from './store';
 
-
-export interface OAuth2Service {
-  passwordCredentialsUIAdapter: OAuth2PasswordCredentialsUIAdapter | null;
-  setPasswordCredentials(credentials: OAuth2PasswordCredentials): void;
-  removePasswordCredentials(): void;
-  getToken(): OAuth2Token | null;
-  setToken(token: OAuth2Token): void;
-  removeToken(): void;
-  requestToken(): Promise<OAuth2Token>;
-  requestAccessToken(): Promise<string>;
-}
-
-export const OAuth2Service = createToken<OAuth2Service>('OAuth2Service');
 
 export interface OAuth2PasswordCredentialsUIAdapter {
   requestCredentials(
@@ -98,29 +85,50 @@ interface OAuth2State {
 }
 
 const KEY = 'oauth2';
-
-const initialState: OAuth2State = {
-  username: '',
-  password: '',
-  token: null
-};
+const KEY_LOCAL_STORAGE = 'innolens/oauth2/token';
 
 @injectableConstructor(Store, map(DashboardOptions, (opts) => opts.clientId))
 @singleton()
-export class OAuth2ServiceImpl implements OAuth2Service {
+export class OAuth2Service {
   private readonly _store: Store;
   private readonly _clientId: string;
+
   private _requestTokenPromise: Promise<OAuth2Token> | null = null;
 
+
   public passwordCredentialsUIAdapter: OAuth2PasswordCredentialsUIAdapter | null = null;
+
 
   public constructor(store: Store, clientId: string) {
     this._store = store;
     this._clientId = clientId;
     store.addReducer(KEY, this._reduce.bind(this));
+
+    const savedTokenJson = globalThis.localStorage.getItem(KEY_LOCAL_STORAGE);
+    if (savedTokenJson !== null) {
+      let tokenObj: any;
+      try {
+        tokenObj = JSON.parse(savedTokenJson);
+      } catch {
+        globalThis.localStorage.removeItem(KEY_LOCAL_STORAGE);
+        return;
+      }
+      if (
+        typeof tokenObj === 'object'
+        && typeof tokenObj.accessToken === 'string'
+        && typeof tokenObj.accessTokenExpiresAt === 'string'
+        && typeof tokenObj.refreshToken === 'string'
+      ) {
+        this.setToken({
+          accessToken: tokenObj.accessToken,
+          accessTokenExpiresAt: tokenObj.accessTokenExpiresAt,
+          refreshToken: tokenObj.refreshToken
+        });
+      }
+    }
   }
 
-  private _getState(): OAuth2State {
+  private get _state(): OAuth2State {
     return this._store.getState(KEY);
   }
 
@@ -139,7 +147,7 @@ export class OAuth2ServiceImpl implements OAuth2Service {
   }
 
   public getToken(): OAuth2Token | null {
-    return this._getState().token;
+    return this._state.token;
   }
 
   public setToken(token: OAuth2Token): void {
@@ -149,6 +157,11 @@ export class OAuth2ServiceImpl implements OAuth2Service {
       accessTokenExpiresAt: token.accessTokenExpiresAt,
       refreshToken: token.refreshToken
     });
+    try {
+      globalThis.localStorage.setItem(KEY_LOCAL_STORAGE, JSON.stringify(token));
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   public removeToken(): void {
@@ -171,7 +184,7 @@ export class OAuth2ServiceImpl implements OAuth2Service {
   }
 
   private async _requestTokenInternal(): Promise<OAuth2Token> {
-    const state = this._getState();
+    const state = this._state;
     if (state.token !== null) {
       return state.token;
     }
@@ -289,7 +302,14 @@ export class OAuth2ServiceImpl implements OAuth2Service {
     return (await this.requestToken()).accessToken;
   }
 
-  private _reduce(state: OAuth2State = initialState, action: AnyAction): OAuth2State {
+  private _reduce(
+    state: OAuth2State = {
+      username: '',
+      password: '',
+      token: null
+    },
+    action: AnyAction
+  ): OAuth2State {
     switch (action.type) {
       case SET_OAUTH2_PASSWORD_CREDENTIALS_ACTION_TYPE: {
         return mergeObject(state, {

@@ -1,5 +1,5 @@
 @use '../theme';
-@use '../elevation';
+@use '../elevation-shadow';
 
 
 :host {
@@ -29,13 +29,13 @@
 }
 
 .dialog {
-  @include elevation.box-shadow(24);
+  @include elevation-shadow.box-shadow(24);
 
   display: flex;
   position: relative;
   padding: 1rem;
   flex-direction: column;
-  background-color: var(elevation.$background-color-24dp);
+  background-color: var(theme.$background-elevation-24dp);
   border-radius: 1rem;
 
   &--freeze {

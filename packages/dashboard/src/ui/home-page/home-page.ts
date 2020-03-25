@@ -1,15 +1,11 @@
 import {
   customElement, LitElement, TemplateResult,
-  html, property
+  html
 } from 'lit-element';
 
-import '../button';
 import '../bar-chart';// eslint-disable-line import/no-duplicates
 import '../line-chart'; // eslint-disable-line import/no-duplicates
 import '../pie-chart'; // eslint-disable-line import/no-duplicates
-import { MemberCompositionService, MemberCompositionState } from '../../services/member-composition';
-import { injectableProperty } from '../../utils/property-injector';
-import { observeProperty } from '../../utils/property-observer';
 import { BarChartData } from '../bar-chart'; // eslint-disable-line import/no-duplicates
 import { LineChartData } from '../line-chart'; // eslint-disable-line import/no-duplicates
 import { PieChartData } from '../pie-chart'; // eslint-disable-line import/no-duplicates
@@ -28,14 +24,6 @@ declare global {
 @customElement(TAG_NAME)
 export class HomePage extends LitElement {
   public static readonly styles = css;
-
-
-  @injectableProperty(MemberCompositionService)
-  @observeProperty('_updateListeners')
-  private _memberCompositionService: MemberCompositionService | null;
-
-  @property({ attribute: false })
-  private _memberComposition: MemberCompositionState = null;
 
 
   private readonly _sampleBarChartData: BarChartData = {
@@ -63,7 +51,7 @@ export class HomePage extends LitElement {
     ]
   };
 
-  private readonly _sampleLineChartData: LineChartData = {
+  private readonly _sampleLineChartData: LineChartData<string> = {
     labels: [...Array(51)].map((_, i) => String(i)),
     lines: [
       {
@@ -115,61 +103,19 @@ export class HomePage extends LitElement {
   };
 
 
-  public constructor() {
-    super();
-    this._bindmemberComposition = this._bindmemberComposition.bind(this);
-    this._memberCompositionService = null;
-  }
-
-
-  public connectedCallback(): void {
-    super.connectedCallback();
-    this._updateListeners();
-  }
-
-  public disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this._updateListeners();
-  }
-
-
-  private _updateListeners(): void {
-    if (this.isConnected && this._memberCompositionService !== null) {
-      if (this._memberCompositionService !== null) {
-        this._memberCompositionService.addEventListener('changed', this._bindmemberComposition);
-      }
-      this._bindmemberComposition();
-    } else if (this._memberCompositionService !== null) {
-      this._memberCompositionService.removeEventListener('changed', this._bindmemberComposition);
-    }
-  }
-
-  private _bindmemberComposition(): void {
-    this._memberComposition = this._memberCompositionService?.memberComposition ?? null;
-  }
-
-
   protected render(): TemplateResult {
-    const { _memberComposition: memberComposition } = this;
-
     return html`
       <h4>Bar Chart Sample</h4>
       <inno-bar-chart
         .data="${this._sampleBarChartData}"></inno-bar-chart>
-      <h4>Line Chart Sample</h4>
       <inno-line-chart
-        .data="${this._sampleLineChartData}"></inno-line-chart>
-      <h4>Pie Chart Sample</h4>
+        .data="${this._sampleLineChartData}">
+        <span slot="title">Line Chart Sample</span>
+      </inno-line-chart>
       <inno-pie-chart
-        .data="${this._samplePieChartData}"></inno-pie-chart>
-      <inno-button
-        theme="raised"
-        @click="${this._onUpdateButtonClick}">Update</inno-button>
-      <pre>${JSON.stringify(memberComposition, undefined, 2)}</pre>
+        .data="${this._samplePieChartData}">
+        <span slot="title">Pie Chart Sample</span>
+      </inno-pie-chart>
     `;
-  }
-
-  private _onUpdateButtonClick(): void {
-    this._memberCompositionService?.update();
   }
 }

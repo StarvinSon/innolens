@@ -4,8 +4,6 @@ import {
 } from 'koa';
 
 
-export interface Context<T = any> extends ParameterizedContext<DefaultState, DefaultContext> {
-  body: T;
-}
+export interface Context extends ParameterizedContext<DefaultState, DefaultContext> {}
 
 export { Next };

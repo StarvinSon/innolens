@@ -1,10 +1,14 @@
 import { sum } from 'd3-array';
-import { pie, arc, PieArcDatum } from 'd3-shape';
+import {
+  pie, arc, PieArcDatum,
+  Arc
+} from 'd3-shape';
 import {
   customElement, LitElement, TemplateResult,
   html, property, svg
 } from 'lit-element';
 import { classMap } from 'lit-html/directives/class-map';
+import { styleMap } from 'lit-html/directives/style-map';
 
 import '../theme';
 
@@ -56,98 +60,188 @@ export class PieChart extends LitElement {
   public data: PieChartData | null = null;
 
 
-  protected render(): TemplateResult {
-    const {
-      chartWidth,
-      chartHeight,
-      chartPaddingLeft,
-      chartPaddingBottom,
-      chartPaddingRight,
-      chartPaddingTop,
-      data
-    } = this;
+  private _renderDataCache: {
+    readonly data: PieChartData | null;
+    readonly pieRadius: number;
+    readonly arrowRadius: number;
+    readonly jointRadius: number;
+    readonly legendRadius: number;
+    readonly angles: ReadonlyArray<PieArcDatum<PieChartPieData>> | null;
+    readonly computeArc: Arc<any, PieArcDatum<PieChartPieData>> | null;
+    readonly valueSum: number | null;
+  } | null = null;
 
-    if (data === null) {
-      return html`Empty`;
+  private _getRenderData(): Exclude<PieChart['_renderDataCache'], null> {
+    const { data } = this;
+
+    if (this._renderDataCache !== null && this._renderDataCache.data === data) {
+      return this._renderDataCache;
     }
 
-    const chartContentWidth = chartWidth - chartPaddingLeft - chartPaddingRight;
-    const chartContentHeight = chartHeight - chartPaddingTop - chartPaddingBottom;
+    const pieRadius = 0.85;
+    const arrowRadius = 0.9;
+    const jointRadius = 0.95;
+    const legendRadius = 1;
 
-    const pieRadius = Math.min(chartContentWidth, chartContentHeight) / 2;
-    const arrowRadius = pieRadius * 1.05;
-    const jointRadius = arrowRadius * 1.05;
-    const legendRadius = jointRadius * 1.05;
+    let angles: Array<PieArcDatum<PieChartPieData>> | null = null;
+    let computeArc: Arc<any, PieArcDatum<PieChartPieData>> | null = null;
+    let valueSum: number | null = null;
+    if (data !== null && data.pies.length > 0) {
+      valueSum = sum(data.pies, (d) => d.value);
+      if (valueSum <= 0) {
+        valueSum = null;
+      }
 
-    const computeAngles = pie<PieChartPieData>()
-      .value((d) => d.value)
-      .sortValues(null);
-    const angles = computeAngles(data.pies.slice());
+      if (valueSum !== null) {
+        angles = pie<PieChartPieData>()
+          .value((d) => d.value)
+          // eslint-disable-next-line @typescript-eslint/func-call-spacing, no-spaced-func
+          .sortValues(null)
+          // eslint-disable-next-line no-unexpected-multiline
+          (data.pies.slice());
 
-    const computeArc = arc<PieArcDatum<PieChartPieData>>()
-      .innerRadius(0)
-      .outerRadius(pieRadius);
+        computeArc = arc<PieArcDatum<PieChartPieData>>()
+          .innerRadius(0)
+          .outerRadius(pieRadius);
+      }
+    }
 
-    const valueSum = sum(data.pies, (d) => d.value);
+    this._renderDataCache = {
+      data,
+      pieRadius,
+      arrowRadius,
+      jointRadius,
+      legendRadius,
+      angles,
+      computeArc,
+      valueSum
+    };
+    return this._renderDataCache;
+  }
+
+  protected render(): TemplateResult {
+    return html`
+      <h4 class="${classes.title}"><slot name="title"></slot></h4>
+      <div class="${classes.main}">
+        ${this._renderSide('left')}
+        ${this._renderPies()}
+        ${this._renderSide('right')}
+        ${this._renderNotAvailableMessage()}
+      </div>
+    `;
+  }
+
+  private _renderPies(): TemplateResult {
+    const {
+      arrowRadius,
+      jointRadius,
+      legendRadius,
+      angles,
+      computeArc
+    } = this._getRenderData();
 
     /* eslint-disable @typescript-eslint/indent */
     return html`
-      <svg
-        class="${classes.chart}"
-        viewBox="0 0 ${chartWidth} ${chartHeight}">
-        <g transform="translate(${chartPaddingLeft} ${chartPaddingTop})">
-          <g transform="translate(${chartContentWidth / 2} ${chartContentHeight / 2})">
-            ${angles.map((angle, i) => svg`
-              <path
-                class="${classes.chart_pie} ${classes[`chart_pie_$${i}`]}"
-                d="${computeArc(angle)}"></path>
-            `)}
-            ${angles.map((angle) => {
+      <div class="${classes.pies}">
+        <svg
+          class="${classes.pies_svg}"
+          viewBox="-1 -1 2 2"
+          preserveAspectRatio="none">
+          ${angles === null || computeArc === null
+            ? null
+            : angles.map((angle, i) => svg`
+                <path
+                  class="${classes.pie} ${classes[`pie_$${i}`]}"
+                  d="${computeArc(angle)}"></path>
+              `)}
+          ${angles === null || computeArc === null
+            ? null
+            : angles.map((angle) => {
+                const centroid = computeArc.centroid(angle);
+                const centroidRadius = Math.sqrt(centroid[0] ** 2 + centroid[1] ** 2);
+                const centroidUnit = [centroid[0] / centroidRadius, centroid[1] / centroidRadius];
+
+                const start = [
+                  (centroidUnit[0] < 0 ? -1 : 1) * legendRadius,
+                  centroidUnit[1] * jointRadius
+                ];
+                const joint = [
+                  centroidUnit[0] * jointRadius,
+                  start[1]
+                ];
+                const end = [
+                  centroidUnit[0] * arrowRadius,
+                  centroidUnit[1] * arrowRadius
+                ];
+                const points = [start, joint, end];
+
+                return svg`
+                  <polyline
+                    class="${classes.arrow}"
+                    points="${points.map((p) => p.join(',')).join(' ')}"></polyline>
+                `;
+              })}
+        </svg>
+      </div>
+    `;
+    /* eslint-enable @typescript-eslint/indent */
+  }
+
+  private _renderSide(side: 'left' | 'right'): TemplateResult {
+    const {
+      jointRadius,
+      angles,
+      computeArc,
+      valueSum
+    } = this._getRenderData();
+
+    /* eslint-disable @typescript-eslint/indent */
+    return html`
+      <div class="${classes.legends} ${classes[`legends_$${side}`]}">
+        ${angles === null || computeArc === null || valueSum === null
+          ? []
+          : angles
+            .map((angle) => {
               const centroid = computeArc.centroid(angle);
               const centroidRadius = Math.sqrt(centroid[0] ** 2 + centroid[1] ** 2);
               const centroidUnit = [centroid[0] / centroidRadius, centroid[1] / centroidRadius];
 
-              const start = [
-                (centroidUnit[0] < 0 ? -1 : 1) * legendRadius,
-                centroidUnit[1] * jointRadius
-              ];
-              const joint = [
-                centroidUnit[0] * jointRadius,
-                start[1]
-              ];
-              const end = [
-                centroidUnit[0] * arrowRadius,
-                centroidUnit[1] * arrowRadius
-              ];
-              const points = [start, joint, end];
+              if (
+                (side === 'left' && centroidUnit[0] >= 0)
+                || (side === 'right' && centroidUnit[0] < 0)
+              ) return null;
 
-              return svg`
-                <polyline
-                  class="${classes.chart_arrow}"
-                  points="${points.map((p) => p.join(',')).join(' ')}"></polyline>
-                <g transform="translate(${start[0] + (start[0] < 0 ? -1 : 1) * 10} ${start[1]})">
-                  <text
-                    class="${classMap({
-                      [classes.chart_legendText]: true,
-                      [classes.chart_legendText_$alignRight]: start[0] < 0
-                    })}"
-                    x="0" y="-10">
-                    ${angle.data.name}
-                  </text>
-                  <text
-                    class="${classMap({
-                      [classes.chart_legendPercentage]: true,
-                      [classes.chart_legendPercentage_$alignRight]: start[0] < 0
-                    })}"
-                    x="0" y="10">
-                    ${((angle.data.value * 100) / valueSum).toFixed()}%
-                  </text>
-                </g>
+              const startY = centroidUnit[1] * jointRadius;
+
+              return html`
+                <div
+                  class="${classes.legend} ${classes[`legend_$${side}`]}"
+                  style="${styleMap({
+                    top: `${((startY + 1) * 100) / 2}%`
+                  })}">
+                  ${angle.data.name}<br>
+                  ${((angle.data.value * 100) / valueSum).toFixed()}%
+                </div>
               `;
-            })}
-          </g>
-        </g>
-      </svg>
+            })
+            .filter((result) => result !== null)}
+      </div>
+    `;
+    /* eslint-enable @typescript-eslint/indent */
+  }
+
+  private _renderNotAvailableMessage(): TemplateResult {
+    const { angles } = this._getRenderData();
+
+    /* eslint-disable @typescript-eslint/indent */
+    return html`
+      <div
+        class="${classMap({
+          [classes.notAvailableMessage]: true,
+          [classes.notAvailableMessage_$hide]: angles !== null
+        })}">
+        Not Available
+      </div>
     `;
     /* eslint-enable @typescript-eslint/indent */
   }

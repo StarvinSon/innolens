@@ -6,7 +6,6 @@ import {
 } from 'lit-element';
 import { classMap } from 'lit-html/directives/class-map';
 
-import '../elevation';
 import { PathService } from '../../services/path';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';

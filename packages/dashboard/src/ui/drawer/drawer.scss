@@ -1,4 +1,5 @@
-@use '../elevation';
+@use '../theme';
+@use '../elevation-shadow';
 
 
 :host {
@@ -26,14 +27,14 @@
 }
 
 .drawer {
-  @include elevation.box-shadow(16);
+  @include elevation-shadow.box-shadow(16);
 
   position: relative;
   box-sizing: border-box;
   padding-top: 1rem;
   width: 16rem;
   height: 100%;
-  background-color: var(elevation.$background-color-16dp);
+  background-color: var(theme.$background-elevation-16dp);
   will-change: transform;
 
   &--freeze {

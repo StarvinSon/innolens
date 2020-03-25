@@ -5,7 +5,6 @@ import {
 import { classMap } from 'lit-html/directives/class-map';
 
 import '../button';
-import '../elevation';
 import '../theme';
 import {
   OAuth2PasswordCredentialsUIAdapter, OAuth2Service, OAuth2PasswordCredentialsRequest,

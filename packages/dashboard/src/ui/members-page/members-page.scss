@@ -1,0 +1,52 @@
+@use '../typography';
+@use '../theme';
+@use '../layout';
+
+
+:host {
+  display: block;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.content {
+  box-sizing: border-box;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: layout.$max-width;
+  padding: 2rem 1rem;
+}
+
+.options {
+  & > :not(:first-child) {
+    margin-top: 2rem;
+  }
+}
+
+.option {
+  /* empty */
+
+  &__label {
+    @include typography.base();
+    color: var(theme.$on-background);
+  }
+
+  &__chips {
+    margin-top: 1rem;
+  }
+}
+
+.chart-cards {
+  display: flex;
+  margin-top: 4rem;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 40rem;
+  flex-direction: column;
+
+  & > * {
+    margin-top: 2rem;
+  }
+}

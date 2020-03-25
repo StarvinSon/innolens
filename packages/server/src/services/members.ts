@@ -6,9 +6,8 @@ import {
   startOfDay, subDays, subMonths,
   addDays
 } from 'date-fns';
-import { ObjectId } from 'mongodb';
 
-import { Member, MemberCollection } from '../db/member';
+import { Member, MembersCollection } from '../db/members';
 
 
 export { Member };
@@ -28,26 +27,18 @@ export interface MemberCountRecord {
 
 
 @injectableConstructor({
-  memberCollection: MemberCollection
+  membersCollection: MembersCollection
 })
 @singleton()
-export class MemberService {
-  private readonly _memberCollection: MemberCollection;
+export class MembersService {
+  private readonly _membersCollection: MembersCollection;
 
   public constructor(options: {
-    memberCollection: MemberCollection;
+    membersCollection: MembersCollection;
   }) {
     ({
-      memberCollection: this._memberCollection
+      membersCollection: this._membersCollection
     } = options);
-  }
-
-  public async *findAll(): AsyncIterable<Member> {
-    yield* this._memberCollection.find({});
-  }
-
-  public async findOneById(id: ObjectId): Promise<Member | null> {
-    return this._memberCollection.findOne({ _id: id });
   }
 
   public async getHistory(
@@ -64,7 +55,7 @@ export class MemberService {
       default: throw new Error(`Unknown timeRange: ${range}`);
     }
 
-    const members = await this._memberCollection
+    const members = await this._membersCollection
       .find({
         membershipStartTime: {
           $lt: endTime
@@ -111,20 +102,6 @@ export class MemberService {
     };
   }
 
-  public async insertOne(member: Member): Promise<void> {
-    await this._memberCollection.insertOne(member);
-  }
-
-  public async insertMany(members: ReadonlyArray<Omit<Member, '_id'>>): Promise<void> {
-    if (members.length === 0) {
-      return;
-    }
-    await this._memberCollection.insertMany(members.map<Member>((member) => ({
-      ...member,
-      _id: new ObjectId()
-    })));
-  }
-
   public async importFromFile(path: string): Promise<void> {
     const stream = createReadStream(path)
       .pipe(parseCsv({
@@ -146,7 +123,7 @@ export class MemberService {
       });
     }
 
-    await this._memberCollection
+    await this._membersCollection
       .bulkWrite(
         importedMembers.map((member) => ({
           replaceOne: {

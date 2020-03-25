@@ -4,8 +4,6 @@
   "license": "UNLICENSED",
   "homepage": "https://i.cs.hku.hk/fyp/2019/fyp19027/",
   "repository": "https://github.com/StarvinSon/innolens/tree/develop/packages/api",
-  "main": "./node/index.js",
-  "module": "./web/index.js",
   "scripts": {
     "lint:es": "eslint --config ./.eslintrc.js --ignore-path ./.eslintignore --ext .js,.ts .",
     "build:node": "tsc --build ./tsconfig-node.json",
@@ -13,6 +11,9 @@
   },
   "engines": {
     "node": ">=13.5.0"
+  },
+  "dependencies": {
+    "date-fns": "^2.11.0"
   },
   "devDependencies": {
     "@innolens/eslint-config": "*",

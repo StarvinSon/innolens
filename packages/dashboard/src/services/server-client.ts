@@ -1,4 +1,4 @@
-import { createToken, injectableConstructor, singleton } from '@innolens/resolver';
+import { injectableConstructor, singleton } from '@innolens/resolver';
 
 import { OAuth2Service } from './oauth2';
 
@@ -12,19 +12,11 @@ export class FetchNotOkError extends Error {
 }
 
 
-export interface ServerClient {
-  fetch(url: string, init?: RequestInit): Promise<Response>;
-  fetchOk(url: string, init?: RequestInit): Promise<Response>;
-}
-
-export const ServerClient = createToken<ServerClient>('ServerClient');
-
-
 @injectableConstructor({
   oauth2Service: OAuth2Service
 })
 @singleton()
-export class ServerClientImpl implements ServerClient {
+export class ServerClient {
   private readonly _oauth2Service: OAuth2Service;
 
   public constructor(options: {
@@ -85,5 +77,13 @@ export class ServerClientImpl implements ServerClient {
       throw new FetchNotOkError(res);
     }
     return res;
+  }
+
+  public async fetchJsonOk(
+    url: string,
+    init?: RequestInit
+  ): Promise<any> {
+    const res = await this.fetchOk(url, init);
+    return res.json();
   }
 }

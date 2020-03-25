@@ -104,6 +104,7 @@ module.exports = (env, { publicPath = '/static/' }) => {
         {
           include: [
             srcPath,
+            resolve(rootPath, '../api'),
             resolve(rootPath, '../resolver')
           ],
           test: /\.js$/i,

@@ -1,4 +1,4 @@
-import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
+import { singleton, injectableConstructor } from '@innolens/resolver';
 import {
   combineReducers, Store as ReduxStore, createStore as createReduxStore,
   ReducersMapObject
@@ -8,20 +8,11 @@ import { composeWithDevTools } from 'redux-devtools-extension/developmentOnly';
 import { Reducer, AnyAction } from './state-types';
 
 
-export interface Store {
-  getState<T>(key: string): T;
-  dispatch(action: AnyAction): void;
-  addReducer(key: string, reducer: Reducer<any>): void;
-}
-
-export const Store = createToken<Store>('Store');
-
-
 type State = Readonly<Record<string, any>>;
 
 @injectableConstructor()
 @singleton()
-export class StoreImpl implements Store {
+export class Store {
   private readonly _reduxStore: ReduxStore<State, AnyAction>;
   private _reducerMap: ReducersMapObject<any, AnyAction>;
 

@@ -1,4 +1,4 @@
-export interface MigrateArray {
+export interface MergeArray {
   <T>(
     target: ReadonlyArray<T> | undefined,
     source: ReadonlyArray<T>,
@@ -6,7 +6,7 @@ export interface MigrateArray {
   ): ReadonlyArray<T>;
 }
 
-export const migrateArray: MigrateArray = <T>(
+export const mergeArray: MergeArray = <T>(
   target: ReadonlyArray<T> | undefined,
   source: ReadonlyArray<T>,
   mapper: (tarElem: T | undefined, srcElem: T) => T
@@ -26,7 +26,7 @@ export const migrateArray: MigrateArray = <T>(
   for (let i = 0; i < source.length; i += 1) {
     const targetItem = target[i];
     const sourceItem = source[i];
-    if (sourceItem !== undefined) {
+    if (sourceItem !== undefined && targetItem !== sourceItem) {
       const resultItem = mapper(targetItem, sourceItem);
       if (resultItem !== undefined && targetItem !== resultItem) {
         if (result === undefined) {
@@ -36,5 +36,5 @@ export const migrateArray: MigrateArray = <T>(
       }
     }
   }
-  return result === undefined ? target! : result;
+  return result === undefined ? target : result;
 };

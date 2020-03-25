@@ -1,19 +1,21 @@
 import { max } from 'd3-array';
-import { scaleLinear } from 'd3-scale';
-import { line } from 'd3-shape';
+import { scaleLinear, ScaleLinear } from 'd3-scale';
+import { line, Line } from 'd3-shape';
 import {
   customElement, LitElement, TemplateResult,
-  html, property, svg, PropertyValues, query
+  html, property, svg
 } from 'lit-element';
+import { styleMap } from 'lit-html/directives/style-map';
 
 import '../theme';
 
 import { css, classes } from './line-chart.scss';
 
 
-export interface LineChartData {
+export interface LineChartData<T> {
   readonly lines: ReadonlyArray<LineChartLineData>;
-  readonly labels: ReadonlyArray<string>;
+  readonly labels: ReadonlyArray<T>;
+  readonly formatLabel?: (label: T) => string;
 }
 
 export interface LineChartLineData {
@@ -35,177 +37,159 @@ export class LineChart extends LitElement {
   public static readonly styles = css;
 
 
-  @property({ type: Number, attribute: 'chart-width' })
-  public chartWidth = 480;
-
-  @property({ type: Number, attribute: 'chart-height' })
-  public chartHeight = 360;
-
-  @property({ type: Number, attribute: 'chart-padding-left' })
-  public chartPaddingLeft = 32;
-
-  @property({ type: Number, attribute: 'chart-padding-bottom' })
-  public chartPaddingBottom = 64;
-
-  @property({ type: Number, attribute: 'chart-padding-right' })
-  public chartPaddingRight = 32;
-
-  @property({ type: Number, attribute: 'chart-padding-top' })
-  public chartPaddingTop = 32;
-
   @property({ attribute: false })
-  public data: LineChartData | null = null;
+  public data: LineChartData<unknown> | null = null;
 
 
-  @query('#legends')
-  private readonly _legendsElem!: SVGGElement;
+  private _renderDataCache: {
+    readonly data: LineChartData<unknown> | null;
+    readonly iToX: ScaleLinear<number, number> | null;
+    readonly vMax: number | null;
+    readonly vToY: ScaleLinear<number, number> | null;
+    readonly computePath: Line<number> | null;
+  } | null = null;
 
+  private _getRenderData(): Exclude<LineChart['_renderDataCache'], null> {
+    const { data } = this;
 
-  protected render(): TemplateResult {
-    const {
-      chartWidth,
-      chartHeight,
-      chartPaddingLeft,
-      chartPaddingBottom,
-      chartPaddingRight,
-      chartPaddingTop,
-      data
-    } = this;
-
-    if (data === null) {
-      return html`Empty`;
+    if (this._renderDataCache !== null && this._renderDataCache.data === data) {
+      return this._renderDataCache;
     }
 
-    const chartContentWidth = chartWidth - chartPaddingLeft - chartPaddingRight;
-    const chartContentHeight = chartHeight - chartPaddingTop - chartPaddingBottom;
+    let iToX: ScaleLinear<number, number> | null = null;
+    let vMax: number | null = null;
+    let vToY: ScaleLinear<number, number> | null = null;
+    let computePath: Line<number> | null = null;
+    if (data !== null && data.labels.length > 0) {
+      iToX = scaleLinear()
+        .domain([0, data.labels.length - 1])
+        .range([0, 1]);
 
-    const vMax = max(data.lines.flatMap((l) => l.values))!;
+      vMax = max(data.lines.flatMap((l) => l.values))!;
 
-    const iToX = scaleLinear()
-      .domain([0, data.labels.length - 1])
-      .range([0, chartContentWidth]);
+      vToY = scaleLinear()
+        .domain([0, vMax])
+        .range([1, 0]);
 
-    const vToY = scaleLinear()
-      .domain([0, vMax])
-      .range([chartContentHeight, 0]);
+      computePath = line<number>()
+        .x((_, i) => iToX!(i))
+        .y((v) => vToY!(v));
+    }
 
-    const computePath = line<number>()
-      .x((_, i) => iToX(i))
-      .y((v) => vToY(v));
+    this._renderDataCache = {
+      data,
+      iToX,
+      vMax,
+      vToY,
+      computePath
+    };
+    return this._renderDataCache;
+  }
 
+  protected render(): TemplateResult {
     return html`
-      <svg
-        class="${classes.chart}"
-        viewBox="0 0 ${chartWidth} ${chartHeight}">
-        <clipPath id="content-clip-path">
-          <rect x="0" y="0" width="${chartContentWidth}" height="${chartContentHeight}"></rect>
-        </clipPath>
-        <g transform="translate(${chartPaddingLeft} ${chartPaddingTop})">
-          <g clip-path="url(#content-clip-path)">
-            ${vToY.ticks(5).map(vToY).map((y) => svg`
-              <line
-                class="${classes.chart_refLine}"
-                x1="0" y1="${y}"
-                x2="${chartContentWidth}" y2="${y}"></line>
-            `)}
-            ${data.lines.map((lineData, lineIdx) => svg`
-              <path
-                class="${classes.chart_line} ${classes[`chart_line_$${lineIdx}`]}"
-                d="${computePath(lineData.values.slice())}"></path>
-            `)}
-          </g>
-          <polyline
-            class="${classes.chart_axis}"
-            points="0,0 0,${chartContentHeight} ${chartContentWidth},${chartContentHeight}"></polyline>
-          ${vToY.ticks(5).map((v) => svg`
-            <text
-              class="${classes.chart_tick} ${classes.chart_tick_$y}"
-              x="-8" y="${vToY(v)}">${v}</text>
-          `)}
-          ${iToX.ticks(5).map((i) => svg`
-            <text
-              class="${classes.chart_tick} ${classes.chart_tick_$x}"
-              x="${iToX(i)}" y="${chartContentHeight + 8}">${data.labels[i]}</text>
-          `)}
-          <g id="legends" transform="translate(0 ${chartContentHeight + 32})">
-            ${data.lines.map((lineData, lineIdx) => svg`
-              <g>
-                <circle
-                  class="${classes.chart_legendDot} ${classes[`chart_legendDot_$${lineIdx}`]}"
-                  cx="5" cy="0" r="5"></circle>
-                <text
-                  class="${classes.chart_legendText}"
-                  x="15" y="0">${lineData.name}</text>
-              </g>
-            `)}
-          </g>
-        </g>
-      </svg>
+      <h4 class="${classes.title}"><slot name="title"></slot></h4>
+      ${this._renderMain()}
+      ${this._renderLegends()}
     `;
   }
 
-  protected updated(changedProps: PropertyValues): void {
-    super.updated(changedProps);
-    this._updateLegendsPosition();
+  private _renderMain(): TemplateResult {
+    const {
+      data,
+      iToX,
+      vMax,
+      vToY,
+      computePath
+    } = this._getRenderData();
+
+    /* eslint-disable @typescript-eslint/indent */
+    return html`
+      <div class="${classes.main}">
+        <div class="${classes.main_content}">
+          <div class="${classes.main_chart}">
+            <svg
+              class="${classes.chartSvg}"
+              viewBox="0 0 1 1"
+              preserveAspectRatio="none">
+              <clipPath id="content-clip-path">
+                <rect x="0" y="0" width="1" height="1"></rect>
+              </clipPath>
+              <g clip-path="url(#content-clip-path)">
+                ${vToY === null
+                  ? []
+                  : vToY.ticks(5).map(vToY).map((y) => svg`
+                    <line
+                      class="${classes.refLine}"
+                      x1="0" y1="${y}"
+                      x2="1" y2="${y}"></line>
+                  `)}
+                ${data === null || computePath === null
+                  ? []
+                  : data.lines.map((lineData, lineIdx) => svg`
+                    <path
+                      class="${classes.line} ${classes[`line_$${lineIdx}`]}"
+                      d="${computePath(lineData.values.slice())}"></path>
+                  `)}
+              </g>
+              <polyline
+                class="${classes.axes}"
+                points="0,0 0,1 1,1"></polyline>
+            </svg>
+            <div class="${classes.chartOverlay}">
+              <div class="${classes.ticks} ${classes.ticks_$y}">
+                ${vToY === null || vMax === null
+                  ? []
+                  : vToY.ticks(5).map((v) => html`
+                    <span
+                      class="${classes.tick} ${classes.tick_$y}"
+                      style="${styleMap({
+                        top: `${(1 - (v / vMax)) * 100}%`
+                      })}">
+                      ${v}
+                    </span>
+                  `)}
+              </div>
+              <div class="${classes.ticks} ${classes.ticks_$x}">
+                ${data === null || iToX === null
+                  ? []
+                  : iToX.ticks(5).map((i) => html`
+                    <span
+                      class="${classes.tick} ${classes.tick_$x}"
+                      style="${styleMap({
+                        left: `${(1 - (i / (data.labels.length - 1))) * 100}%`
+                      })}">
+                      ${(data.formatLabel ?? String)(data.labels[i])}
+                    </span>
+                  `)}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    /* eslint-enable @typescript-eslint/indent */
   }
 
-  private _updateLegendsPosition(): void {
+  private _renderLegends(): TemplateResult {
     const {
-      chartWidth,
-      chartPaddingLeft,
-      chartPaddingRight,
-      data,
-      _legendsElem: legendsElem
-    } = this;
-
-    if (data === null) return;
-
-    const chartContentWidth = chartWidth - chartPaddingLeft - chartPaddingRight;
-
-    const legendElems: ReadonlyArray<SVGGElement> = Array.from(legendsElem.children)
-      .filter((elem): elem is SVGGElement => elem instanceof SVGGElement);
-
-    const rowGap = 20;
-    const columnGap = 10;
-    const rows: Array<{
-      width: number;
-      legends: Array<{
-        tx: number;
-        ty: number;
-        element: SVGGElement;
-      }>
-    }> = [];
-
-    for (const legendElem of legendElems) {
-      const bbox = legendElem.getBBox();
-      if (
-        rows.length === 0
-        || rows[rows.length - 1].width + bbox.width + columnGap > chartContentWidth + columnGap
-      ) {
-        rows.push({
-          width: 0,
-          legends: []
-        });
-      }
-      rows[rows.length - 1].legends.push({
-        tx: rows[rows.length - 1].width,
-        ty: (rows.length - 1) * rowGap + rowGap / 2,
-        element: legendElem
-      });
-      rows[rows.length - 1].width += bbox.width + columnGap;
-    }
-
-    for (const row of rows) {
-      const marginLeft = (chartContentWidth - row.width) / 2;
-      for (const legend of row.legends) {
-        legend.tx += marginLeft;
-      }
-    }
-
-    for (const row of rows) {
-      for (const legend of row.legends) {
-        legend.element.setAttribute('transform', `translate(${legend.tx} ${legend.ty})`);
-      }
-    }
+      data
+    } = this._getRenderData();
+    /* eslint-disable @typescript-eslint/indent */
+    return html`
+      <div class="${classes.legends}">
+        <div class="${classes.legends_content}">
+          ${data === null
+            ? []
+            : data.lines.map((lineData, lineIdx) => html`
+              <div class="${classes.legend}">
+                <div class="${classes.legend_dot} ${classes[`legend_dot_$${lineIdx}`]}"></div>
+                <span class="${classes.legend_text}">${lineData.name}</span>
+              </div>
+            `)}
+        </div>
+      </div>
+    `;
+    /* eslint-enable @typescript-eslint/indent */
   }
 }

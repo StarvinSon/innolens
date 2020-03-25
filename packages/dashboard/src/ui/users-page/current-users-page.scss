@@ -1,14 +1,15 @@
-@use '../elevation';
+@use '../elevation-shadow';
 @use '../theme';
 @use '../typography';
 
+
 :host {
-  @include elevation.box-shadow(3);
+  @include elevation-shadow.box-shadow(3);
 
   display: block;
   margin-bottom: 1rem;
   padding: 4rem;
-  background: var(elevation.$background-color-3dp);
+  background: var(theme.$background-elevation-3dp);
   text-align: center;
 }
 

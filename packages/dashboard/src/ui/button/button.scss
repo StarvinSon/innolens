@@ -1,6 +1,6 @@
 @use '../theme';
 @use '../typography';
-@use '../elevation';
+@use '../elevation-shadow';
 @use '../ripple';
 @use './button-variables' as vars;
 
@@ -35,14 +35,14 @@
   }
 
   &--raised {
-    @include elevation.box-shadow(2);
-    @include elevation.transition();
+    @include elevation-shadow.box-shadow(2);
+    @include elevation-shadow.transition();
 
     background-color: var(vars.$background-color, var(theme.$primary));
 
     &:hover,
     &:focus {
-      @include elevation.box-shadow(8);
+      @include elevation-shadow.box-shadow(8);
     }
   }
 

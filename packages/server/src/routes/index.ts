@@ -1,10 +1,10 @@
-import * as Api from '@innolens/api';
+import * as Api from '@innolens/api/node';
 import {
   decorate, singleton, name,
   injectableFactory
 } from '@innolens/resolver';
 
-import { MemberController } from '../controllers/member';
+import { MembersController } from '../controllers/members';
 import { StaticController } from '../controllers/static';
 import { bindMethods } from '../utils/method-binder';
 
@@ -19,20 +19,20 @@ const bindControllerMethods = <T extends Readonly<Record<string, object>>>(obj: 
 export const createAppRouter = decorate(
   name('createRoutes'),
   injectableFactory(createApiRouter, {
-    member: MemberController,
+    members: MembersController,
     static: StaticController
   }),
   singleton(),
   (apiRouter: Router, _controllers: {
-    member: MemberController,
+    members: MembersController,
     static: StaticController
   }): Router => {
     const controllers = bindControllerMethods(_controllers);
     const router = createRouter();
 
     // member
-    router.get(Api.Member.GetHistory.path, controllers.member.getHistory);
-    router.post(Api.Member.PostImport.path, controllers.member.postImport);
+    router.get(Api.Members.GetCountHistory.path, controllers.members.getCountHistory);
+    router.post(Api.Members.PostImport.path, controllers.members.postImport);
 
     nest(router, '/api', apiRouter);
     router.get(':subPath(.*)', controllers.static.get);

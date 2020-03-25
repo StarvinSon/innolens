@@ -16,6 +16,7 @@
     ]
   },
   "references": [
+    { "path": "../api/tsconfig-web.json" },
     { "path": "../resolver/tsconfig-web.json" }
   ]
 }

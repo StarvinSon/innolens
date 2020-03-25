@@ -1,9 +1,39 @@
+@use 'sass:color';
 @use './theme-variables' as vars;
+
+
+@function _overlay($overlay-transparency) {
+  @return color.mix(#121212, white, $weight: 100% - $overlay-transparency);
+}
 
 
 :root {
   // See: https://material.io/design/color/dark-theme.html
-  #{vars.$background}: #121212;
+  #{vars.$background-elevation-0dp}: _overlay(0%);
+  #{vars.$background-elevation-1dp}: _overlay(5%);
+  #{vars.$background-elevation-2dp}: _overlay(7%);
+  #{vars.$background-elevation-3dp}: _overlay(8%);
+  #{vars.$background-elevation-4dp}: _overlay(9%);
+  #{vars.$background-elevation-5dp}: _overlay(9%);
+  #{vars.$background-elevation-6dp}: _overlay(11%);
+  #{vars.$background-elevation-7dp}: _overlay(11%);
+  #{vars.$background-elevation-8dp}: _overlay(12%);
+  #{vars.$background-elevation-9dp}: _overlay(12%);
+  #{vars.$background-elevation-10dp}: _overlay(12%);
+  #{vars.$background-elevation-11dp}: _overlay(12%);
+  #{vars.$background-elevation-12dp}: _overlay(14%);
+  #{vars.$background-elevation-13dp}: _overlay(14%);
+  #{vars.$background-elevation-14dp}: _overlay(14%);
+  #{vars.$background-elevation-15dp}: _overlay(14%);
+  #{vars.$background-elevation-16dp}: _overlay(15%);
+  #{vars.$background-elevation-17dp}: _overlay(15%);
+  #{vars.$background-elevation-18dp}: _overlay(15%);
+  #{vars.$background-elevation-19dp}: _overlay(15%);
+  #{vars.$background-elevation-20dp}: _overlay(15%);
+  #{vars.$background-elevation-21dp}: _overlay(15%);
+  #{vars.$background-elevation-22dp}: _overlay(15%);
+  #{vars.$background-elevation-23dp}: _overlay(15%);
+  #{vars.$background-elevation-24dp}: _overlay(16%);
   #{vars.$on-background}: white;
 
   #{vars.$primary}: #0080FF;

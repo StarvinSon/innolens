@@ -26,6 +26,17 @@ export const pageEntries: ReadonlyArray<PageEntry | PageGroupEntry> = [
     tagName: 'inno-home-page'
   },
   {
+    type: 'pageEntry',
+    name: 'Members',
+    href: '/members',
+    pathRegExp: /^\/members$/,
+    load: async () => void import(
+      /* webpackChunkName: 'members-page' */
+      './members-page'
+    ),
+    tagName: 'inno-members-page'
+  },
+  {
     type: 'pageGroupEntry',
     name: 'User',
     pages: [

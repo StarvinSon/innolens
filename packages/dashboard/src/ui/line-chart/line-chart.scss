@@ -1,100 +1,200 @@
 @use '../theme';
-@use '../svg-typography';
+@use '../typography';
+
+
+@mixin _title() {
+  @include typography.base();
+  font-size: 1.25rem;
+  font-weight: 400;
+}
+
+@mixin _tick() {
+  @include typography.base();
+  font-size: 1rem;
+}
+
+@mixin _legend-text() {
+  @include typography.base();
+  font-size: 1rem;
+}
 
 
 :host {
   display: block;
-  width: 30rem;
-  height: 22.5rem;
 }
 
 :host([hidden]) {
   display: block;
 }
 
-.chart {
+.title {
+  @include _title();
+  margin: 0rem;
+  text-align: center;
+  color: var(theme.$on-background);
+}
+
+.main {
+  position: relative;
+  width: 100%;
+
+  &::before {
+    content: '';
+    display: block;
+    padding-bottom: 67%;
+  }
+
+  &__content {
+    position: absolute;
+    box-sizing: border-box;
+    left: 0rem;
+    top: 0rem;
+    width: 100%;
+    height: 100%;
+    padding: 2rem;
+  }
+
+  &__chart {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.chart-svg {
   width: 100%;
   height: 100%;
+  overflow: visible;
+}
 
-  &__ref-line {
-    stroke: var(theme.$on-background);
-    stroke-opacity: 0.2;
+.ref-line {
+  stroke: var(theme.$on-background);
+  stroke-opacity: 0.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.line {
+  fill: none;
+  stroke: var(theme.$on-background);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+
+  &--0 {
+    stroke: var(theme.$chart-0);
   }
 
-  &__line {
-    fill: none;
-    stroke: var(theme.$on-background);
+  &--1 {
+    stroke: var(theme.$chart-1);
+  }
+
+  &--2 {
+    stroke: var(theme.$chart-2);
+  }
+
+  &--3 {
+    stroke: var(theme.$chart-3);
+  }
+
+  &--4 {
+    stroke: var(theme.$chart-4);
+  }
+}
+
+.axes {
+  fill: none;
+  stroke: var(theme.$on-background);
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-overlay {
+  position: absolute;
+  left: 0rem;
+  top: 0rem;
+  width: 100%;
+  height: 100%;
+}
+
+.ticks {
+  position: absolute;
+
+  &--y {
+    left: -0.5rem;
+    height: 100%;
+  }
+
+  &--x {
+    bottom: -0.5rem;
+    width: 100%;
+  }
+}
+
+.tick {
+  @include _tick();
+  position: absolute;
+  top: 0rem;
+  color: var(theme.$on-background);
+
+  &--y {
+    right: 0rem;
+    transform: translateY(-50%);
+  }
+
+  &--x {
+    left: 0rem;
+    transform: translateX(-50%);
+  }
+}
+
+.legends {
+  overflow: hidden;
+
+  &__content {
+    display: flex;
+    margin-right: -1rem;
+    margin-bottom: -1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+
+    & > * {
+      margin-right: 1rem;
+      margin-bottom: 1rem;
+    }
+  }
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+
+  &__dot {
+    width: 1rem;
+    height: 1rem;
+    margin-right: 0.5rem;
+    border-radius: 50%;
 
     &--0 {
-      stroke: var(theme.$chart-0);
+      background-color: var(theme.$chart-0);
     }
 
     &--1 {
-      stroke: var(theme.$chart-1);
+      background-color: var(theme.$chart-1);
     }
 
     &--2 {
-      stroke: var(theme.$chart-2);
+      background-color: var(theme.$chart-2);
     }
 
     &--3 {
-      stroke: var(theme.$chart-3);
+      background-color: var(theme.$chart-3);
     }
 
     &--4 {
-      stroke: var(theme.$chart-4);
+      background-color: var(theme.$chart-4);
     }
   }
 
-  &__axis {
-    fill: none;
-    stroke: var(theme.$on-background);
-  }
-
-  &__tick {
-    @include svg-typography.base();
-
-    font-size: 16px;
-    fill: var(theme.$on-background);
-
-    &--x {
-      text-anchor: middle;
-      dominant-baseline: hanging;
-    }
-
-    &--y {
-      text-anchor: end;
-      dominant-baseline: middle;
-    }
-  }
-
-  &__legend-dot {
-    &--0 {
-      fill: var(theme.$chart-0);
-    }
-
-    &--1 {
-      fill: var(theme.$chart-1);
-    }
-
-    &--2 {
-      fill: var(theme.$chart-2);
-    }
-
-    &--3 {
-      fill: var(theme.$chart-3);
-    }
-
-    &--4 {
-      fill: var(theme.$chart-4);
-    }
-  }
-
-  &__legend-text {
-    @include svg-typography.base();
-
-    dominant-baseline: middle;
-    font-size: 16px;
-    fill: var(theme.$on-background);
+  &__text {
+    @include _legend-text();
+    color: var(theme.$on-background);
   }
 }

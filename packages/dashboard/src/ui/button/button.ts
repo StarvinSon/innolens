@@ -5,9 +5,7 @@ import {
 } from 'lit-element';
 import { classMap } from 'lit-html/directives/class-map';
 
-import '../elevation';
 import '../theme';
-import '../typography';
 import '../ripple'; // eslint-disable-line import/no-duplicates
 import { RippleController } from '../ripple'; // eslint-disable-line import/no-duplicates
 

@@ -1,0 +1,16 @@
+@use '../theme';
+@use '../elevation-shadow';
+
+
+:host {
+  @include elevation-shadow.box-shadow(1);
+  display: block;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  background-color: var(theme.$background-elevation-1dp);
+  overflow: hidden;
+}
+
+:host([hidden]) {
+  display: none;
+}
