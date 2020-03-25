@@ -4,8 +4,8 @@ from typing import TYPE_CHECKING, Optional, Callable, TypeVar
 from typing_extensions import Final
 
 if TYPE_CHECKING:
-  from innolens_simulator.engine import Engine
-  from innolens_simulator.object import Object
+  from .engine import Engine
+  from .object import Object
 
 
 class Component:

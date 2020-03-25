@@ -13,8 +13,11 @@ import numpy as np
 import tensorflow as tf
 import pandas as pd
 
-from innolens_models.cli import Cli
-from innolens_models.models.utils.estimator_metrics import to_estimator_metrics
+from ..cli import Cli
+from .utils.estimator_metrics import to_estimator_metrics
+
+
+hk_timezone: Final = timezone(timedelta(hours=8))
 
 
 class UserCountCli(Cli):
@@ -274,43 +277,52 @@ def preprocess(
       study_programmes,
       years_of_study,
       affiliated_student_interest_groups
-    ], names = ['Department', 'Type of Study', 'Study Programme', 'Year of Study', 'Affiliated Student Interest Group'])
+    ], names=['department', 'type_of_study', 'study_programme', 'year_of_study', 'affiliated_student_interest_group'])
     return pd.DataFrame(index = index).reset_index()
 
   def load_member_data(path: str) -> pd.DataFrame:
     df = pd.read_csv(
       path,
+      usecols=[
+        'member_id',
+        'name',
+        'department',
+        'type_of_study',
+        'study_programme',
+        'year_of_study',
+        'affiliated_student_interest_group'
+      ],
       dtype={
-        'UID': str,
-        'Name': str,
-        'Department': str,
-        'Type of Study': pd.CategoricalDtype(types_of_study),
-        'Study Programme': pd.CategoricalDtype(study_programmes),
-        'Year of Study': pd.CategoricalDtype(years_of_study),
-        'Affiliated Student Interest Group': str,
+        'member_id': str,
+        'name': str,
+        'department': str,
+        'type_of_study': pd.CategoricalDtype(types_of_study),
+        'study_programme': pd.CategoricalDtype(study_programmes),
+        'year_of_study': pd.CategoricalDtype(years_of_study),
+        'affiliated_student_interest_group': str,
       }
     )
     assert df.columns.to_list() == [
-      'UID',
-      'Name',
-      'Department',
-      'Type of Study',
-      'Study Programme',
-      'Year of Study',
-      'Affiliated Student Interest Group'
+      'member_id',
+      'name',
+      'department',
+      'type_of_study',
+      'study_programme',
+      'year_of_study',
+      'affiliated_student_interest_group'
     ]
     return df
 
   def load_access_records(path: str) -> pd.DataFrame:
     df = pd.read_csv(
       path,
-      parse_dates=['Time'],
+      parse_dates=['time'],
       dtype={
-        'UID': str,
-        'Action': pd.CategoricalDtype(['enter', 'exit'])
+        'member_id': str,
+        'action': pd.CategoricalDtype(['enter', 'exit'])
       }
     )
-    assert df.columns.to_list() == ['Time', 'UID', 'Action']
+    assert df.columns.to_list() == ['time', 'member_id', 'action']
     return df
 
   def iterate_spans(
@@ -320,19 +332,19 @@ def preprocess(
     end_time: pd.Timestamp,
     time_step: pd.Timedelta
   ) -> Iterator[Mapping[str, Any]]:
-    df = df.sort_values('Time')
-    df = pd.merge(df, member_df, on='UID')
+    df = df.sort_values('time')
+    df = pd.merge(df, member_df, on='member_id')
 
     staying_uids = {}
     for _, row in df.iterrows():
-      time = row['Time']
-      uid = row['UID']
-      department = row['Department']
-      type_of_study = row['Type of Study']
-      study_programme = row['Study Programme']
-      year_of_study = row['Year of Study']
-      affiliated_student_interest_group = row['Affiliated Student Interest Group']
-      action = row['Action']
+      time = row['time']
+      uid = row['member_id']
+      department = row['department']
+      type_of_study = row['type_of_study']
+      study_programme = row['study_programme']
+      year_of_study = row['year_of_study']
+      affiliated_student_interest_group = row['affiliated_student_interest_group']
+      action = row['action']
 
       if department not in departments:
         departments.append(department)
@@ -346,14 +358,14 @@ def preprocess(
         if enter_time is not None:
           if enter_time < time:
             yield {
-              'Enter Time': enter_time,
-              'Exit Time': time,
-              'UID': uid,
-              'Department': department,
-              'Type of Study': type_of_study,
-              'Study Programme': study_programme,
-              'Year of Study': year_of_study,
-              'Affiliated Student Interest Group': affiliated_student_interest_group
+              'enter_time': enter_time,
+              'exit_time': time,
+              'member_id': uid,
+              'department': department,
+              'type_of_study': type_of_study,
+              'study_programme': study_programme,
+              'year_of_study': year_of_study,
+              'affiliated_student_interest_group': affiliated_student_interest_group
             }
           del staying_uids[uid]
 
@@ -365,6 +377,7 @@ def preprocess(
   ) -> Iterator[Mapping[str, Any]]:
 
     def time_components(prefix: str, time: pd.Timestamp) -> Mapping[str, Any]:
+      time = time.astimezone(hk_timezone)
       return {
         prefix: time,
         f'{prefix}_year': time.year,
@@ -381,48 +394,48 @@ def preprocess(
     curr_spans: MutableSequence[Mapping[str, Any]] = []
     while period_end_time <= end_time:
 
-      while i < len(spans) and spans[i]['Enter Time'] < period_end_time:
-        if spans[i]['Exit Time'] > period_start_time:
+      while i < len(spans) and spans[i]['enter_time'] < period_end_time:
+        if spans[i]['exit_time'] > period_start_time:
           curr_spans.append(spans[i])
         i += 1
 
       groups = generate_member_groups()
       for _, row in groups.iterrows():
-        department = row['Department']
-        type_of_study = row['Type of Study']
-        study_programme = row['Study Programme']
-        year_of_study = row['Year of Study']
-        affiliated_student_interest_group = row['Affiliated Student Interest Group']
+        department = row['department']
+        type_of_study = row['type_of_study']
+        study_programme = row['study_programme']
+        year_of_study = row['year_of_study']
+        affiliated_student_interest_group = row['affiliated_student_interest_group']
 
         filtered_span = [span for span in curr_spans if (
-          span['Department'] == department and
-          span['Type of Study'] == type_of_study and
-          span['Study Programme'] == study_programme and
-          span['Year of Study'] == year_of_study and
-          span['Affiliated Student Interest Group'] == affiliated_student_interest_group
+          span['department'] == department and
+          span['type_of_study'] == type_of_study and
+          span['study_programme'] == study_programme and
+          span['year_of_study'] == year_of_study and
+          span['affiliated_student_interest_group'] == affiliated_student_interest_group
         )]
 
         enter_count = sum(
-          span['Enter Time'] >= period_start_time
+          span['enter_time'] >= period_start_time
           for span in curr_spans
         )
         unique_enter_count = len(set(
-          span['UID']
+          span['member_id']
           for span in curr_spans
-          if span['Enter Time'] >= period_start_time
+          if span['enter_time'] >= period_start_time
         ))
         exit_count = sum(
-          span['Exit Time'] <= period_end_time
+          span['exit_time'] <= period_end_time
           for span in curr_spans
         )
         unique_exit_count = len(set(
-          span['UID']
+          span['member_id']
           for span in curr_spans
-          if span['Exit Time'] <= period_end_time
+          if span['exit_time'] <= period_end_time
         ))
         stay_count = len(curr_spans)
         unique_stay_count = len(set(
-          span['UID']
+          span['member_id']
           for span in curr_spans
         ))
         yield {
@@ -444,7 +457,7 @@ def preprocess(
       curr_spans = [
         span
         for span in curr_spans
-        if span['Exit Time'] > period_end_time
+        if span['exit_time'] > period_end_time
       ]
       period_start_time = period_end_time
       period_end_time = period_start_time + time_step
@@ -453,7 +466,7 @@ def preprocess(
 
     def time_columns(prefix: str) -> Mapping[str, Any]:
       return {
-        prefix: pd.DatetimeTZDtype(tz=timezone(timedelta(hours=8))),
+        prefix: pd.DatetimeTZDtype(tz=hk_timezone),
         f'{prefix}_year': np.uint16,
         f'{prefix}_month': pd.CategoricalDtype(range(1, 13), ordered=True),
         f'{prefix}_day': pd.CategoricalDtype(range(1, 32), ordered=True),

@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import List, Type, TypeVar, Optional, Sequence, TYPE_CHECKING, Iterable
 from typing_extensions import Final
 
-from innolens_simulator.component import Component, ComponentFactory
+from .component import Component, ComponentFactory
 
 if TYPE_CHECKING:
-  from innolens_simulator.engine import Engine
+  from .engine import Engine
 
 
 TComponent = TypeVar('TComponent', bound=Component)

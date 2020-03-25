@@ -3,8 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing_extensions import Final
 
-from innolens_simulator.object import Object
-from innolens_simulator.clock import Clock
+from .object import Object
+from .clock import Clock
 
 
 class Engine:

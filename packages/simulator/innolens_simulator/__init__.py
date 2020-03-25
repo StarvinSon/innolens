@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from innolens_simulator.engine import Engine
-from innolens_simulator.clock import Clock
+from .engine import Engine
+from .clock import Clock
 
 
 def create_engine(

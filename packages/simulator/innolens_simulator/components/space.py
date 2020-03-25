@@ -4,10 +4,10 @@ from datetime import datetime
 from typing import Tuple, Sequence, MutableSequence, Any, Optional, Union
 from typing_extensions import Final
 
-from innolens_simulator.object import Object
-from innolens_simulator.engine import Engine
-from innolens_simulator.component import Component
-from innolens_simulator.components.member import MemberComponent
+from ..object import Object
+from ..engine import Engine
+from ..component import Component
+from .member import MemberComponent
 
 
 class SpaceComponent(Component):
@@ -37,7 +37,7 @@ class SpaceComponent(Component):
     assert hasattr(self, 'name')
 
   def enter(self, member: MemberComponent) -> None:
-    self.__log.append((self.engine.clock.current_time, member.uid, 'enter'))
+    self.__log.append((self.engine.clock.current_time, member.member_id, 'enter'))
 
   def exit(self, member: MemberComponent) -> None:
-    self.__log.append((self.engine.clock.current_time, member.uid, 'exit'))
+    self.__log.append((self.engine.clock.current_time, member.member_id, 'exit'))

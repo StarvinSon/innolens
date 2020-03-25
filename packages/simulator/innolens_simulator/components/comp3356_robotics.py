@@ -3,13 +3,13 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Optional, Tuple
 
-from innolens_simulator.component import Component
-from innolens_simulator.components.space import SpaceComponent
-from innolens_simulator.components.machine import MachineComponent
-from innolens_simulator.components.inventory import InventoryComponent
-from innolens_simulator.components.member import MemberComponent
-from innolens_simulator.object import Object
-from innolens_simulator.utils.random import randint_nd
+from ..component import Component
+from .space import SpaceComponent
+from .machine import MachineComponent
+from .inventory import InventoryComponent
+from .member import MemberComponent
+from ..object import Object
+from ..utils.random.int import randint_nd
 
 
 class COMP3356RoboticsComponent(Component):
@@ -77,8 +77,18 @@ class COMP3356RoboticsComponent(Component):
   def _on_next_tick(self) -> None:
     curr_time = self.engine.clock.current_time
     if (
-      curr_time.weekday() == 0 and curr_time.hour == 14 and curr_time.minute == 30
-      or curr_time.weekday() == 3 and curr_time.hour == 13 and curr_time.minute == 30
+      self.__member.membership_start_time <= curr_time
+      and (
+        (
+          curr_time.weekday() == 0
+          and curr_time.hour == 14
+          and curr_time.minute == 30
+        ) or (
+          curr_time.weekday() == 3
+          and curr_time.hour == 13
+          and curr_time.minute == 30
+        )
+      )
     ):
       if curr_time.weekday() == 0:
         span = randint_nd(lower=45, upper=75, mean=60, stddev=5)
@@ -88,8 +98,11 @@ class COMP3356RoboticsComponent(Component):
       end_time = curr_time + timedelta(minutes=span)
       if self.__staying_period is None:
         self.__staying_period = (curr_time, end_time)
-        self.__inno_wing.enter(self.__member)
-        for space in (self.__machine_room, self.__laser_cutting_room):
+        for space in (
+          self.__inno_wing,
+          self.__machine_room,
+          self.__laser_cutting_room
+        ):
           space.enter(self.__member)
         for machine in (
           self.__waterjet_cutting_machine,
@@ -105,7 +118,13 @@ class COMP3356RoboticsComponent(Component):
           self.__staying_period[1] if self.__staying_period[1] > end_time else end_time
         )
 
-    if self.__staying_period is not None and curr_time >= self.__staying_period[1]:
+    if (
+      self.__staying_period is not None
+      and (
+        self.__member.membership_end_time <= curr_time
+        or curr_time >= self.__staying_period[1]
+      )
+    ):
       self.__staying_period = None
       self.__copper_wire.release(self.__member)
       for machine in (
@@ -115,6 +134,9 @@ class COMP3356RoboticsComponent(Component):
         self.__metal_laser_cut_machine
       ):
         machine.release(self.__member)
-      for space in (self.__machine_room, self.__laser_cutting_room):
+      for space in (
+        self.__machine_room,
+        self.__laser_cutting_room,
+        self.__inno_wing
+      ):
         space.exit(self.__member)
-      self.__inno_wing.exit(self.__member)

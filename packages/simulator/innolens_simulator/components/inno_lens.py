@@ -3,12 +3,12 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Optional, Tuple
 
-from innolens_simulator.component import Component
-from innolens_simulator.components.space import SpaceComponent
-from innolens_simulator.components.machine import MachineComponent
-from innolens_simulator.components.inventory import InventoryComponent
-from innolens_simulator.components.member import MemberComponent
-from innolens_simulator.object import Object
+from ..component import Component
+from .space import SpaceComponent
+from .machine import MachineComponent
+from .inventory import InventoryComponent
+from .member import MemberComponent
+from ..object import Object
 
 
 class InnoLensComponent(Component):
@@ -39,7 +39,12 @@ class InnoLensComponent(Component):
 
   def _on_next_tick(self) -> None:
     curr_time = self.engine.clock.current_time
-    if curr_time.weekday() == 2 and curr_time.hour == 13 and curr_time.minute == 0:
+    if (
+      self.__member.membership_start_time <= curr_time
+      and curr_time.weekday() == 2
+      and curr_time.hour == 13
+      and curr_time.minute == 0
+    ):
       span = 2
       end_time = curr_time + timedelta(hours=span)
       if self.__staying_period is None:
@@ -52,7 +57,13 @@ class InnoLensComponent(Component):
           self.__staying_period[1] if self.__staying_period[1] > end_time else end_time
         )
 
-    if self.__staying_period is not None and curr_time >= self.__staying_period[1]:
+    if (
+      self.__staying_period is not None
+      and (
+        self.__member.membership_end_time <= curr_time
+        or curr_time >= self.__staying_period[1]
+      )
+    ):
       self.__staying_period = None
       self.__inno_wing.exit(self.__member)
       self.__vr_gadget.release(self.__member)

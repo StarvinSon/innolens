@@ -7,8 +7,9 @@ from datetime import datetime
 
 import pandas as pd
 
-from innolens_simulator.component import Component, ComponentFactory
-from innolens_simulator.object import Object
+from ..component import Component, ComponentFactory
+from ..object import Object
+from ..utils.random.int import randint_nd
 
 
 T = TypeVar('T')
@@ -16,12 +17,12 @@ def rand_element(choices: Sequence[T]) -> T:
   return choices[randrange(len(choices))]
 
 
-_last_uid = '0'
+_last_member_id = '0'
 
-def rand_uid() -> str:
-  global _last_uid
-  _last_uid = str(int(_last_uid) + 1)
-  return _last_uid
+def rand_member_id() -> str:
+  global _last_member_id
+  _last_member_id = str(int(_last_member_id) + 1)
+  return _last_member_id
 
 
 # Source: https://github.com/andreasonny83/unique-names-generator/blob/master/src/dictionaries/names.ts
@@ -5035,13 +5036,15 @@ def rand_affiliated_student_interest_group() -> str:
 
 
 class MemberComponent(Component):
-  uid: str
+  member_id: str
   name: str
   department: str
   type_of_study: str
   study_programme: str
   year_of_study: int
   affiliated_student_interest_group: str
+  membership_start_time: datetime
+  membership_end_time: datetime
 
   def randomize_fields(
     self,
@@ -5050,12 +5053,45 @@ class MemberComponent(Component):
     type_of_study_choices: Optional[Sequence[str]] = None,
     study_programme_choices: Optional[Sequence[str]] = None,
     year_of_study_choices: Optional[Sequence[int]] = None,
-    affiliated_student_interest_groups_choices: Optional[Sequence[str]] = None
+    affiliated_student_interest_groups_choices: Optional[Sequence[str]] = None,
+    membership_start_time: Optional[datetime] = None,
+    membership_end_time: Optional[datetime] = None
   ) -> None:
-    self.uid = rand_uid()
+    self.member_id = rand_member_id()
     self.name = rand_name()
-    self.department = rand_department() if department_choices is None else rand_element(department_choices)
-    self.type_of_study = rand_type_of_study() if type_of_study_choices is None else rand_element(type_of_study_choices)
-    self.study_programme = rand_study_programme() if study_programme_choices is None else rand_element(study_programme_choices)
-    self.year_of_study = rand_year_of_study() if year_of_study_choices is None else rand_element(year_of_study_choices)
-    self.affiliated_student_interest_group = rand_affiliated_student_interest_group() if affiliated_student_interest_groups_choices is None else rand_element(affiliated_student_interest_groups_choices)
+    self.department = (
+      rand_department()
+      if department_choices is None
+      else rand_element(department_choices)
+    )
+    self.type_of_study = (
+      rand_type_of_study()
+      if type_of_study_choices is None
+      else rand_element(type_of_study_choices)
+    )
+    self.study_programme = (
+      rand_study_programme()
+      if study_programme_choices is None
+      else rand_element(study_programme_choices)
+    )
+    self.year_of_study = (
+      rand_year_of_study()
+      if year_of_study_choices is None
+      else rand_element(year_of_study_choices)
+    )
+    self.affiliated_student_interest_group = (
+      rand_affiliated_student_interest_group()
+      if affiliated_student_interest_groups_choices is None
+      else rand_element(affiliated_student_interest_groups_choices)
+    )
+
+    self.membership_start_time = (
+      datetime(year=2019, month=9, day=1)
+      if membership_start_time is None
+      else membership_start_time
+    )
+    self.membership_end_time = (
+      datetime(year=2019, month=6, day=1)
+      if membership_end_time is None
+      else membership_end_time
+    )

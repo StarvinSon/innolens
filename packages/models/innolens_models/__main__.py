@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from argparse import ArgumentParser
 
-from innolens_models.models.access_record import AccessRecordCli
-from innolens_models.models.user_count import UserCountCli
+from .models.access_record import AccessRecordCli
+from .models.user_count import UserCountCli
 
 
 parser = ArgumentParser(

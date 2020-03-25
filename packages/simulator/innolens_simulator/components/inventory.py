@@ -4,10 +4,10 @@ from datetime import datetime
 from typing import Tuple, Sequence, MutableSequence, Any, Optional
 from typing_extensions import Final
 
-from innolens_simulator.object import Object
-from innolens_simulator.engine import Engine
-from innolens_simulator.component import Component
-from innolens_simulator.components.member import MemberComponent
+from ..object import Object
+from ..engine import Engine
+from ..component import Component
+from .member import MemberComponent
 
 
 class InventoryComponent(Component):
@@ -34,7 +34,7 @@ class InventoryComponent(Component):
     assert hasattr(self, 'name')
 
   def acquire(self, member: MemberComponent) -> None:
-    self.__log.append((self.engine.clock.current_time, member.uid, 'acquire'))
+    self.__log.append((self.engine.clock.current_time, member.member_id, 'acquire'))
 
   def release(self, member: MemberComponent) -> None:
-    self.__log.append((self.engine.clock.current_time, member.uid, 'release'))
+    self.__log.append((self.engine.clock.current_time, member.member_id, 'release'))
