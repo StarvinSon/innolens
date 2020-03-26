@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Optional, Callable, TypeVar
 from typing_extensions import Final
 
 if TYPE_CHECKING:
-  from .engine import Engine
+  from . import Engine
   from .object import Object
 
 

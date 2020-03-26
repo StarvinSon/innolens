@@ -1,15 +1,10 @@
 from __future__ import annotations
 
-from argparse import ArgumentParser
 from random import randrange
-from typing import Optional, Iterable, Tuple, Union, List, Iterable, Sequence, TypeVar, Callable
+from typing import Optional, Sequence, TypeVar
 from datetime import datetime
 
-import pandas as pd
-
-from ..component import Component, ComponentFactory
-from ..object import Object
-from ..utils.random.int import randint_nd
+from ..engine.component import Component
 
 
 T = TypeVar('T')
@@ -5035,7 +5030,7 @@ def rand_affiliated_student_interest_group() -> str:
   return rand_element(_affiliated_student_interest_groups)
 
 
-class MemberComponent(Component):
+class Member(Component):
   member_id: str
   name: str
   department: str
@@ -5091,7 +5086,7 @@ class MemberComponent(Component):
       else membership_start_time
     )
     self.membership_end_time = (
-      datetime(year=2019, month=6, day=1)
+      datetime(year=2020, month=6, day=1)
       if membership_end_time is None
       else membership_end_time
     )

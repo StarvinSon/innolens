@@ -35,3 +35,11 @@ class Engine:
       self.__world.prepare_next_tick()
       self.__world.next_tick()
       has_next = self.__clock.next_tick()
+
+
+def create_engine(
+  start_time: datetime,
+  end_time: datetime,
+  time_step: timedelta
+) -> Engine:
+  return Engine(Clock(start=start_time, end=end_time, step=time_step))

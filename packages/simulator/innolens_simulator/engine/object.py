@@ -6,7 +6,7 @@ from typing_extensions import Final
 from .component import Component, ComponentFactory
 
 if TYPE_CHECKING:
-  from .engine import Engine
+  from . import Engine
 
 
 TComponent = TypeVar('TComponent', bound=Component)
