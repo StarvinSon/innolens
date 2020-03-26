@@ -5,25 +5,25 @@ import {
 
 import '../button';
 
-import { css, classes } from './machines-page.scss';
+import { css, classes } from './users-registered-page.scss';
 
 
-const TAG_NAME = 'inno-machines-page';
+const TAG_NAME = 'inno-users-registered-page';
 
 declare global {
   interface HTMLElementTagNameMap {
-    [TAG_NAME]: MachinesPage;
+    [TAG_NAME]: UsersRegisteredPage;
   }
 }
 
 @customElement(TAG_NAME)
-export class MachinesPage extends LitElement {
+export class UsersRegisteredPage extends LitElement {
   public static readonly styles = css;
 
   protected render(): TemplateResult {
     return html`
       <div class="${classes.content}">
-        <h4 class="${classes.title}">All machines</h4>
+        <h4 class="${classes.title}">Registered users</h4>
       </div>
     `;
   }

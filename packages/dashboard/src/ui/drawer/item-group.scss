@@ -77,6 +77,14 @@
   }
 }
 
+.expandIcon {
+  fill: var(theme.$on-background);
+
+  &--hide {
+    transform: rotate(-90deg);
+  }
+}
+
 .items {
   display: flex;
   flex-direction: column;

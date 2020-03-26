@@ -7,6 +7,7 @@ import { classMap } from 'lit-html/directives/class-map';
 import '../theme';
 import '../typography';
 import '../ripple'; // eslint-disable-line import/no-duplicates
+import { expandMoreIcon } from '../icons/expand-more';
 import { RippleController } from '../ripple'; // eslint-disable-line import/no-duplicates
 
 import { css, classes } from './item-group.scss';
@@ -31,6 +32,9 @@ export class DrawerItemGroup extends LitElement {
   @property({ attribute: false })
   private _expand = false;
 
+
+  @query(`.${classes.expandIcon}`)
+  private readonly _expandIconElem!: HTMLElement;
 
   @query(`.${classes.items}`)
   private readonly _itemsElem!: HTMLElement;
@@ -161,6 +165,10 @@ export class DrawerItemGroup extends LitElement {
         <div
           class="${classes.button_content} ${classes[`button_content_$indent${indentation}`]}">
           <slot></slot>
+          ${expandMoreIcon({
+            [classes.expandIcon]: true,
+            [classes.expandIcon_$hide]: hide
+          })}
         </div>
       </button>
       <div
@@ -230,6 +238,7 @@ export class DrawerItemGroup extends LitElement {
 
   private _createAnimations(type: 'collapsing' | 'expanding'): ReadonlyArray<Animation> {
     const itemsElem = this._itemsElem;
+    const expandIconElem = this._expandIconElem;
 
     if (type === 'collapsing') {
       return [
@@ -239,6 +248,21 @@ export class DrawerItemGroup extends LitElement {
             [
               { height: `${itemsElem.getBoundingClientRect().height}px` },
               { height: '0px' }
+            ],
+            {
+              duration: 200,
+              easing: 'ease-out',
+              fill: 'forwards'
+            }
+          ),
+          document.timeline
+        ),
+        new Animation(
+          new KeyframeEffect(
+            expandIconElem,
+            [
+              { transform: 'none' },
+              { transform: 'rotate(-90deg)' }
             ],
             {
               duration: 200,
@@ -258,6 +282,21 @@ export class DrawerItemGroup extends LitElement {
           [
             { height: '0px' },
             { height: `${itemsElem.getBoundingClientRect().height}px` }
+          ],
+          {
+            duration: 200,
+            easing: 'ease-out',
+            fill: 'forwards'
+          }
+        ),
+        document.timeline
+      ),
+      new Animation(
+        new KeyframeEffect(
+          expandIconElem,
+          [
+            { transform: 'rotate(-90deg)' },
+            { transform: 'none' }
           ],
           {
             duration: 200,

@@ -5,24 +5,26 @@ import {
 
 import '../button';
 
-import { css, classes } from './all-spaces-page.scss';
+import { css, classes } from './users-current-page.scss';
 
 
-const TAG_NAME = 'inno-all-spaces-page';
+const TAG_NAME = 'inno-users-current-page';
 
 declare global {
   interface HTMLElementTagNameMap {
-    [TAG_NAME]: AllSpacesPage;
+    [TAG_NAME]: UsersCurrentPage;
   }
 }
 
 @customElement(TAG_NAME)
-export class AllSpacesPage extends LitElement {
+export class UsersCurrentPage extends LitElement {
   public static readonly styles = css;
 
   protected render(): TemplateResult {
     return html`
-      <p class="${classes.text}">All spaces</p>
+      <div class="${classes.content}">
+        <h4 class="${classes.title}">Current users</h4>
+      </div>
     `;
   }
 }
