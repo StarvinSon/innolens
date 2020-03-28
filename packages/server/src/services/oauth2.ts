@@ -1,7 +1,7 @@
 import { randomBytes } from 'crypto';
 import { promisify } from 'util';
 
-import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
+import { singleton, injectableConstructor } from '@innolens/resolver';
 import { ObjectId } from 'mongodb';
 
 import { OAuth2Token, OAuth2Collection } from '../db/oauth2';
@@ -11,17 +11,6 @@ const randomBytesAsync = promisify(randomBytes);
 
 
 export { OAuth2Token };
-
-export interface OAuth2Service {
-  findByAccessToken(accessToken: string, currDate?: Date): Promise<OAuth2Token | null>;
-  verifyScopes(scopes: ReadonlyArray<string>): boolean;
-  isScopeFullfilled(grantScopes: ReadonlyArray<string>, requiredScope: string): boolean;
-  findByRefreshToken(refreshToken: string, time: Date): Promise<OAuth2Token | null>;
-  revokeByRefreshToken(refreshToken: string, time: Date): Promise<boolean>;
-  createAccessToken(tokenOptions: CreateAccessTokenOptions): Promise<OAuth2Token>;
-}
-
-export const OAuth2Service = createToken<OAuth2Service>('OAuth2Service');
 
 export interface CreateAccessTokenOptions {
   readonly clientId: ObjectId;
@@ -40,7 +29,7 @@ const generateToken = async (): Promise<string> => (await randomBytesAsync(16)).
   oauth2Collection: OAuth2Collection
 })
 @singleton()
-export class OAuth2ServiceImpl implements OAuth2Service {
+export class OAuth2Service {
   private readonly _oauth2Collection: OAuth2Collection;
 
   public constructor(options: {

@@ -1,4 +1,4 @@
-import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
+import { singleton, injectableConstructor } from '@innolens/resolver';
 import { ObjectId } from 'mongodb';
 
 import { SpaceAccessRecord, SpaceAccessRecordCollection } from '../db/space-access-record';
@@ -6,22 +6,12 @@ import { SpaceAccessRecord, SpaceAccessRecordCollection } from '../db/space-acce
 
 export { SpaceAccessRecord };
 
-export interface SpaceAccessRecordService {
-  findAll(): AsyncIterable<SpaceAccessRecord>;
-  findOneById(id: ObjectId): Promise<SpaceAccessRecord | null>;
-  insertOne(spaceAccess: SpaceAccessRecord): Promise<void>;
-  insertMany(spaceAccesses: ReadonlyArray<Omit<SpaceAccessRecord, '_id'>>): Promise<void>
-}
-
-export const SpaceAccessRecordService =
-  createToken<SpaceAccessRecordService>('SpaceAccessRecordService');
-
 
 @injectableConstructor({
   spaceAccessRecordCollection: SpaceAccessRecordCollection
 })
 @singleton()
-export class SpaceAccessRecordServiceImpl implements SpaceAccessRecordService {
+export class SpaceAccessRecordService {
   private readonly _spaceAccessRecordCollection: SpaceAccessRecordCollection;
 
   public constructor(deps: {

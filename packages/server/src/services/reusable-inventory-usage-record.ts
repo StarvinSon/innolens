@@ -1,4 +1,4 @@
-import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
+import { singleton, injectableConstructor } from '@innolens/resolver';
 import { ObjectId } from 'mongodb';
 
 import { ReusableInventoryUsageRecord, ReusableInventoryUsageRecordCollection } from '../db/reusable-inventory-usage-record';
@@ -6,23 +6,12 @@ import { ReusableInventoryUsageRecord, ReusableInventoryUsageRecordCollection } 
 
 export { ReusableInventoryUsageRecord };
 
-export interface ReusableInventoryUsageRecordService {
-  findAll(): AsyncIterable<ReusableInventoryUsageRecord>;
-  findOneById(id: ObjectId): Promise<ReusableInventoryUsageRecord | null>;
-  insertOne(reusableInventoryUsage: ReusableInventoryUsageRecord): Promise<void>;
-  insertMany(reusableInventoryUsageList: ReadonlyArray<Omit<ReusableInventoryUsageRecord, '_id'>>): Promise<void>
-}
-
-export const ReusableInventoryUsageRecordService =
-  createToken<ReusableInventoryUsageRecordService>('ReusableInventoryUsageRecordService');
-
 
 @injectableConstructor({
   reusableInventoryUsageRecordCollection: ReusableInventoryUsageRecordCollection
 })
 @singleton()
-// eslint-disable-next-line max-len
-export class ReusableInventoryUsageRecordServiceImpl implements ReusableInventoryUsageRecordService {
+export class ReusableInventoryUsageRecordService {
   private readonly _reusableInventoryUsageRecordCollection: ReusableInventoryUsageRecordCollection;
 
   public constructor(deps: {

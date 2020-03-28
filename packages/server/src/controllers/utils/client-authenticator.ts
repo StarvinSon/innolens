@@ -1,8 +1,7 @@
-import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
 import { BAD_REQUEST, UNAUTHORIZED } from 'http-status-codes';
 
 import { Client, ClientService } from '../../services/client';
-import { wrapMethodFactory, createMethodInitializer } from '../../utils/method-wrapper';
+import { wrapMethod } from '../../utils/method-wrapper';
 import { Context } from '../context';
 import { Headers } from '../headers';
 import { Middleware } from '../middleware';
@@ -26,94 +25,13 @@ export class InvalidClientCredentialError extends Error {
 }
 
 
-export interface ClientAuthenticator {
-  authenticate(ctx: Context): Promise<ClientAuthenticationResult>;
-  authenticateOrThrow(ctx: Context): Promise<Client>;
-}
-
-export const ClientAuthenticator =
-  createToken<ClientAuthenticator>('ClientAuthenticator');
-
-export type ClientAuthenticationResult =
-  FailedClientAuthenticationResult | SuccessfulClientAuthenticationResult;
-
-export interface FailedClientAuthenticationResult {
-  type: 'FAILED';
-  error: Error;
-}
-
-export interface SuccessfulClientAuthenticationResult {
-  type: 'SUCCESSFUL';
-  client: Client;
-}
-
-@injectableConstructor({
-  clientService: ClientService
-})
-@singleton()
-export class ClientAuthenticatorImpl implements ClientAuthenticator {
-  private readonly _clientService: ClientService;
-
-  public constructor(deps: {
-    clientService: ClientService;
-  }) {
-    ({
-      clientService: this._clientService
-    } = deps);
-  }
-
-  public async authenticate(ctx: Context): Promise<ClientAuthenticationResult> {
-    const auth = ctx.get('Authorization');
-
-    let publicId: string | null = null;
-    let secret: string | null = null;
-    if (auth !== undefined && auth.startsWith('Basic ')) {
-      const encoded = auth.slice('Basic '.length);
-      let decoded: string | null;
-      try {
-        decoded = Buffer.from(encoded, 'base64').toString();
-      } catch {
-        decoded = null;
-      }
-      const parts = decoded?.split(':', 2) ?? null;
-      if (parts?.length === 2) {
-        [publicId, secret] = parts;
-      }
-    }
-    if (publicId === null || secret === null) {
-      return {
-        type: 'FAILED',
-        error: new InvalidAuthorizationHeaderError()
-      };
-    }
-
-    const client = await this._clientService.findByCredentials({
-      publicId,
-      secret
-    });
-    if (client === null) {
-      return {
-        type: 'FAILED',
-        error: new InvalidClientCredentialError()
-      };
-    }
-
-    return {
-      type: 'SUCCESSFUL',
-      client
-    };
-  }
-
-  public async authenticateOrThrow(ctx: Context): Promise<Client> {
-    const result = await this.authenticate(ctx);
-    if (result.type === 'FAILED') {
-      Error.captureStackTrace(result.error, this.authenticateOrThrow);
-      throw result.error;
-    }
-    return result.client;
-  }
-}
-
+export type ClientAuthenticationResult = {
+  readonly type: 'failed';
+  readonly error: Error;
+} | {
+  readonly type: 'successful';
+  readonly client: Client;
+};
 
 const clientAuthenticationResultSym = Symbol('clientAuthenticationResult');
 
@@ -132,7 +50,7 @@ export const getClientAuthenticationResult = (ctx: Context): ClientAuthenticatio
 
 export const getAuthenticatedClient = (ctx: Context): Client => {
   const result = getClientAuthenticationResult(ctx);
-  if (result.type === 'FAILED') {
+  if (result.type === 'failed') {
     Error.captureStackTrace(result.error, getAuthenticatedClient);
     throw result.error;
   }
@@ -140,36 +58,108 @@ export const getAuthenticatedClient = (ctx: Context): Client => {
 };
 
 
-type AuthenticateClientInitializerArgs = [ClientAuthenticator];
+export const useClientAuthenticator$clientServiceSym = Symbol('useClientAuthenticator$clientServiceSym');
 
-const authenticateClientName = 'authenticateClient';
-const authenticateClientInitializersSym = Symbol('authenticateClientInitializers');
+declare abstract class UseClientAuthenticator {
+  public constructor(...args: Array<any>);
+  protected abstract readonly [useClientAuthenticator$clientServiceSym]: ClientService;
+}
+
+const useClientAuthenticatorPrototypes = new WeakSet<object>();
+
+const instanceofUseClientAuthenticator = (val: unknown): val is UseClientAuthenticator => {
+  if (typeof val === 'object' && val !== null) {
+    for (
+      let proto = Reflect.getPrototypeOf(val);
+      proto !== null;
+      proto = Reflect.getPrototypeOf(proto)
+    ) {
+      if (useClientAuthenticatorPrototypes.has(proto)) return true;
+    }
+  }
+  return false;
+};
+
+export const useAuthenticateClient =
+  <T extends Function>(base: T): (typeof UseClientAuthenticator) & T => {
+    abstract class AbstractUseClientAuthenticator extends (base as any) {
+      protected abstract readonly [useClientAuthenticator$clientServiceSym]: ClientService;
+    }
+    useClientAuthenticatorPrototypes.add(AbstractUseClientAuthenticator.prototype);
+    return AbstractUseClientAuthenticator as any;
+  };
+
+
+const authenticateClientInternal = async (
+  ctx: Context,
+  clientService: ClientService
+): Promise<ClientAuthenticationResult> => {
+  const auth = ctx.get('Authorization');
+
+  let publicId: string | null = null;
+  let secret: string | null = null;
+  if (auth !== undefined && auth.startsWith('Basic ')) {
+    const encoded = auth.slice('Basic '.length);
+    let decoded: string | null;
+    try {
+      decoded = Buffer.from(encoded, 'base64').toString();
+    } catch {
+      decoded = null;
+    }
+    const parts = decoded?.split(':', 2) ?? null;
+    if (parts?.length === 2) {
+      [publicId, secret] = parts;
+    }
+  }
+  if (publicId === null || secret === null) {
+    return {
+      type: 'failed',
+      error: new InvalidAuthorizationHeaderError()
+    };
+  }
+
+  const client = await clientService.findByCredentials({
+    publicId,
+    secret
+  });
+  if (client === null) {
+    return {
+      type: 'failed',
+      error: new InvalidClientCredentialError()
+    };
+  }
+
+  return {
+    type: 'successful',
+    client
+  };
+};
 
 export const authenticateClient =
   (options?: { noThrow?: boolean }): MethodDecorator => {
-    const noThrow = options?.noThrow ?? false;
+    const { noThrow = false } = options ?? {};
 
-    return wrapMethodFactory<AuthenticateClientInitializerArgs>(
-      authenticateClientName,
-      authenticateClientInitializersSym,
-      (method) => ($this, authenticator) => {
-        const authenticateClientHandler: Middleware = async function(this: object, ctx, next) {
-          const result = await authenticator.authenticate(ctx);
-          setClientAuthenticationResult(ctx, result);
-          if (!noThrow && result.type === 'FAILED') {
-            Error.captureStackTrace(result.error, authenticateClientHandler);
-            throw result.error;
-          }
-
-          return Reflect.apply(method, this, [ctx, next]);
-        };
-        return authenticateClientHandler;
+    return wrapMethod((method, target) => {
+      if (!instanceofUseClientAuthenticator(target)) {
+        throw new Error('@authenticateClient can only be used in class which extends useAuthenticateClient()');
       }
-    );
-  };
 
-export const initializeAuthenticateClient =
-  createMethodInitializer<AuthenticateClientInitializerArgs>(
-    authenticateClientName,
-    authenticateClientInitializersSym
-  );
+      const authenticateClientHandler: Middleware = async function(
+        this: UseClientAuthenticator,
+        ctx,
+        next
+      ) {
+        const result = await authenticateClientInternal(
+          ctx,
+          this[useClientAuthenticator$clientServiceSym]
+        );
+        setClientAuthenticationResult(ctx, result);
+        if (!noThrow && result.type === 'failed') {
+          Error.captureStackTrace(result.error, authenticateClientHandler);
+          throw result.error;
+        }
+        return Reflect.apply(method, this, [ctx, next]);
+      };
+      return authenticateClientHandler;
+    });
+  };

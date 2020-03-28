@@ -1,19 +1,13 @@
 import {
-  createToken, decorate, singleton,
-  name, injectableFactory
+  decorate, singleton, name,
+  injectableFactory
 } from '@innolens/resolver';
 import { INTERNAL_SERVER_ERROR, getStatusText } from 'http-status-codes';
 import Koa, { Middleware as KoaMiddleware, DefaultContext, DefaultState } from 'koa';
 import compress from 'koa-compress';
 
 import { Logger } from './logger';
-import { createAppRouter } from './routes';
-import { Router } from './routes/router';
-
-
-export interface App extends Koa<DefaultState, DefaultContext> {}
-
-export const App = createToken<App>('App');
+import { Router } from './routes';
 
 
 const isError = (val: unknown): val is Error & Readonly<Record<string, unknown>> =>
@@ -56,9 +50,12 @@ const errorHandler = (logger: Logger): KoaMiddleware<DefaultState, DefaultContex
     }
   };
 
-export const createApp = decorate(
-  name('createApp'),
-  injectableFactory(createAppRouter, Logger),
+
+export interface App extends Koa<DefaultState, DefaultContext> {}
+
+export const App = decorate(
+  name('App'),
+  injectableFactory(Router, Logger),
   singleton(),
   (router: Router, logger: Logger): App => {
     const app: App = new Koa();

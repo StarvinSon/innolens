@@ -3,38 +3,53 @@ import {
   decorate, singleton, name,
   injectableFactory
 } from '@innolens/resolver';
+import KoaRouter from '@koa/router';
+import { DefaultState, DefaultContext } from 'koa';
 
-import { MembersController } from '../controllers/members';
+import { MemberController } from '../controllers/member';
+import { OAuth2Controller } from '../controllers/oauth2';
+import { SpaceController } from '../controllers/space';
 import { StaticController } from '../controllers/static';
 import { bindMethods } from '../utils/method-binder';
-
-import { createApiRouter } from './api';
-import { Router, createRouter, nest } from './router';
 
 
 const bindControllerMethods = <T extends Readonly<Record<string, object>>>(obj: T): T =>
   Object.fromEntries(Object.entries(obj)
     .map(([key, controller]) => [key, bindMethods(controller)]));
 
-export const createAppRouter = decorate(
+
+export interface Router extends KoaRouter<DefaultState, DefaultContext> {}
+
+export const Router = decorate(
   name('createRoutes'),
-  injectableFactory(createApiRouter, {
-    members: MembersController,
+  injectableFactory({
+    member: MemberController,
+    oauth2: OAuth2Controller,
+    space: SpaceController,
     static: StaticController
   }),
   singleton(),
-  (apiRouter: Router, _controllers: {
-    members: MembersController,
+  (_controllers: {
+    member: MemberController,
+    oauth2: OAuth2Controller,
+    space: SpaceController,
     static: StaticController
   }): Router => {
     const controllers = bindControllerMethods(_controllers);
-    const router = createRouter();
+    const router: Router = new KoaRouter();
 
     // member
-    router.get(Api.Members.GetCountHistory.path, controllers.members.getCountHistory);
-    router.post(Api.Members.PostImport.path, controllers.members.postImport);
+    router.get(Api.Members.GetCountHistory.path, controllers.member.getCountHistory);
+    router.post(Api.Members.PostMembers.path, controllers.member.postMembers);
 
-    nest(router, '/api', apiRouter);
+    // oauth2
+    router.post(Api.OAuth2.PostToken.path, controllers.oauth2.postToken);
+
+    // space
+    router.post(Api.Spaces.PostSpaces.path, controllers.space.postSpaces);
+    router.get(Api.Spaces.GetSpaces.path, controllers.space.getSpaces);
+
+    // fallback
     router.get(':subPath(.*)', controllers.static.get);
 
     return router;

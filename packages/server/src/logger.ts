@@ -1,6 +1,6 @@
 import {
-  createToken, decorate, singleton,
-  name, injectableFactory
+  decorate, singleton, name,
+  injectableFactory
 } from '@innolens/resolver';
 import {
   Logger as WinstonLogger, createLogger as createWinstonLogger,
@@ -10,11 +10,8 @@ import {
 
 export type Logger = WinstonLogger;
 
-export const Logger = createToken<Logger>('Logger');
-
-
-export const createLogger = decorate(
-  name('createLogger'),
+export const Logger = decorate(
+  name('Logger'),
   injectableFactory(),
   singleton(),
   (): Logger => createWinstonLogger({

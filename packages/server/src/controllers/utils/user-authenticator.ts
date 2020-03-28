@@ -1,10 +1,9 @@
-import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
 import { UNAUTHORIZED } from 'http-status-codes';
 
 import { Client, ClientService } from '../../services/client';
 import { OAuth2Service, OAuth2Token } from '../../services/oauth2';
 import { User, UserService } from '../../services/user';
-import { wrapMethodFactory, createMethodInitializer } from '../../utils/method-wrapper';
+import { wrapMethod } from '../../utils/method-wrapper';
 import { Context } from '../context';
 import { Headers } from '../headers';
 import { Middleware } from '../middleware';
@@ -29,100 +28,15 @@ export class InvalidAccessTokenError extends Error {
 }
 
 
-export interface UserAuthenticator {
-  authenticate(ctx: Context): Promise<UserAuthenticationResult>;
-  authenticateOrThrow(ctx: Context): Promise<SuccessfulUserAuthenticationResult>;
-}
-
-export const UserAuthenticator = createToken<UserAuthenticator>('UserAuthenticator');
-
-export type UserAuthenticationResult =
-  FailedUserAuthenticationResult | SuccessfulUserAuthenticationResult;
-
-export interface FailedUserAuthenticationResult {
-  type: 'FAILED';
-  error: Error;
-}
-
-export interface SuccessfulUserAuthenticationResult {
-  type: 'SUCCESSFUL';
-  oauth2Token: OAuth2Token;
-  getClient(): Promise<Client>;
-  getUser(): Promise<User>;
-}
-
-@injectableConstructor({
-  oauth2Service: OAuth2Service,
-  clientService: ClientService,
-  userService: UserService
-})
-@singleton()
-export class UserAuthenticatorImpl implements UserAuthenticator {
-  private readonly _oauth2Service: OAuth2Service;
-  private readonly _clientService: ClientService;
-  private readonly _userService: UserService;
-
-  public constructor(deps: {
-    oauth2Service: OAuth2Service,
-    clientService: ClientService
-    userService: UserService;
-  }) {
-    ({
-      oauth2Service: this._oauth2Service,
-      clientService: this._clientService,
-      userService: this._userService
-    } = deps);
-  }
-
-  public async authenticate(ctx: Context): Promise<UserAuthenticationResult> {
-    const auth = ctx.get('Authorization');
-
-    if (auth === undefined || !auth.startsWith('Bearer ')) {
-      return {
-        type: 'FAILED',
-        error: new MissingAccessTokenError()
-      };
-    }
-    const accessToken = auth.slice('Bearer '.length);
-
-    const oauth2Token = await this._oauth2Service.findByAccessToken(accessToken);
-    if (oauth2Token === null) {
-      return {
-        type: 'FAILED',
-        error: new InvalidAccessTokenError()
-      };
-    }
-
-    return {
-      type: 'SUCCESSFUL',
-      oauth2Token,
-      getClient: async () => {
-        const client = await this._clientService.findById(oauth2Token.clientId);
-        if (client === null) {
-          throw new Error('Failed to retrieve client from db');
-        }
-        return client;
-      },
-      getUser: async () => {
-        const user = await this._userService.findById(oauth2Token.userId);
-        if (user === null) {
-          throw new Error('Failed to retrieve user from db');
-        }
-        return user;
-      }
-    };
-  }
-
-  public async authenticateOrThrow(ctx: Context): Promise<SuccessfulUserAuthenticationResult> {
-    const result = await this.authenticate(ctx);
-    if (result.type === 'FAILED') {
-      Error.captureStackTrace(result.error, this.authenticateOrThrow);
-      throw result.error;
-    }
-    return result;
-  }
-}
-
+export type UserAuthenticationResult = {
+  readonly type: 'failed';
+  readonly error: Error;
+} | {
+  readonly type: 'successful';
+  readonly oauth2Token: OAuth2Token;
+  readonly getClient: () => Promise<Client>;
+  readonly getUser: () => Promise<User>;
+};
 
 const userAuthenticationResultSym = Symbol('userAuthenticationResult');
 
@@ -139,49 +53,126 @@ export const getUserAuthenticationResult = (ctx: Context): UserAuthenticationRes
   return result;
 };
 
-// eslint-disable-next-line max-len
-export const getSuccessfulUserAuthenticationResult = (ctx: Context): SuccessfulUserAuthenticationResult => {
+export const getAuthenticatedUser = async (ctx: Context): Promise<User> => {
   const result = getUserAuthenticationResult(ctx);
-  if (result.type === 'FAILED') {
-    Error.captureStackTrace(result.error, getSuccessfulUserAuthenticationResult);
+  if (result.type === 'failed') {
+    Error.captureStackTrace(result.error, getAuthenticatedUser);
     throw result.error;
   }
-  return result;
+  return result.getUser();
 };
 
-export const getAuthenticatedUser = async (ctx: Context): Promise<User> =>
-  getSuccessfulUserAuthenticationResult(ctx).getUser();
+
+export const useAuthenticateUser$oauth2ServiceSym = Symbol('useAuthenticateUser$oauth2Service');
+export const useAuthenticateUser$clientServiceSym = Symbol('useAuthenticateUser$clientService');
+export const useAuthenticateUser$userServiceSym = Symbol('useAuthenticateUser$userService');
 
 
-type AuthenticateUserInitializerArgs = [UserAuthenticator];
+declare abstract class UseAuthenticateUser {
+  public constructor(...args: Array<any>);
+  protected abstract readonly [useAuthenticateUser$oauth2ServiceSym]: OAuth2Service;
+  protected abstract readonly [useAuthenticateUser$clientServiceSym]: ClientService;
+  protected abstract readonly [useAuthenticateUser$userServiceSym]: UserService;
+}
 
-const authenticateUserName = 'authenticateUserName';
-const authenticateUserInitializersSym = Symbol('authenticateUserInitializers');
+const useAuthenticateUserPrototypes = new WeakSet<object>();
+
+const instanceOfUseAuthenticateUser = (val: unknown): val is UseAuthenticateUser => {
+  if (typeof val === 'object' && val !== null) {
+    for (
+      let proto = Reflect.getPrototypeOf(val);
+      proto !== null;
+      proto = Reflect.getPrototypeOf(proto)
+    ) {
+      if (useAuthenticateUserPrototypes.has(proto)) return true;
+    }
+  }
+  return false;
+};
+
+export const useAuthenticateUser =
+  <T extends Function>(base: T): (typeof UseAuthenticateUser) & T => {
+    abstract class AbstractUseAuthenticateUser extends (base as any) {
+      protected abstract readonly [useAuthenticateUser$oauth2ServiceSym]: OAuth2Service;
+      protected abstract readonly [useAuthenticateUser$clientServiceSym]: ClientService;
+      protected abstract readonly [useAuthenticateUser$userServiceSym]: UserService;
+    }
+    useAuthenticateUserPrototypes.add(AbstractUseAuthenticateUser.prototype);
+    return AbstractUseAuthenticateUser as any;
+  };
+
+
+const authenticate = async (
+  ctx: Context,
+  oauth2Service: OAuth2Service,
+  clientService: ClientService,
+  userService: UserService
+): Promise<UserAuthenticationResult> => {
+  const auth = ctx.get('Authorization');
+
+  if (auth === undefined || !auth.startsWith('Bearer ')) {
+    return {
+      type: 'failed',
+      error: new MissingAccessTokenError()
+    };
+  }
+  const accessToken = auth.slice('Bearer '.length);
+
+  const oauth2Token = await oauth2Service.findByAccessToken(accessToken);
+  if (oauth2Token === null) {
+    return {
+      type: 'failed',
+      error: new InvalidAccessTokenError()
+    };
+  }
+
+  return {
+    type: 'successful',
+    oauth2Token,
+    getClient: async () => {
+      const client = await clientService.findById(oauth2Token.clientId);
+      if (client === null) {
+        throw new Error('Failed to retrieve client from db');
+      }
+      return client;
+    },
+    getUser: async () => {
+      const user = await userService.findById(oauth2Token.userId);
+      if (user === null) {
+        throw new Error('Failed to retrieve user from db');
+      }
+      return user;
+    }
+  };
+};
 
 export const authenticateUser =
   (options?: { noThrow?: boolean }): MethodDecorator => {
-    const noThrow = options?.noThrow ?? false;
+    const { noThrow = false } = options ?? {};
 
-    return wrapMethodFactory<AuthenticateUserInitializerArgs>(
-      authenticateUserName,
-      authenticateUserInitializersSym,
-      (method) => ($this, authenticator) => {
-        const authenticateClientHandler: Middleware = async function(this: object, ctx, next) {
-          const result = await authenticator.authenticate(ctx);
-          setUserAuthenticationResult(ctx, result);
-          if (!noThrow && result.type === 'FAILED') {
-            Error.captureStackTrace(result.error, authenticateClientHandler);
-            throw result.error;
-          }
-          return Reflect.apply(method, this, [ctx, next]);
-        };
-        return authenticateClientHandler;
+    return wrapMethod((method, target) => {
+      if (!instanceOfUseAuthenticateUser(target)) {
+        throw new Error('@authenticateUser can only be used in subclass of UseAuthenticateUser');
       }
-    );
-  };
 
-export const initializeAuthenticateUser =
-  createMethodInitializer<AuthenticateUserInitializerArgs>(
-    authenticateUserName,
-    authenticateUserInitializersSym
-  );
+      const authenticateClientHandler: Middleware = async function(
+        this: UseAuthenticateUser,
+        ctx,
+        next
+      ) {
+        const result = await authenticate(
+          ctx,
+          this[useAuthenticateUser$oauth2ServiceSym],
+          this[useAuthenticateUser$clientServiceSym],
+          this[useAuthenticateUser$userServiceSym]
+        );
+        setUserAuthenticationResult(ctx, result);
+        if (!noThrow && result.type === 'failed') {
+          Error.captureStackTrace(result.error, authenticateClientHandler);
+          throw result.error;
+        }
+        return Reflect.apply(method, this, [ctx, next]);
+      };
+      return authenticateClientHandler;
+    });
+  };

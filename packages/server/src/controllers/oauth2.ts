@@ -1,29 +1,33 @@
-import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
+import * as Api from '@innolens/api/node';
+import { singleton, injectableConstructor } from '@innolens/resolver';
 import {
   BAD_REQUEST, INTERNAL_SERVER_ERROR, UNAUTHORIZED,
   getStatusText
 } from 'http-status-codes';
 
 import { Logger } from '../logger';
+import { ClientService } from '../services/client';
 import { OAuth2Service } from '../services/oauth2';
 import { UserService } from '../services/user';
 
 import { Next, Context } from './context';
 import { Headers } from './headers';
-import { Middleware } from './middleware';
 import {
-  parseBody, EmptyBodyError, UnsupportedContentTypeError,
-  InjectedBodyParserFactory,
-  initializeParseBody
-} from './utils/body-parser';
-import {
-  ClientAuthenticator, authenticateClient, InvalidClientCredentialError,
-  InvalidAuthorizationHeaderError, getAuthenticatedClient, initializeAuthenticateClient
+  authenticateClient, InvalidClientCredentialError,
+  InvalidAuthorizationHeaderError, getAuthenticatedClient, useAuthenticateClient,
+  useClientAuthenticator$clientServiceSym
 } from './utils/client-authenticator';
 import { mapError } from './utils/error-configurator';
+import { getRequestBody } from './utils/request-body';
 import {
-  validateRequestBody, getValidatedRequestBody, BodyValidationError
+  parseRequestBody, EmptyBodyError, UnsupportedContentTypeError,
+  useParseRequestBody,
+  useParseRequestBody$loggerSym
+} from './utils/request-body-parser';
+import {
+  validateRequestBody, BodyValidationError
 } from './utils/request-body-validator';
+import { validateResponseBody } from './utils/response-body-validator';
 
 
 class InvalidRequestError extends Error {
@@ -60,81 +64,6 @@ class UnsupportedGrantTypeError extends Error {
 }
 
 
-export interface OAuth2Controller {
-  handleError: Middleware;
-  postToken: Middleware;
-}
-
-export const OAuth2Controller = createToken<OAuth2Controller>('OAuth2Controller');
-
-
-interface PostTokenBody {
-  readonly grant_type: string;
-}
-
-const PostTokenBody: object = {
-  type: 'object',
-  required: ['grant_type'],
-  properties: {
-    grant_type: {
-      type: 'string'
-    }
-  }
-};
-
-
-interface PostPasswordGrantBody {
-  readonly grant_type: 'password';
-  readonly username: string;
-  readonly password: string;
-  readonly scope: string;
-}
-
-const PostPasswordGrantBody: object = {
-  type: 'object',
-  required: ['grant_type', 'username', 'password', 'scope'],
-  additionalProperties: false,
-  properties: {
-    grant_type: {
-      const: 'password'
-    },
-    username: {
-      type: 'string'
-    },
-    password: {
-      type: 'string'
-    },
-    scope: {
-      type: 'string'
-    }
-  }
-};
-
-
-interface PostRefreshTokenGrantBody {
-  readonly grant_type: 'refresh_token';
-  readonly refresh_token: string;
-  readonly scope: string;
-}
-
-const PostRefreshTokenGrantBody: object = {
-  type: 'object',
-  required: ['grant_type', 'refresh_token', 'scope'],
-  additionalProperties: false,
-  properties: {
-    grant_type: {
-      const: 'refresh_token'
-    },
-    refresh_token: {
-      type: 'string'
-    },
-    scope: {
-      type: 'string'
-    }
-  }
-};
-
-
 const parseScope = (str: string): Array<string> => Array
   .from(str.matchAll(/[^\s]+/g))
   .map((match) => match[0]);
@@ -143,32 +72,34 @@ const isError = (val: unknown): val is Error & Readonly<Record<string, unknown>>
   val instanceof Error;
 
 @injectableConstructor({
-  logger: Logger,
-  userService: UserService,
   oauth2Service: OAuth2Service,
-  clientAuthenticator: ClientAuthenticator,
-  injectedBodyParserFactory: InjectedBodyParserFactory
+  userService: UserService,
+  clientService: ClientService,
+  logger: Logger
 })
 @singleton()
-export class OAuth2ControllerImpl implements OAuth2Controller {
-  private readonly _logger: Logger;
-  private readonly _userService: UserService;
+export class OAuth2Controller extends useParseRequestBody(useAuthenticateClient(Object)) {
   private readonly _oauth2Service: OAuth2Service;
+  private readonly _userService: UserService;
+  private readonly _logger: Logger;
+
+  protected readonly [useClientAuthenticator$clientServiceSym]: ClientService;
+  protected readonly [useParseRequestBody$loggerSym]: Logger;
 
   public constructor(deps: {
-    logger: Logger;
-    userService: UserService;
     oauth2Service: OAuth2Service;
-    clientAuthenticator: ClientAuthenticator;
-    injectedBodyParserFactory: InjectedBodyParserFactory;
+    userService: UserService;
+    clientService: ClientService;
+    logger: Logger;
   }) {
+    super();
     ({
-      logger: this._logger,
+      oauth2Service: this._oauth2Service,
       userService: this._userService,
-      oauth2Service: this._oauth2Service
+      logger: this._logger,
+      clientService: this[useClientAuthenticator$clientServiceSym],
+      logger: this[useParseRequestBody$loggerSym]
     } = deps);
-    initializeAuthenticateClient(OAuth2ControllerImpl, this, deps.clientAuthenticator);
-    initializeParseBody(OAuth2ControllerImpl, this, deps.injectedBodyParserFactory);
   }
 
   public async handleError(ctx: Context, next: Next): Promise<void> {
@@ -222,10 +153,10 @@ export class OAuth2ControllerImpl implements OAuth2Controller {
     ]
   ])
   @authenticateClient()
-  @parseBody({ json: false, form: true })
-  @validateRequestBody(PostTokenBody)
+  @parseRequestBody('application/x-www-form-urlencoded')
+  @validateRequestBody(Api.OAuth2.PostToken.baseRequestJsonSchema)
   public async postToken(ctx: Context): Promise<void> {
-    const body = getValidatedRequestBody<PostTokenBody>(ctx);
+    const body = Api.OAuth2.PostToken.fromBaseRequestJson(getRequestBody(ctx));
     switch (body.grant_type) {
       case 'password': {
         return this._handlePasswordGrant(ctx);
@@ -239,11 +170,12 @@ export class OAuth2ControllerImpl implements OAuth2Controller {
     }
   }
 
-  @validateRequestBody(PostPasswordGrantBody)
+  @validateRequestBody(Api.OAuth2.PostToken.passwordGrantRequestJsonSchema)
+  @validateResponseBody(Api.OAuth2.PostToken.passwordGrantResponseJsonSchema)
   private async _handlePasswordGrant(ctx: Context): Promise<void> {
     const client = getAuthenticatedClient(ctx);
 
-    const body = getValidatedRequestBody<PostPasswordGrantBody>(ctx);
+    const body = Api.OAuth2.PostToken.fromPasswordGrantRequestJson(getRequestBody(ctx));
     const { username, password } = body;
 
     const scopes = parseScope(body.scope);
@@ -262,7 +194,7 @@ export class OAuth2ControllerImpl implements OAuth2Controller {
       scopes
     });
 
-    ctx.body = {
+    ctx.body = Api.OAuth2.PostToken.toPasswordGrantResponseJson({
       access_token: token.accessToken,
       token_type: 'Bearer',
       expires_in: Math.max(
@@ -270,13 +202,14 @@ export class OAuth2ControllerImpl implements OAuth2Controller {
         Math.floor((token.accessTokenExpireDate.getTime() - Date.now()) / 1000)
       ),
       scope: token.scopes.join(' '),
-      refresh_token: token.refreshToken
-    };
+      refresh_token: token.refreshToken ?? undefined
+    });
   }
 
-  @validateRequestBody(PostRefreshTokenGrantBody)
+  @validateRequestBody(Api.OAuth2.PostToken.refreshGrantRequestJsonSchema)
+  @validateResponseBody(Api.OAuth2.PostToken.refreshGrantResponseJsonSchema)
   private async _handleRefreshTokenGrant(ctx: Context): Promise<void> {
-    const body = getValidatedRequestBody<PostRefreshTokenGrantBody>(ctx);
+    const body = Api.OAuth2.PostToken.fromRefreshGrantRequestJson(getRequestBody(ctx));
     const { refresh_token: refreshToken } = body;
 
     const scopes = parseScope(body.scope);
@@ -307,7 +240,7 @@ export class OAuth2ControllerImpl implements OAuth2Controller {
       scopes
     });
 
-    ctx.body = {
+    ctx.body = Api.OAuth2.PostToken.toRefreshGrantResponseJson({
       access_token: newToken.accessToken,
       token_type: 'Bearer',
       expires_in: Math.max(
@@ -315,7 +248,7 @@ export class OAuth2ControllerImpl implements OAuth2Controller {
         Math.floor((newToken.accessTokenExpireDate.getTime() - Date.now()) / 1000)
       ),
       scope: newToken.scopes.join(' '),
-      refresh_token: newToken.refreshToken
-    };
+      refresh_token: newToken.refreshToken ?? undefined
+    });
   }
 }

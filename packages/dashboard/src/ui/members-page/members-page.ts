@@ -10,9 +10,9 @@ import '../choice-chip'; // eslint-disable-line import/no-duplicates
 import '../line-chart'; // eslint-disable-line import/no-duplicates
 import '../pie-chart'; // eslint-disable-line import/no-duplicates
 import {
-  MembersService, MemberCountHistoryRange, MemberCountHistoryCategory,
+  MemberService, MemberCountHistoryRange, MemberCountHistoryCategory,
   MemberCountHistory
-} from '../../services/members';
+} from '../../services/member';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
 import { ChoiceChip } from '../choice-chip'; // eslint-disable-line import/no-duplicates
@@ -35,9 +35,9 @@ export class MembersPage extends LitElement {
   public static readonly styles = css;
 
 
-  @injectableProperty(MembersService)
+  @injectableProperty(MemberService)
   @observeProperty('_onDependencyInjected')
-  private _memberService: MembersService | null;
+  private _memberService: MemberService | null;
 
 
   @property({ attribute: false })

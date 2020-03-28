@@ -1,6 +1,6 @@
 import {
-  createToken, decorate, singleton,
-  name, injectableFactory
+  decorate, singleton, name,
+  injectableFactory
 } from '@innolens/resolver';
 import { ObjectId, Collection } from 'mongodb';
 
@@ -19,12 +19,8 @@ export interface ReusableInventoryUsageRecord {
 export interface ReusableInventoryUsageRecordCollection
   extends Collection<ReusableInventoryUsageRecord> {}
 
-export const ReusableInventoryUsageRecordCollection =
-  createToken<ReusableInventoryUsageRecordCollection>('ReusableInventoryUsageRecordCollection');
-
-
-export const createReusableInventoryUsageRecordCollection = decorate(
-  name('createReusableInventoryUsageRecordCollection'),
+export const ReusableInventoryUsageRecordCollection = decorate(
+  name('ReusableInventoryUsageRecordCollection'),
   injectableFactory(Db),
   singleton(),
   async (db: Db): Promise<ReusableInventoryUsageRecordCollection> =>

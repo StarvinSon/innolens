@@ -1,4 +1,4 @@
-import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
+import { singleton, injectableConstructor } from '@innolens/resolver';
 import { compare, hash } from 'bcrypt';
 import { ObjectId } from 'mongodb';
 
@@ -6,15 +6,6 @@ import { User, UserCollection } from '../db/user';
 
 
 export { User };
-
-export interface UserService {
-  findById(id: ObjectId): Promise<User | null>;
-  findByUsername(username: string): Promise<User | null>;
-  findByCredentials(credential: UserCredential): Promise<User | null>;
-  insert(userWithPassword: UserWithPassword): Promise<void>;
-}
-
-export const UserService = createToken<UserService>('UserService');
 
 export interface UserWithPassword extends Omit<User, 'passwordHash'> {
   readonly password: string;
@@ -32,7 +23,7 @@ const SALT_ROUNDS: number = 10;
   userCollection: UserCollection
 })
 @singleton()
-export class UserServiceImpl implements UserService {
+export class UserService {
   private readonly _userCollection: UserCollection;
 
   public constructor(options: {

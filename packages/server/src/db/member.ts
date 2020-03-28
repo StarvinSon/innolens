@@ -21,13 +21,13 @@ export interface Member {
 }
 
 
-export interface MembersCollection extends Collection<Member> {}
+export interface MemberCollection extends Collection<Member> {}
 
-export const MembersCollection = decorate(
-  name('MembersCollection'),
+export const MemberCollection = decorate(
+  name('MemberCollection'),
   injectableFactory(Db),
   singleton(),
-  async (db: Db): Promise<MembersCollection> =>
+  async (db: Db): Promise<MemberCollection> =>
     db.defineCollection('members', {
       validationLevel: 'strict',
       validationAction: 'error',

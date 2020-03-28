@@ -1,4 +1,4 @@
-import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
+import { singleton, injectableConstructor } from '@innolens/resolver';
 import { ObjectId } from 'mongodb';
 
 import {
@@ -11,21 +11,12 @@ export { Inventory };
 
 export type InventoryWithoutId = Omit<ExpendableInventory, '_id'> | Omit<ReusableInventory, '_id'>;
 
-export interface InventoryService {
-  findAll(): AsyncIterable<Inventory>;
-  findOneById(id: ObjectId): Promise<Inventory | null>;
-  insertOne(inventory: Inventory): Promise<void>;
-  insertMany(inventories: ReadonlyArray<InventoryWithoutId>): Promise<void>
-}
-
-export const InventoryService = createToken<InventoryService>('InventoryService');
-
 
 @injectableConstructor({
   inventoryCollection: InventoryCollection
 })
 @singleton()
-export class InventoryServiceImpl implements InventoryService {
+export class InventoryService {
   private readonly _inventoryCollection: InventoryCollection;
 
   public constructor(deps: {

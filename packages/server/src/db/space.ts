@@ -1,5 +1,5 @@
 import {
-  createToken, decorate, singleton,
+  decorate, singleton,
   name, injectableFactory
 } from '@innolens/resolver';
 import { ObjectId, Collection } from 'mongodb';
@@ -11,18 +11,13 @@ export interface Space {
   readonly _id: ObjectId;
   readonly spaceId: string;
   readonly spaceName: string;
-  readonly floor: string;
-  readonly indoor: boolean;
 }
 
 
 export interface SpaceCollection extends Collection<Space> {}
 
-export const SpaceCollection = createToken<SpaceCollection>('SpaceCollection');
-
-
-export const createSpaceCollection = decorate(
-  name('createSpaceCollection'),
+export const SpaceCollection = decorate(
+  name('SpaceCollection'),
   injectableFactory(Db),
   singleton(),
   async (db: Db): Promise<SpaceCollection> =>
@@ -36,9 +31,7 @@ export const createSpaceCollection = decorate(
           required: [
             '_id',
             'spaceId',
-            'spaceName',
-            'floor',
-            'indoor'
+            'spaceName'
           ],
           properties: {
             _id: {
@@ -49,12 +42,6 @@ export const createSpaceCollection = decorate(
             },
             spaceName: {
               bsonType: 'string'
-            },
-            floor: {
-              bsonType: 'string'
-            },
-            indoor: {
-              bsonType: 'bool'
             }
           }
         }

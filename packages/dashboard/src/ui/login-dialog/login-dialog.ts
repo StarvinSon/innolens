@@ -320,7 +320,7 @@ export class LoginDialog extends LitElement {
     const username = this._usernameInputElement.value;
     const password = this._passwordInputElement.value;
     this._responseCredentials({
-      type: 'ENTER',
+      type: 'entered',
       username,
       password
     });
@@ -328,7 +328,7 @@ export class LoginDialog extends LitElement {
 
   private _onCancelButtonClick(): void {
     this._responseCredentials({
-      type: 'CANCEL'
+      type: 'cancelled'
     });
   }
 

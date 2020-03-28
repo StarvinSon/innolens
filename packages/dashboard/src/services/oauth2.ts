@@ -1,3 +1,4 @@
+import * as Api from '@innolens/api/web';
 import {
   injectableConstructor, singleton,
   map
@@ -24,13 +25,13 @@ export interface OAuth2PasswordCredentialsRequest {
 }
 
 export type OAuth2PasswordCredentialsResponse = {
-  readonly type: 'ENTER';
+  readonly type: 'entered';
   readonly username: string;
   readonly password: string;
 } | {
-  readonly type: 'CANCEL';
+  readonly type: 'cancelled';
 } | {
-  readonly type: 'IGNORE';
+  readonly type: 'ignored';
 };
 
 export interface OAuth2PasswordCredentials {
@@ -198,9 +199,9 @@ export class OAuth2Service {
     let errorMessage: string | null = null;
 
     let result: {
-      readonly type: 'CANCEL' | 'IGNORE';
+      readonly type: 'cancelled' | 'ignored';
     } | {
-      readonly type: 'SUCCESS';
+      readonly type: 'successful';
       readonly token: OAuth2Token;
     } | undefined;
 
@@ -212,7 +213,7 @@ export class OAuth2Service {
         errorMessage
       });
       switch (askResult.type) {
-        case 'ENTER': {
+        case 'entered': {
           ({ username, password } = askResult);
           this.setPasswordCredentials({
             username,
@@ -228,17 +229,17 @@ export class OAuth2Service {
 
       let res: Response;
       try {
-        res = await window.fetch('/api/oauth2/token', {
+        res = await window.fetch(Api.OAuth2.PostToken.path, {
           method: 'POST',
           headers: {
             Authorization: `Basic ${btoa(`${this._clientId}:`)}`
           },
-          body: new URLSearchParams({
+          body: new URLSearchParams(Api.OAuth2.PostToken.toPasswordGrantRequestJson({
             grant_type: 'password',
             username: askResult.username,
             password: askResult.password,
             scope: '*'
-          }),
+          })),
           cache: 'no-store'
         });
       } catch (err) {
@@ -261,7 +262,7 @@ export class OAuth2Service {
 
       let resBody: any;
       try {
-        resBody = await res.json();
+        resBody = Api.OAuth2.PostToken.fromPasswordGrantResponseJson(await res.json());
       } catch (err) {
         console.error(err);
         errorMessage = String(err);
@@ -269,7 +270,7 @@ export class OAuth2Service {
       }
 
       result = {
-        type: 'SUCCESS',
+        type: 'successful',
         token: {
           accessToken: resBody.access_token,
           accessTokenExpiresAt: new Date(Date.now() + resBody.expires_in * 1000).toISOString(),
@@ -282,14 +283,14 @@ export class OAuth2Service {
     uiAdapter.close();
 
     switch (result.type) {
-      case 'SUCCESS': {
+      case 'successful': {
         this.setToken(result.token);
         return result.token;
       }
-      case 'CANCEL': {
+      case 'cancelled': {
         throw new Error('User cancelled opereation');
       }
-      case 'IGNORE': {
+      case 'ignored': {
         throw new Error('User ignored operation');
       }
       default: {

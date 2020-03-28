@@ -1,4 +1,4 @@
-import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
+import { singleton, injectableConstructor } from '@innolens/resolver';
 import { ObjectId } from 'mongodb';
 
 import { ReusableInventory, ReusableInventoryCollection } from '../db/reusable-inventory';
@@ -6,21 +6,12 @@ import { ReusableInventory, ReusableInventoryCollection } from '../db/reusable-i
 
 export { ReusableInventory };
 
-export interface ReusableInventoryService {
-  findAll(): AsyncIterable<ReusableInventory>;
-  findOneById(id: ObjectId): Promise<ReusableInventory | null>;
-  insertOne(reusableInventory: ReusableInventory): Promise<void>;
-  insertMany(reusableInventories: ReadonlyArray<Omit<ReusableInventory, '_id'>>): Promise<void>
-}
-
-export const ReusableInventoryService = createToken<ReusableInventoryService>('ReusableInventoryService');
-
 
 @injectableConstructor({
   reusableInventoryCollection: ReusableInventoryCollection
 })
 @singleton()
-export class ReusableInventoryServiceImpl implements ReusableInventoryService {
+export class ReusableInventoryService {
   private readonly _reusableInventoryCollection: ReusableInventoryCollection;
 
   public constructor(deps: {

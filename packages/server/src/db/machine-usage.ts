@@ -1,6 +1,6 @@
 import {
-  createToken, decorate, singleton,
-  name, injectableFactory
+  decorate, singleton, name,
+  injectableFactory
 } from '@innolens/resolver';
 import { ObjectId, Collection } from 'mongodb';
 
@@ -18,11 +18,8 @@ export interface MachineUsage {
 
 export interface MachineUsageCollection extends Collection<MachineUsage> {}
 
-export const MachineUsageCollection = createToken<MachineUsageCollection>('MachineUsageCollection');
-
-
-export const createMachineUsageCollection = decorate(
-  name('createMachineUsageCollection'),
+export const MachineUsageCollection = decorate(
+  name('MachineUsageCollection'),
   injectableFactory(Db),
   singleton(),
   async (db: Db): Promise<MachineUsageCollection> =>

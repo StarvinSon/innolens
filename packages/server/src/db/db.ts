@@ -1,4 +1,4 @@
-import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
+import { singleton, injectableConstructor } from '@innolens/resolver';
 import deepEqual from 'deep-equal';
 import {
   CollectionCreateOptions, Collection, IndexSpecification,
@@ -9,12 +9,6 @@ import { Logger } from '../logger';
 
 import { DbClient } from './db-client';
 
-
-export interface Db {
-  defineCollection<T>(name: string, options: DefineCollectionOptions): Promise<Collection<T>>;
-}
-
-export const Db = createToken<Db>('Db');
 
 export interface DefineCollectionOptions {
   readonly validator?: Required<CollectionCreateOptions>['validator'];
@@ -35,7 +29,7 @@ interface CollModOptions {
   dbClient: DbClient
 })
 @singleton()
-export class DbImpl implements Db {
+export class Db {
   private readonly _logger: Logger;
   private readonly _dbClient: DbClient;
   private readonly _rawDb: RawDb;

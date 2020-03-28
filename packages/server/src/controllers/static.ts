@@ -1,25 +1,10 @@
-import {
-  createToken, singleton, map,
-  injectableConstructor
-} from '@innolens/resolver';
+import { singleton, map, injectableConstructor } from '@innolens/resolver';
 import { NOT_FOUND } from 'http-status-codes';
 import send from 'koa-send';
 
 import { ServerOptions } from '../server-options';
 
 import { Context } from './context';
-import { Middleware } from './middleware';
-
-
-export interface StaticController {
-  /**
-   * Expect subpath in ctx.params.subPath.
-   * E.g. router.get(':subPath(.*)', staticController.getFile);
-   */
-  get: Middleware;
-}
-
-export const StaticController = createToken<StaticController>('StaticController');
 
 
 const pagePaths: ReadonlyArray<string> = [
@@ -28,7 +13,7 @@ const pagePaths: ReadonlyArray<string> = [
 
 @injectableConstructor(map(ServerOptions, (serOpts) => serOpts.staticRoot))
 @singleton()
-export class StaticControllerImpl implements StaticController {
+export class StaticController {
   private readonly _root: string;
 
   public constructor(root: string) {

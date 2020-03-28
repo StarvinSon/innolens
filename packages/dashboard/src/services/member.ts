@@ -24,8 +24,8 @@ export interface MemberServiceState {
 }
 
 
-const SET_COUNT_HISTORY_ACTION_TYPE = 'members/count-history/SET';
-interface SetMemberCompositionAction extends Action<typeof SET_COUNT_HISTORY_ACTION_TYPE> {
+const SET_COUNT_HISTORY_ACTION_TYPE = 'member/count-history/SET';
+interface SetCountHistoryAction extends Action<typeof SET_COUNT_HISTORY_ACTION_TYPE> {
   readonly countHistoryCategory: MemberCountHistoryCategory;
   readonly countHistoryRange: MemberCountHistoryRange;
   readonly countHistory: MemberCountHistory;
@@ -34,7 +34,7 @@ interface SetMemberCompositionAction extends Action<typeof SET_COUNT_HISTORY_ACT
 declare global {
   namespace App {
     interface ActionMap {
-      [SET_COUNT_HISTORY_ACTION_TYPE]: SetMemberCompositionAction;
+      [SET_COUNT_HISTORY_ACTION_TYPE]: SetCountHistoryAction;
     }
   }
 }
@@ -44,7 +44,7 @@ const KEY = 'member';
 
 @injectableConstructor(Store, ServerClient)
 @singleton()
-export class MembersService extends EventTarget {
+export class MemberService extends EventTarget {
   private readonly _store: Store;
   private readonly _serverClient: ServerClient;
 
@@ -103,7 +103,7 @@ export class MembersService extends EventTarget {
       const json = await this._serverClient.fetchJsonOk(url.href, {
         cache: 'no-store'
       });
-      const body = Api.Members.GetCountHistory.parseResponse(json);
+      const body = Api.Members.GetCountHistory.fromResponseJson(json);
       this._store.dispatch({
         type: SET_COUNT_HISTORY_ACTION_TYPE,
         countHistoryCategory: category,
@@ -113,7 +113,7 @@ export class MembersService extends EventTarget {
       return body;
     });
 
-    const updateState: MembersService['_countHistoryUpdateState'] = {
+    const updateState: MemberService['_countHistoryUpdateState'] = {
       type: 'updating',
       category,
       range,
@@ -131,10 +131,10 @@ export class MembersService extends EventTarget {
     }
   }
 
-  public async importData(file: File): Promise<void> {
+  public async importMembers(file: File): Promise<void> {
     const form = new FormData();
     form.set('file', file);
-    await this._serverClient.fetchOk(Api.Members.PostImport.path, {
+    await this._serverClient.fetchOk(Api.Members.PostMembers.path, {
       method: 'POST',
       body: form
     });

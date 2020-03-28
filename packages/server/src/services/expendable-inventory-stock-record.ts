@@ -1,4 +1,4 @@
-import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
+import { singleton, injectableConstructor } from '@innolens/resolver';
 import { ObjectId } from 'mongodb';
 
 import { ExpendableInventoryStockRecord, ExpendableInventoryStockRecordCollection } from '../db/expendable-inventory-stock-record';
@@ -6,22 +6,12 @@ import { ExpendableInventoryStockRecord, ExpendableInventoryStockRecordCollectio
 
 export { ExpendableInventoryStockRecord };
 
-export interface ExpendableInventoryStockRecordService {
-  findAll(): AsyncIterable<ExpendableInventoryStockRecord>;
-  findOneById(id: ObjectId): Promise<ExpendableInventoryStockRecord | null>;
-  insertOne(expendableInventoryStockRecord: ExpendableInventoryStockRecord): Promise<void>;
-  insertMany(expendableInventoryStockRecords: ReadonlyArray<Omit<ExpendableInventoryStockRecord, '_id'>>): Promise<void>
-}
-
-export const ExpendableInventoryStockRecordService = createToken<ExpendableInventoryStockRecordService>('ExpendableInventoryStockRecordService');
-
 
 @injectableConstructor({
   expendableInventoryStockRecordCollection: ExpendableInventoryStockRecordCollection
 })
 @singleton()
-// eslint-disable-next-line max-len
-export class ExpendableInventoryStockRecordServiceImpl implements ExpendableInventoryStockRecordService {
+export class ExpendableInventoryStockRecordService {
   // eslint-disable-next-line max-len
   private readonly _expendableInventoryStockRecordCollection: ExpendableInventoryStockRecordCollection;
 

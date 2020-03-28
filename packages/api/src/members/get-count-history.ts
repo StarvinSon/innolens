@@ -35,7 +35,9 @@ export interface Response {
   }>;
 }
 
-export const Response: object = {
+export type ResponseJson = ToJson<Response>;
+
+export const responseJsonSchema: object = {
   type: 'object',
   additionalProperties: false,
   required: ['categories', 'records'],
@@ -68,9 +70,8 @@ export const Response: object = {
   }
 };
 
-
-export const stringifyResponse =
-  (obj: Response): ToJson<Response> => ({
+export const toResponseJson =
+  (obj: Response): ResponseJson => ({
     categories: obj.categories,
     records: obj.records.map((record) => ({
       time: formatISO(record.time),
@@ -78,8 +79,8 @@ export const stringifyResponse =
     }))
   });
 
-export const parseResponse =
-  (json: ToJson<Response>): Response => ({
+export const fromResponseJson =
+  (json: ResponseJson): Response => ({
     categories: json.categories,
     records: json.records.map((record) => ({
       time: parseISO(record.time),

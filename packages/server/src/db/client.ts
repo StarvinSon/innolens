@@ -1,6 +1,6 @@
 import {
-  createToken, decorate, singleton,
-  name, injectableFactory
+  decorate, singleton, name,
+  injectableFactory
 } from '@innolens/resolver';
 import { ObjectId, Collection } from 'mongodb';
 
@@ -23,11 +23,8 @@ export enum ClientType {
 
 export interface ClientCollection extends Collection<Client> {}
 
-export const ClientCollection = createToken<ClientCollection>('ClientCollection');
-
-
-export const createClientCollection = decorate(
-  name('createClientCollection'),
+export const ClientCollection = decorate(
+  name('ClientCollection'),
   injectableFactory(Db),
   singleton(),
   async (db: Db): Promise<ClientCollection> =>

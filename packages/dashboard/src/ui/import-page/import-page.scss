@@ -45,6 +45,10 @@
   background-color: var(theme.$background-elevation-1dp);
   overflow: hidden;
 
+  &:not(:first-child) {
+    margin-top: 2rem;
+  }
+
   &__title {
     @include _card-title();
     margin: 0rem;

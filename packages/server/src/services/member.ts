@@ -1,13 +1,10 @@
-import { createReadStream } from 'fs';
-
 import { singleton, injectableConstructor } from '@innolens/resolver';
-import parseCsv from 'csv-parse';
 import {
   startOfDay, subDays, subMonths,
   addDays
 } from 'date-fns';
 
-import { Member, MembersCollection } from '../db/members';
+import { Member, MemberCollection } from '../db/member';
 
 
 export { Member };
@@ -27,17 +24,17 @@ export interface MemberCountRecord {
 
 
 @injectableConstructor({
-  membersCollection: MembersCollection
+  memberCollection: MemberCollection
 })
 @singleton()
-export class MembersService {
-  private readonly _membersCollection: MembersCollection;
+export class MemberService {
+  private readonly _memberCollection: MemberCollection;
 
   public constructor(options: {
-    membersCollection: MembersCollection;
+    memberCollection: MemberCollection;
   }) {
     ({
-      membersCollection: this._membersCollection
+      memberCollection: this._memberCollection
     } = options);
   }
 
@@ -55,7 +52,7 @@ export class MembersService {
       default: throw new Error(`Unknown timeRange: ${range}`);
     }
 
-    const members = await this._membersCollection
+    const members = await this._memberCollection
       .find({
         membershipStartTime: {
           $lt: endTime
@@ -102,30 +99,10 @@ export class MembersService {
     };
   }
 
-  public async importFromFile(path: string): Promise<void> {
-    const stream = createReadStream(path)
-      .pipe(parseCsv({
-        columns: true
-      }));
-
-    const importedMembers: Array<Omit<Member, '_id'>> = [];
-    for await (const record of stream) {
-      importedMembers.push({
-        memberId: record.member_id,
-        name: record.name,
-        department: record.department,
-        typeOfStudy: record.type_of_study,
-        studyProgramme: record.study_programme,
-        yearOfStudy: record.year_of_study,
-        affiliatedStudentInterestGroup: record.affiliated_student_interest_group,
-        membershipStartTime: new Date(record.membership_start_time),
-        membershipEndTime: new Date(record.membership_end_time)
-      });
-    }
-
-    await this._membersCollection
+  public async import(members: ReadonlyArray<Omit<Member, '_id'>>): Promise<void> {
+    await this._memberCollection
       .bulkWrite(
-        importedMembers.map((member) => ({
+        members.map((member) => ({
           replaceOne: {
             filter: { memberId: member.memberId },
             replacement: member,

@@ -1,96 +1,78 @@
-import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
+import * as Api from '@innolens/api/node';
+import { singleton, injectableConstructor } from '@innolens/resolver';
+import { CREATED } from 'http-status-codes';
 
+import { Logger } from '../logger';
+import { ClientService } from '../services/client';
+import { OAuth2Service } from '../services/oauth2';
 import { SpaceService } from '../services/space';
-import { fromAsync } from '../utils/array';
+import { UserService } from '../services/user';
 
 import { Context } from './context';
-import { Middleware } from './middleware';
-import { parseBody, InjectedBodyParserFactory, initializeParseBody } from './utils/body-parser';
-import { validateRequestBody, getValidatedRequestBody } from './utils/request-body-validator';
-import { UserAuthenticator, authenticateUser, initializeAuthenticateUser } from './utils/user-authenticator';
+import { getRequestBody } from './utils/request-body';
+import { parseRequestBodyCsv } from './utils/request-body-csv-parser';
+import { useParseRequestBody, useParseRequestBody$loggerSym, parseRequestBody } from './utils/request-body-parser';
+import { validateRequestBody } from './utils/request-body-validator';
+import { validateResponseBody } from './utils/response-body-validator';
+import {
+  authenticateUser, useAuthenticateUser, useAuthenticateUser$oauth2ServiceSym,
+  useAuthenticateUser$userServiceSym, useAuthenticateUser$clientServiceSym
+} from './utils/user-authenticator';
 
-
-export interface SpaceController {
-  get: Middleware;
-  post: Middleware;
-}
-
-export const SpaceController = createToken<SpaceController>('SpaceController');
-
-
-type PostSpaceBody = ReadonlyArray<{
-  readonly spaceId: string;
-  readonly spaceName: string;
-  readonly floor: string;
-  readonly indoor: boolean;
-}>;
-
-const PostSpaceBody: object = {
-  type: 'array',
-  items: {
-    type: 'object',
-    additionalProperties: false,
-    required: [
-      'spaceId',
-      'spaceName',
-      'floor',
-      'indoor'
-    ],
-    properties: {
-      spaceId: {
-        type: 'string'
-      },
-      spaceName: {
-        type: 'string'
-      },
-      floor: {
-        type: 'string'
-      },
-      indoor: {
-        type: 'boolean'
-      }
-    }
-  }
-};
 
 @injectableConstructor({
   spaceService: SpaceService,
-  userAuthenticator: UserAuthenticator,
-  injectedBodyParserFactory: InjectedBodyParserFactory
+  oauth2Service: OAuth2Service,
+  userService: UserService,
+  clientService: ClientService,
+  logger: Logger
 })
 @singleton()
-export class SpaceControllerImpl implements SpaceController {
+export class SpaceController extends useParseRequestBody(useAuthenticateUser(Object)) {
   private readonly _spaceService: SpaceService;
+
+  protected readonly [useAuthenticateUser$oauth2ServiceSym]: OAuth2Service;
+  protected readonly [useAuthenticateUser$userServiceSym]: UserService;
+  protected readonly [useAuthenticateUser$clientServiceSym]: ClientService;
+  protected readonly [useParseRequestBody$loggerSym]: Logger;
 
   public constructor(deps: {
     spaceService: SpaceService;
-    userAuthenticator: UserAuthenticator;
-    injectedBodyParserFactory: InjectedBodyParserFactory
+    oauth2Service: OAuth2Service;
+    userService: UserService;
+    clientService: ClientService;
+    logger: Logger;
   }) {
+    super();
     ({
-      spaceService: this._spaceService
+      spaceService: this._spaceService,
+      oauth2Service: this[useAuthenticateUser$oauth2ServiceSym],
+      userService: this[useAuthenticateUser$userServiceSym],
+      clientService: this[useAuthenticateUser$clientServiceSym],
+      logger: this[useParseRequestBody$loggerSym]
     } = deps);
-    initializeAuthenticateUser(SpaceControllerImpl, this, deps.userAuthenticator);
-    initializeParseBody(SpaceControllerImpl, this, deps.injectedBodyParserFactory);
   }
 
   @authenticateUser()
-  public async get(ctx: Context): Promise<void> {
-    const spaces = await fromAsync(this._spaceService.findAll());
-    ctx.body = spaces.map((space) => ({
+  @parseRequestBody('multipart/form-data')
+  @parseRequestBodyCsv('file')
+  @validateRequestBody(Api.Spaces.PostSpaces.Request)
+  public async postSpaces(ctx: Context): Promise<void> {
+    const { file } = getRequestBody<Api.Spaces.PostSpaces.Request>(ctx);
+    await this._spaceService.importSpaces(file.map((record) => ({
+      spaceId: record.space_id,
+      spaceName: record.space_name
+    })));
+    ctx.status = CREATED;
+  }
+
+  @authenticateUser()
+  @validateResponseBody(Api.Spaces.GetSpaces.responseJsonSchema)
+  public async getSpaces(ctx: Context): Promise<void> {
+    const spaces = await this._spaceService.getSpaces();
+    ctx.body = Api.Spaces.GetSpaces.toResponseJson(spaces.map((space) => ({
       spaceId: space.spaceId,
-      spaceName: space.spaceName,
-      floor: space.floor,
-      indoor: space.indoor
-    }));
-  }
-
-  @authenticateUser()
-  @parseBody()
-  @validateRequestBody(PostSpaceBody)
-  public async post(ctx: Context): Promise<void> {
-    const spaces = getValidatedRequestBody<PostSpaceBody>(ctx);
-    await this._spaceService.insertMany(spaces);
-    ctx.body = null;
+      spaceName: space.spaceName
+    })));
   }
 }

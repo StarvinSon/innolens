@@ -1,4 +1,4 @@
-import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
+import { singleton, injectableConstructor } from '@innolens/resolver';
 import { ObjectId } from 'mongodb';
 
 import { MachineUsage, MachineUsageCollection } from '../db/machine-usage';
@@ -6,21 +6,12 @@ import { MachineUsage, MachineUsageCollection } from '../db/machine-usage';
 
 export { MachineUsage };
 
-export interface MachineUsageService {
-  findAll(): AsyncIterable<MachineUsage>;
-  findOneById(id: ObjectId): Promise<MachineUsage | null>;
-  insertOne(machineUsage: MachineUsage): Promise<void>;
-  insertMany(machineUsageList: ReadonlyArray<Omit<MachineUsage, '_id'>>): Promise<void>
-}
-
-export const MachineUsageService = createToken<MachineUsageService>('MachineUsageService');
-
 
 @injectableConstructor({
   machineUsageCollection: MachineUsageCollection
 })
 @singleton()
-export class MachineUsageServiceImpl implements MachineUsageService {
+export class MachineUsageService {
   private readonly _machineUsageCollection: MachineUsageCollection;
 
   public constructor(deps: {

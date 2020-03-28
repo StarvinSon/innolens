@@ -1,6 +1,6 @@
 import {
-  createToken, decorate, singleton,
-  name, injectableFactory
+  decorate, singleton, name,
+  injectableFactory
 } from '@innolens/resolver';
 import { ObjectId, Collection } from 'mongodb';
 
@@ -25,11 +25,8 @@ export interface OAuth2Collection {
   readonly tokens: Collection<OAuth2Token>;
 }
 
-export const OAuth2Collection = createToken<OAuth2Collection>('OAuth2Collection');
-
-
-export const createOAuth2Collection = decorate(
-  name('createOAuth2Collection'),
+export const OAuth2Collection = decorate(
+  name('OAuth2Collection'),
   injectableFactory(Db),
   singleton(),
   async (db: Db): Promise<OAuth2Collection> => {

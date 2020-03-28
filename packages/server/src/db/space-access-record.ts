@@ -1,6 +1,6 @@
 import {
-  createToken, decorate, singleton,
-  name, injectableFactory
+  decorate, singleton, name,
+  injectableFactory
 } from '@innolens/resolver';
 import { ObjectId, Collection } from 'mongodb';
 
@@ -18,12 +18,8 @@ export interface SpaceAccessRecord {
 
 export interface SpaceAccessRecordCollection extends Collection<SpaceAccessRecord> {}
 
-export const SpaceAccessRecordCollection =
-  createToken<SpaceAccessRecordCollection>('SpaceAccessRecordCollection');
-
-
-export const createSpaceAccessRecordCollection = decorate(
-  name('createSpaceAccessRecordCollection'),
+export const SpaceAccessRecordCollection = decorate(
+  name('SpaceAccessRecordCollection'),
   injectableFactory(Db),
   singleton(),
   async (db: Db): Promise<SpaceAccessRecordCollection> =>

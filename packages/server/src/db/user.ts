@@ -1,5 +1,5 @@
 import {
-  createToken, decorate, singleton,
+  decorate, singleton,
   name, injectableFactory
 } from '@innolens/resolver';
 import { ObjectId, Collection } from 'mongodb';
@@ -17,11 +17,8 @@ export interface User {
 
 export interface UserCollection extends Collection<User> {}
 
-export const UserCollection = createToken<UserCollection>('UserCollection');
-
-
-export const createUserCollection = decorate(
-  name('createUserCollection'),
+export const UserCollection = decorate(
+  name('UserCollection'),
   injectableFactory(Db),
   singleton(),
   async (db: Db): Promise<UserCollection> =>

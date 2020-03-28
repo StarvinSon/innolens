@@ -1,26 +1,16 @@
-import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
-import { ObjectId } from 'mongodb';
+import { singleton, injectableConstructor } from '@innolens/resolver';
 
 import { Space, SpaceCollection } from '../db/space';
 
 
 export { Space };
 
-export interface SpaceService {
-  findAll(): AsyncIterable<Space>;
-  findOneById(id: ObjectId): Promise<Space | null>;
-  insertOne(space: Space): Promise<void>;
-  insertMany(spaces: ReadonlyArray<Omit<Space, '_id'>>): Promise<void>
-}
-
-export const SpaceService = createToken<SpaceService>('SpaceService');
-
 
 @injectableConstructor({
   spaceCollection: SpaceCollection
 })
 @singleton()
-export class SpaceServiceImpl implements SpaceService {
+export class SpaceService {
   private readonly _spaceCollection: SpaceCollection;
 
   public constructor(deps: {
@@ -31,26 +21,21 @@ export class SpaceServiceImpl implements SpaceService {
     } = deps);
   }
 
-  public async *findAll(): AsyncIterable<Space> {
-    yield* this._spaceCollection.find({});
-  }
-
-  public async findOneById(id: ObjectId): Promise<Space | null> {
-    return this._spaceCollection.findOne({ _id: id });
-  }
-
-  public async insertOne(space: Space): Promise<void> {
-    await this._spaceCollection.insertOne(space);
-  }
-
-  public async insertMany(spaces: ReadonlyArray<Omit<Space, '_id'>>): Promise<void> {
-    if (spaces.length === 0) {
-      return;
-    }
+  public async importSpaces(spaces: ReadonlyArray<Omit<Space, '_id'>>): Promise<void> {
     await this._spaceCollection
-      .insertMany(spaces.map<Space>((space) => ({
-        ...space,
-        _id: new ObjectId()
-      })));
+      .bulkWrite(
+        spaces.map((space) => ({
+          replaceOne: {
+            filter: { spaceId: space.spaceId },
+            replacement: space,
+            upsert: true
+          }
+        })),
+        { ordered: false }
+      );
+  }
+
+  public async getSpaces(): Promise<Array<Space>> {
+    return this._spaceCollection.find({}).toArray();
   }
 }

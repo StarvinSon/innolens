@@ -1,4 +1,4 @@
-import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
+import { singleton, injectableConstructor } from '@innolens/resolver';
 import { ObjectId } from 'mongodb';
 
 import { Machine, MachineCollection } from '../db/machine';
@@ -6,21 +6,12 @@ import { Machine, MachineCollection } from '../db/machine';
 
 export { Machine };
 
-export interface MachineService {
-  findAll(): AsyncIterable<Machine>;
-  findOneById(id: ObjectId): Promise<Machine | null>;
-  insertOne(machine: Machine): Promise<void>;
-  insertMany(machines: ReadonlyArray<Omit<Machine, '_id'>>): Promise<void>
-}
-
-export const MachineService = createToken<MachineService>('MachineService');
-
 
 @injectableConstructor({
   machineCollection: MachineCollection
 })
 @singleton()
-export class MachineServiceImpl implements MachineService {
+export class MachineService {
   private readonly _machineCollection: MachineCollection;
 
   public constructor(deps: {

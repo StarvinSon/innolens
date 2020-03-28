@@ -89,17 +89,6 @@ export const pageEntries: ReadonlyArray<PageEntry | PageGroupEntry> = [
   },
   {
     type: 'pageEntry',
-    name: 'About',
-    href: '/about',
-    pathRegExp: /^\/about$/,
-    load: async () => void import(
-      /* webpackChunkName: 'about-page' */
-      './about-page'
-    ),
-    tagName: 'inno-about-page'
-  },
-  {
-    type: 'pageEntry',
     name: 'Import Center',
     href: '/import',
     pathRegExp: /^\/import$/,
@@ -108,5 +97,16 @@ export const pageEntries: ReadonlyArray<PageEntry | PageGroupEntry> = [
       './import-page'
     ),
     tagName: 'inno-import-page'
+  },
+  {
+    type: 'pageEntry',
+    name: 'About',
+    href: '/about',
+    pathRegExp: /^\/about$/,
+    load: async () => void import(
+      /* webpackChunkName: 'about-page' */
+      './about-page'
+    ),
+    tagName: 'inno-about-page'
   }
 ];

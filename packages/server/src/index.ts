@@ -1,53 +1,27 @@
 import 'reflect-metadata';
 import {
-  createResolver, Token, FactoryOrConstructor,
-  decorate, singleton, name,
-  injectableFactory
+  createResolver, decorate, singleton,
+  name, injectableFactory
 } from '@innolens/resolver';
 import { ObjectId } from 'mongodb';
 import yargs from 'yargs';
 
-import { App, createApp } from './app';
-import { controllerCreators } from './controllers';
-import { dbCreators } from './db';
-import { Logger, createLogger } from './logger';
+import { App } from './app';
+import { Logger } from './logger';
 import { ServerOptions } from './server-options';
-import { serviceCreators } from './services';
 import { ClientService, ClientType } from './services/client';
 import { UserService } from './services/user';
-import { utilCreators } from './utils';
 
-
-const getCreators = (
-  serverOptions: ServerOptions
-): ReadonlyArray<readonly [Token<unknown>, FactoryOrConstructor<unknown>]> => [
-  ...controllerCreators,
-  ...dbCreators,
-  ...serviceCreators,
-  ...utilCreators,
-  [App, createApp],
-  [Logger, createLogger],
-  [ServerOptions, decorate(
-    name('createServerOptions'),
-    injectableFactory(),
-    singleton(),
-    () => serverOptions
-  )]
-];
 
 const start = async (options: ServerOptions): Promise<void> => {
   try {
-    const creators = getCreators(options);
     const resolver = createResolver();
-    for (const [token, creator] of creators) {
-      resolver.register(token, creator);
-    }
-
-    // Uncomment to test all dependencies:
-    // for (const [token] of creators) {
-    //   // eslint-disable-next-line no-await-in-loop
-    //   await resolver.resolve(token);
-    // }
+    resolver.register(ServerOptions, decorate(
+      name('createServerOptions'),
+      injectableFactory(),
+      singleton(),
+      () => options
+    ));
 
     const [clientService, userService, app, logger] =
       await resolver.resolve([ClientService, UserService, App, Logger] as const);

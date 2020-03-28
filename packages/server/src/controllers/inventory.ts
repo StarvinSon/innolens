@@ -1,21 +1,6 @@
-import { createToken, singleton, injectableConstructor } from '@innolens/resolver';
+import { singleton, injectableConstructor } from '@innolens/resolver';
 
 import { InventoryService } from '../services/inventory';
-import { fromAsync } from '../utils/array';
-
-import { Context } from './context';
-import { Middleware } from './middleware';
-import { parseBody, InjectedBodyParserFactory, initializeParseBody } from './utils/body-parser';
-import { validateRequestBody, getValidatedRequestBody } from './utils/request-body-validator';
-import { UserAuthenticator, authenticateUser, initializeAuthenticateUser } from './utils/user-authenticator';
-
-
-export interface InventoryController {
-  get: Middleware;
-  post: Middleware;
-}
-
-export const InventoryController = createToken<InventoryController>('InventoryController');
 
 
 type PostInventoryBody = ReadonlyArray<{
@@ -30,6 +15,7 @@ type PostInventoryBody = ReadonlyArray<{
   }>;
 })>;
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const PostInventoryBody = ((): object => {
   const base = {
     type: 'object',
@@ -103,49 +89,17 @@ const PostInventoryBody = ((): object => {
 })();
 
 @injectableConstructor({
-  inventoryService: InventoryService,
-  userAuthenticator: UserAuthenticator,
-  injectedBodyParserFactory: InjectedBodyParserFactory
+  inventoryService: InventoryService
 })
 @singleton()
-export class InventoryControllerImpl implements InventoryController {
+export class InventoryController {
   private readonly _inventoryService: InventoryService;
 
   public constructor(deps: {
     inventoryService: InventoryService;
-    userAuthenticator: UserAuthenticator;
-    injectedBodyParserFactory: InjectedBodyParserFactory
   }) {
     ({
       inventoryService: this._inventoryService
     } = deps);
-    initializeAuthenticateUser(InventoryControllerImpl, this, deps.userAuthenticator);
-    initializeParseBody(InventoryControllerImpl, this, deps.injectedBodyParserFactory);
-  }
-
-  @authenticateUser()
-  public async get(ctx: Context): Promise<void> {
-    const inventories = await fromAsync(this._inventoryService.findAll());
-    ctx.body = inventories.map((inventory) => ({
-      inventoryId: inventory.inventoryId,
-      inventoryName: inventory.inventoryName,
-      type: inventory.type,
-      ...inventory.type === 'expendable'
-        ? {}
-        : {
-          items: inventory.items.map((item) => ({
-            itemId: item.itemId
-          }))
-        }
-    }));
-  }
-
-  @authenticateUser()
-  @parseBody()
-  @validateRequestBody(PostInventoryBody)
-  public async post(ctx: Context): Promise<void> {
-    const inventories = getValidatedRequestBody<PostInventoryBody>(ctx);
-    await this._inventoryService.insertMany(inventories);
-    ctx.body = null;
   }
 }

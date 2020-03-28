@@ -1,13 +1,13 @@
 export interface MergeArray {
   <T>(
-    target: ReadonlyArray<T> | undefined,
+    target: ReadonlyArray<T> | null | undefined,
     source: ReadonlyArray<T>,
     mapper: (targetItem: T | undefined, sourceItem: T) => T
   ): ReadonlyArray<T>;
 }
 
 export const mergeArray: MergeArray = <T>(
-  target: ReadonlyArray<T> | undefined,
+  target: ReadonlyArray<T> | null | undefined,
   source: ReadonlyArray<T>,
   mapper: (tarElem: T | undefined, srcElem: T) => T
 ): ReadonlyArray<T> => {
@@ -15,7 +15,7 @@ export const mergeArray: MergeArray = <T>(
     return target;
   }
 
-  if (target === undefined) {
+  if (target === undefined || target === null) {
     return source.map((sourceItem) => mapper(undefined, sourceItem));
   }
 
