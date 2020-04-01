@@ -154,9 +154,9 @@ export class OAuth2Controller extends useParseRequestBody(useAuthenticateClient(
   ])
   @authenticateClient()
   @parseRequestBody('application/x-www-form-urlencoded')
-  @validateRequestBody(Api.OAuth2.PostToken.baseRequestJsonSchema)
+  @validateRequestBody(Api.OAuth2.PostToken.Base.requestBodySchema)
   public async postToken(ctx: Context): Promise<void> {
-    const body = Api.OAuth2.PostToken.fromBaseRequestJson(getRequestBody(ctx));
+    const body = Api.OAuth2.PostToken.Base.fromRequestBodyJson(getRequestBody(ctx));
     switch (body.grant_type) {
       case 'password': {
         return this._handlePasswordGrant(ctx);
@@ -170,12 +170,12 @@ export class OAuth2Controller extends useParseRequestBody(useAuthenticateClient(
     }
   }
 
-  @validateRequestBody(Api.OAuth2.PostToken.passwordGrantRequestJsonSchema)
-  @validateResponseBody(Api.OAuth2.PostToken.passwordGrantResponseJsonSchema)
+  @validateRequestBody(Api.OAuth2.PostToken.Password.requestBodySchema)
+  @validateResponseBody(Api.OAuth2.PostToken.Password.responseBodySchema)
   private async _handlePasswordGrant(ctx: Context): Promise<void> {
     const client = getAuthenticatedClient(ctx);
 
-    const body = Api.OAuth2.PostToken.fromPasswordGrantRequestJson(getRequestBody(ctx));
+    const body = Api.OAuth2.PostToken.Password.fromRequestBodyJson(getRequestBody(ctx));
     const { username, password } = body;
 
     const scopes = parseScope(body.scope);
@@ -194,7 +194,7 @@ export class OAuth2Controller extends useParseRequestBody(useAuthenticateClient(
       scopes
     });
 
-    ctx.body = Api.OAuth2.PostToken.toPasswordGrantResponseJson({
+    ctx.body = Api.OAuth2.PostToken.Password.toResponseBodyJson({
       access_token: token.accessToken,
       token_type: 'Bearer',
       expires_in: Math.max(
@@ -206,10 +206,10 @@ export class OAuth2Controller extends useParseRequestBody(useAuthenticateClient(
     });
   }
 
-  @validateRequestBody(Api.OAuth2.PostToken.refreshGrantRequestJsonSchema)
-  @validateResponseBody(Api.OAuth2.PostToken.refreshGrantResponseJsonSchema)
+  @validateRequestBody(Api.OAuth2.PostToken.Refresh.requestBodySchema)
+  @validateResponseBody(Api.OAuth2.PostToken.Refresh.responseBodySchema)
   private async _handleRefreshTokenGrant(ctx: Context): Promise<void> {
-    const body = Api.OAuth2.PostToken.fromRefreshGrantRequestJson(getRequestBody(ctx));
+    const body = Api.OAuth2.PostToken.Refresh.fromRequestBodyJson(getRequestBody(ctx));
     const { refresh_token: refreshToken } = body;
 
     const scopes = parseScope(body.scope);
@@ -240,7 +240,7 @@ export class OAuth2Controller extends useParseRequestBody(useAuthenticateClient(
       scopes
     });
 
-    ctx.body = Api.OAuth2.PostToken.toRefreshGrantResponseJson({
+    ctx.body = Api.OAuth2.PostToken.Refresh.toResponseBodyJson({
       access_token: newToken.accessToken,
       token_type: 'Bearer',
       expires_in: Math.max(
