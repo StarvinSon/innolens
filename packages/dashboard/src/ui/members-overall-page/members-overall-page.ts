@@ -19,19 +19,19 @@ import { ChoiceChip } from '../choice-chip'; // eslint-disable-line import/no-du
 import { LineChartData } from '../line-chart'; // eslint-disable-line import/no-duplicates
 import { PieChartData } from '../pie-chart'; // eslint-disable-line import/no-duplicates
 
-import { css, classes } from './members-page.scss';
+import { css, classes } from './members-overall-page.scss';
 
 
-const TAG_NAME = 'inno-members-page';
+const TAG_NAME = 'inno-members-overall-page';
 
 declare global {
   interface HTMLElementTagNameMap {
-    [TAG_NAME]: MembersPage;
+    [TAG_NAME]: MembersOverallPage;
   }
 }
 
 @customElement(TAG_NAME)
-export class MembersPage extends LitElement {
+export class MembersOverallPage extends LitElement {
   public static readonly styles = css;
 
 
@@ -47,20 +47,6 @@ export class MembersPage extends LitElement {
   private _historyRange: MemberCountHistoryRange = 'past12Months';
 
 
-  private _countHistoryCache: MemberCountHistory | null = null;
-
-  private _countHistoryCacheUpdateState: {
-    readonly type: 'idle';
-  } | {
-    readonly type: 'updating';
-    readonly category: MemberCountHistoryCategory;
-    readonly range: MemberCountHistoryRange;
-    readonly promise: Promise<void>;
-  } = {
-    type: 'idle'
-  };
-
-
   private _lineChartDataDeps: readonly [MemberCountHistory | null] = [null];
 
   private _lineChartDataCache: LineChartData<Date> | null = null;
@@ -73,53 +59,27 @@ export class MembersPage extends LitElement {
 
   public constructor() {
     super();
+    this._onMemberServiceStateUpdated = this._onMemberServiceStateUpdated.bind(this);
     this._memberService = null;
   }
 
   private _onDependencyInjected(): void {
     this.requestUpdate();
+    this._memberService?.addEventListener('state-updated', this._onMemberServiceStateUpdated);
+  }
+
+  private _onMemberServiceStateUpdated(): void {
+    this.requestUpdate();
   }
 
   private _getCountHistory(): MemberCountHistory | null {
-    this._countHistoryCache = this._memberService
+    return this._memberService
       ?.getCountHistory(this._historyCategory, this._historyRange) ?? null;
-
-    if (
-      this._countHistoryCache === null
-      && this._memberService !== null
-      && (
-        this._countHistoryCacheUpdateState.type === 'idle'
-        || this._countHistoryCacheUpdateState.category !== this._historyCategory
-        || this._countHistoryCacheUpdateState.range !== this._historyRange
-      )
-    ) {
-      const category = this._historyCategory;
-      const range = this._historyRange;
-      const membersService = this._memberService;
-      const promise = Promise.resolve().then(async () => {
-        await membersService.updateCountHistory(category, range);
-        this.requestUpdate();
-      });
-      const updateState: MembersPage['_countHistoryCacheUpdateState'] = {
-        type: 'updating',
-        category,
-        range,
-        promise
-      };
-      this._countHistoryCacheUpdateState = updateState;
-      promise.finally(() => {
-        if (this._countHistoryCacheUpdateState === updateState) {
-          this._countHistoryCacheUpdateState = {
-            type: 'idle'
-          };
-        }
-      });
-    }
-    return this._countHistoryCache;
   }
 
   private _getLineChartData(): LineChartData<Date> | null {
     const countHistory = this._getCountHistory();
+
     if (this._lineChartDataDeps[0] !== countHistory) {
       if (countHistory === null) {
         this._lineChartDataCache = null;
@@ -140,6 +100,7 @@ export class MembersPage extends LitElement {
 
   private _getPieChartData(): PieChartData | null {
     const countHistory = this._getCountHistory();
+
     if (this._pieChartDataDeps[0] !== countHistory) {
       if (countHistory === null) {
         this._pieChartDataCache = null;
@@ -215,7 +176,12 @@ export class MembersPage extends LitElement {
 
   protected updated(changedProps: PropertyValues): void {
     super.updated(changedProps);
-    this._getCountHistory();
+
+    if (this._memberService !== null) {
+      if (this._getCountHistory() === null) {
+        this._memberService.updateCountHistory(this._historyCategory, this._historyRange);
+      }
+    }
   }
 
   private _onCategoryChipClick(event: MouseEvent): void {

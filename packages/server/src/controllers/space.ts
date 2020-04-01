@@ -56,9 +56,9 @@ export class SpaceController extends useParseRequestBody(useAuthenticateUser(Obj
   @authenticateUser()
   @parseRequestBody('multipart/form-data')
   @parseRequestBodyCsv('file')
-  @validateRequestBody(Api.Spaces.PostSpaces.Request)
+  @validateRequestBody(Api.Spaces.PostSpaces.requestBodySchema)
   public async postSpaces(ctx: Context): Promise<void> {
-    const { file } = getRequestBody<Api.Spaces.PostSpaces.Request>(ctx);
+    const { file } = Api.Spaces.PostSpaces.fromRequestBodyJson(getRequestBody(ctx));
     await this._spaceService.importSpaces(file.map((record) => ({
       spaceId: record.space_id,
       spaceName: record.space_name
@@ -67,12 +67,14 @@ export class SpaceController extends useParseRequestBody(useAuthenticateUser(Obj
   }
 
   @authenticateUser()
-  @validateResponseBody(Api.Spaces.GetSpaces.responseJsonSchema)
+  @validateResponseBody(Api.Spaces.GetSpaces.responseBodySchema)
   public async getSpaces(ctx: Context): Promise<void> {
     const spaces = await this._spaceService.getSpaces();
-    ctx.body = Api.Spaces.GetSpaces.toResponseJson(spaces.map((space) => ({
-      spaceId: space.spaceId,
-      spaceName: space.spaceName
-    })));
+    ctx.body = Api.Spaces.GetSpaces.toResponseBodyJson({
+      data: spaces.map((space) => ({
+        spaceId: space.spaceId,
+        spaceName: space.spaceName
+      }))
+    });
   }
 }

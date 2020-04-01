@@ -8,7 +8,7 @@ import { ClientService } from '../services/client';
 import { MemberService } from '../services/member';
 import { OAuth2Service } from '../services/oauth2';
 import { UserService } from '../services/user';
-
+import { Writable } from '../utils/object';
 
 import { Context } from './context';
 import { getRequestBody } from './utils/request-body';
@@ -58,7 +58,75 @@ export class MemberController extends useParseRequestBody(useAuthenticateUser(Ob
   }
 
   @authenticateUser()
-  @validateResponseBody(Api.Members.GetCountHistory.responseJsonSchema)
+  @validateResponseBody(Api.Members.GetDepartments.responseBodySchema)
+  public async getDepartments(ctx: Context): Promise<void> {
+    const departments = await this._memberService.getDepartments();
+    ctx.body = Api.Members.GetDepartments.toResponseBodyJson({
+      data: departments
+    });
+  }
+
+  @authenticateUser()
+  @validateResponseBody(Api.Members.GetTypesOfStudy.responseBodySchema)
+  public async getTypesOfStudy(ctx: Context): Promise<void> {
+    const typesOfStudy = await this._memberService.getTypesOfStudy();
+    ctx.body = Api.Members.GetTypesOfStudy.toResponseBodyJson({
+      data: typesOfStudy
+    });
+  }
+
+  @authenticateUser()
+  @validateResponseBody(Api.Members.GetStudyProgrammes.responseBodySchema)
+  public async getStudyProgrammes(ctx: Context): Promise<void> {
+    const studyProgrammes = await this._memberService.getStudyProgrammes();
+    ctx.body = Api.Members.GetStudyProgrammes.toResponseBodyJson({
+      data: studyProgrammes
+    });
+  }
+
+  @authenticateUser()
+  @validateResponseBody(Api.Members.GetYearsOfStudy.responseBodySchema)
+  public async getYearsOfStudy(ctx: Context): Promise<void> {
+    const yearsOfStudy = await this._memberService.getYearsOfStudy();
+    ctx.body = Api.Members.GetYearsOfStudy.toResponseBodyJson({
+      data: yearsOfStudy
+    });
+  }
+
+  @authenticateUser()
+  @validateResponseBody(Api.Members.GetAffiliatedStudentInterestGroups.responseBodySchema)
+  public async getAffiliatedStudentInterestGroups(ctx: Context): Promise<void> {
+    const interestGroups = await this._memberService.getAffiliatedStudentInterestGroups();
+    ctx.body = Api.Members.GetAffiliatedStudentInterestGroups.toResponseBodyJson({
+      data: interestGroups
+    });
+  }
+
+  @authenticateUser()
+  @validateResponseBody(Api.Members.GetCount.responseBodySchema)
+  public async getCount(ctx: Context): Promise<void> {
+    const filter: Writable<Parameters<MemberService['getCount']>[0]> = {};
+    const keys = [
+      'department',
+      'typeOfStudy',
+      'yearOfStudy',
+      'studyProgramme',
+      'affiliatedStudentInterestGroup'
+    ] as const;
+    for (const key of keys) {
+      const str: string | undefined = ctx.query[key];
+      if (str !== undefined) {
+        filter[key] = str.split(',').map(globalThis.decodeURIComponent);
+      }
+    }
+    const count = await this._memberService.getCount(filter);
+    ctx.body = Api.Members.GetCount.toResponseBodyJson({
+      data: count
+    });
+  }
+
+  @authenticateUser()
+  @validateResponseBody(Api.Members.GetCountHistory.responseBodySchema)
   public async getCountHistory(ctx: Context): Promise<void> {
     const { category, range } = ctx.query as Record<string, string>;
     if (
@@ -80,15 +148,17 @@ export class MemberController extends useParseRequestBody(useAuthenticateUser(Ob
     }
 
     const history = await this._memberService.getHistory(category, range);
-    ctx.body = Api.Members.GetCountHistory.toResponseJson(history);
+    ctx.body = Api.Members.GetCountHistory.toResponseBodyJson({
+      data: history
+    });
   }
 
   @authenticateUser()
   @parseRequestBody('multipart/form-data')
   @parseRequestBodyCsv('file')
-  @validateRequestBody(Api.Members.PostMembers.requestJsonSchema)
+  @validateRequestBody(Api.Members.PostMembers.requestBodySchema)
   public async postMembers(ctx: Context): Promise<void> {
-    const { file } = Api.Members.PostMembers.fromRequestJson(getRequestBody(ctx));
+    const { file } = Api.Members.PostMembers.fromRequestBodyJson(getRequestBody(ctx));
     await this._memberService.import(file.map((record) => ({
       memberId: record.member_id,
       name: record.name,

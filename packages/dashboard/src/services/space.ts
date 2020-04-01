@@ -77,12 +77,12 @@ export class SpaceService extends EventTarget {
           cache: 'no-store'
         }
       );
-      const body = Api.Spaces.GetSpaces.fromResponseJson(json);
+      const { data } = Api.Spaces.GetSpaces.fromResponseBodyJson(json);
       this._store.dispatch({
         type: SET_SPACES_ACTION_TYPE,
-        spaces: body
+        spaces: data
       });
-      return body;
+      return data;
     });
 
     const updateState: SpaceService['_countHistoryUpdateState'] = {

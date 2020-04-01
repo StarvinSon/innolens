@@ -39,6 +39,12 @@ export const Router = decorate(
     const router: Router = new KoaRouter();
 
     // member
+    router.get(Api.Members.GetDepartments.path, controllers.member.getDepartments);
+    router.get(Api.Members.GetTypesOfStudy.path, controllers.member.getTypesOfStudy);
+    router.get(Api.Members.GetStudyProgrammes.path, controllers.member.getStudyProgrammes);
+    router.get(Api.Members.GetYearsOfStudy.path, controllers.member.getYearsOfStudy);
+    router.get(Api.Members.GetAffiliatedStudentInterestGroups.path, controllers.member.getAffiliatedStudentInterestGroups); // eslint-disable-line max-len
+    router.get(Api.Members.GetCount.path, controllers.member.getCount);
     router.get(Api.Members.GetCountHistory.path, controllers.member.getCountHistory);
     router.post(Api.Members.PostMembers.path, controllers.member.postMembers);
 

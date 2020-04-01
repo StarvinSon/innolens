@@ -3,6 +3,7 @@ import {
   html, query, PropertyValues, property
 } from 'lit-element';
 
+import { mergeArray } from '../../utils/immutable/array';
 import { ChoiceChip } from '../choice-chip/choice-chip';
 
 import { css, classes } from './choice-chips.scss';
@@ -28,18 +29,18 @@ export class ChoiceChips extends LitElement {
   public selectAttribute: string = '';
 
   @property({ type: String })
-  public selectId: string = '';
+  public selectId: string | ReadonlyArray<string> | null = null;
 
 
-  private _selectedChip: ChoiceChip | null = null;
+  private _selectedChips: ReadonlyArray<ChoiceChip> = [];
 
 
   @query('slot')
   private readonly _slotElem!: HTMLSlotElement;
 
 
-  public get selectedChip(): ChoiceChip | null {
-    return this._selectedChip;
+  public get selectedChips(): ReadonlyArray<ChoiceChip> {
+    return this._selectedChips;
   }
 
   protected render(): TemplateResult {
@@ -60,15 +61,24 @@ export class ChoiceChips extends LitElement {
       .assignedElements({ flatten: true })
       .filter((elem): elem is ChoiceChip => elem instanceof ChoiceChip);
 
-    const oriSelectedChip = this._selectedChip;
-    this._selectedChip = chips.find((chip) =>
-      chip.getAttribute(this.selectAttribute) === this.selectId) ?? null;
-
-    for (const chip of chips) {
-      chip.selected = chip === this._selectedChip;
+    const oldSelectedChips = this._selectedChips;
+    let newSelectedChips: ReadonlyArray<ChoiceChip>;
+    if (this.selectId === null) {
+      newSelectedChips = mergeArray(oldSelectedChips, []);
+    } else {
+      newSelectedChips = mergeArray(oldSelectedChips, chips.filter((chip) => {
+        const attr = chip.getAttribute(this.selectAttribute);
+        return Array.isArray(this.selectId)
+          ? this.selectId.includes(attr)
+          : attr === this.selectId;
+      }));
     }
 
-    if (this._selectedChip !== oriSelectedChip) {
+    if (oldSelectedChips !== newSelectedChips) {
+      this._selectedChips = newSelectedChips;
+      for (const chip of chips) {
+        chip.selected = newSelectedChips.includes(chip);
+      }
       Promise.resolve().then(() => this.dispatchEvent(new Event('selected-chip-changed')));
     }
   }

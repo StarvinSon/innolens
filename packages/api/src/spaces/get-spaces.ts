@@ -1,16 +1,17 @@
-import { ToJson } from '../conversion';
+import * as CommonResponse from '../common-response';
+
 
 export const path = '/api/spaces';
 
 
-export type Response = ReadonlyArray<{
+type ResponseData = ReadonlyArray<{
   readonly spaceId: string;
   readonly spaceName: string;
 }>;
 
-export type ResponseJson = ToJson<Response>;
+export interface ResponseBody extends CommonResponse.ResponseBody<ResponseData> {}
 
-export const responseJsonSchema = {
+export const responseBodySchema = CommonResponse.responseBodySchema({
   type: 'array',
   items: {
     type: 'object',
@@ -25,8 +26,10 @@ export const responseJsonSchema = {
       }
     }
   }
-};
+});
 
-export const fromResponseJson = (json: ResponseJson): Response => json;
+export const fromResponseBodyJson =
+  CommonResponse.fromResponseBodyJson<ResponseData>((json) => json);
 
-export const toResponseJson = (res: Response): ResponseJson => res;
+export const toResponseBodyJson =
+  CommonResponse.toResponseBodyJson<ResponseData>((obj) => obj);

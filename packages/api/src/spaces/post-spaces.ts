@@ -1,3 +1,6 @@
+import { ToJson } from '../conversion';
+
+
 export const path = '/api/spaces';
 
 
@@ -6,11 +9,11 @@ export const requestFileColumns = [
   'space_name'
 ] as const;
 
-export interface Request {
+export interface RequestBody {
   readonly file: ReadonlyArray<Readonly<Record<(typeof requestFileColumns)[number], string>>>;
 }
 
-export const Request: object = {
+export const requestBodySchema: object = {
   type: 'object',
   additionalProperties: false,
   required: ['file'],
@@ -26,3 +29,5 @@ export const Request: object = {
     }
   }
 };
+
+export const fromRequestBodyJson = (json: ToJson<RequestBody>): RequestBody => json;

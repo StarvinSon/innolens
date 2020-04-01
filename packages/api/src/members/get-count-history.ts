@@ -1,6 +1,6 @@
 import { formatISO, parseISO } from 'date-fns';
 
-import { ToJson } from '../conversion';
+import * as CommonResponse from '../common-response';
 
 
 export const path = '/api/members/count-history';
@@ -25,7 +25,7 @@ export const ranges = [
 export type Range = (typeof ranges)[number];
 
 
-export interface Response {
+interface ResponseData {
   readonly categories: ReadonlyArray<string>;
   readonly records: ReadonlyArray<{
     readonly time: Date;
@@ -35,9 +35,9 @@ export interface Response {
   }>;
 }
 
-export type ResponseJson = ToJson<Response>;
+export interface ResponseBody extends CommonResponse.ResponseBody<ResponseData> {}
 
-export const responseJsonSchema: object = {
+export const responseBodySchema = CommonResponse.responseBodySchema({
   type: 'object',
   additionalProperties: false,
   required: ['categories', 'records'],
@@ -68,22 +68,20 @@ export const responseJsonSchema: object = {
       }
     }
   }
-};
+});
 
-export const toResponseJson =
-  (obj: Response): ResponseJson => ({
-    categories: obj.categories,
-    records: obj.records.map((record) => ({
-      time: formatISO(record.time),
-      counts: record.counts
-    }))
-  });
+export const toResponseBodyJson = CommonResponse.toResponseBodyJson<ResponseData>((obj) => ({
+  categories: obj.categories,
+  records: obj.records.map((record) => ({
+    time: formatISO(record.time),
+    counts: record.counts
+  }))
+}));
 
-export const fromResponseJson =
-  (json: ResponseJson): Response => ({
-    categories: json.categories,
-    records: json.records.map((record) => ({
-      time: parseISO(record.time),
-      counts: record.counts
-    }))
-  });
+export const fromResponseBodyJson = CommonResponse.fromResponseBodyJson<ResponseData>((json) => ({
+  categories: json.categories,
+  records: json.records.map((record) => ({
+    time: parseISO(record.time),
+    counts: record.counts
+  }))
+}));

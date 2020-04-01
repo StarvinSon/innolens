@@ -9,6 +9,7 @@
     "build": "tsc --build ./tsconfig.json",
     "build:watch": "tsc --build ./tsconfig.json --watch",
     "start": "node ./out/index.js start --config ./server.config.js",
+    "start:watch": "nodemon --config ./nodemon.json ./out/index.js -- start --config ./server.config.js",
     "deploy": "pm2 start ./ecosystem.config.js"
   },
   "dependencies": {

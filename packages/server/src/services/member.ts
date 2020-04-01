@@ -3,8 +3,10 @@ import {
   startOfDay, subDays, subMonths,
   addDays
 } from 'date-fns';
+import { FilterQuery } from 'mongodb';
 
 import { Member, MemberCollection } from '../db/member';
+import { Writable } from '../utils/object';
 
 
 export { Member };
@@ -36,6 +38,52 @@ export class MemberService {
     ({
       memberCollection: this._memberCollection
     } = options);
+  }
+
+  public async getDepartments(): Promise<ReadonlyArray<string>> {
+    return this._memberCollection.distinct('department');
+  }
+
+  public async getTypesOfStudy(): Promise<ReadonlyArray<string>> {
+    return this._memberCollection.distinct('typeOfStudy');
+  }
+
+  public async getStudyProgrammes(): Promise<ReadonlyArray<string>> {
+    return this._memberCollection.distinct('studyProgramme');
+  }
+
+  public async getYearsOfStudy(): Promise<ReadonlyArray<string>> {
+    return this._memberCollection.distinct('yearOfStudy');
+  }
+
+  public async getAffiliatedStudentInterestGroups(): Promise<ReadonlyArray<string>> {
+    return this._memberCollection.distinct('affiliatedStudentInterestGroup');
+  }
+
+  public async getCount(filter: {
+    readonly department?: ReadonlyArray<string>;
+    readonly typeOfStudy?: ReadonlyArray<string>;
+    readonly yearOfStudy?: ReadonlyArray<string>;
+    readonly studyProgramme?: ReadonlyArray<string>;
+    readonly affiliatedStudentInterestGroup?: ReadonlyArray<string>;
+  }): Promise<number> {
+    const query: FilterQuery<Writable<Member>> = {};
+    if (filter.department !== undefined) {
+      query.department = { $in: filter.department.slice() };
+    }
+    if (filter.typeOfStudy !== undefined) {
+      query.typeOfStudy = { $in: filter.typeOfStudy.slice() };
+    }
+    if (filter.studyProgramme !== undefined) {
+      query.studyProgramme = { $in: filter.studyProgramme.slice() };
+    }
+    if (filter.yearOfStudy !== undefined) {
+      query.yearOfStudy = { $in: filter.yearOfStudy.slice() };
+    }
+    if (filter.affiliatedStudentInterestGroup !== undefined) {
+      query.affiliatedStudentInterestGroup = { $in: filter.affiliatedStudentInterestGroup.slice() };
+    }
+    return this._memberCollection.countDocuments(query);
   }
 
   public async getHistory(

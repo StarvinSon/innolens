@@ -1,5 +1,6 @@
 import { ToJson } from '../conversion';
 
+
 export const path = '/api/members';
 
 
@@ -15,13 +16,11 @@ const requestFileColumns = [
   'membership_end_time'
 ] as const;
 
-export interface Request {
+export interface RequestBody {
   file: ReadonlyArray<Readonly<Record<(typeof requestFileColumns)[number], string>>>;
 }
 
-export type RequestJson = ToJson<Request>;
-
-export const requestJsonSchema: object = {
+export const requestBodySchema: object = {
   type: 'object',
   additionalProperties: false,
   required: ['file'],
@@ -38,4 +37,4 @@ export const requestJsonSchema: object = {
   }
 };
 
-export const fromRequestJson = (json: RequestJson): Request => json;
+export const fromRequestBodyJson = (json: ToJson<RequestBody>): RequestBody => json;
