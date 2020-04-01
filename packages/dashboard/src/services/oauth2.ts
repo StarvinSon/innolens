@@ -234,7 +234,7 @@ export class OAuth2Service {
           headers: {
             Authorization: `Basic ${btoa(`${this._clientId}:`)}`
           },
-          body: new URLSearchParams(Api.OAuth2.PostToken.toPasswordGrantRequestJson({
+          body: new URLSearchParams(Api.OAuth2.PostToken.Password.toRequestBodyJson({
             grant_type: 'password',
             username: askResult.username,
             password: askResult.password,
@@ -262,7 +262,7 @@ export class OAuth2Service {
 
       let resBody: any;
       try {
-        resBody = Api.OAuth2.PostToken.fromPasswordGrantResponseJson(await res.json());
+        resBody = Api.OAuth2.PostToken.Password.fromResponseBodyJson(await res.json());
       } catch (err) {
         console.error(err);
         errorMessage = String(err);
