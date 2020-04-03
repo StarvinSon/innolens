@@ -1,4 +1,4 @@
-import { singleton, injectableConstructor } from '@innolens/resolver';
+import { singleton, injectableConstructor } from '@innolens/resolver/node';
 
 import { Space, SpaceCollection } from '../db/space';
 

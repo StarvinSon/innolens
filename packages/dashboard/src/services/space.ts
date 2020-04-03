@@ -1,5 +1,5 @@
 import * as Api from '@innolens/api/web';
-import { injectableConstructor, singleton } from '@innolens/resolver';
+import { injectableConstructor, singleton } from '@innolens/resolver/web';
 
 import { mergeArray } from '../utils/immutable/array';
 import { mergeObject } from '../utils/immutable/object';

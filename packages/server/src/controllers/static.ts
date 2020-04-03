@@ -1,4 +1,4 @@
-import { singleton, map, injectableConstructor } from '@innolens/resolver';
+import { singleton, map, injectableConstructor } from '@innolens/resolver/node';
 import { NOT_FOUND } from 'http-status-codes';
 import send from 'koa-send';
 

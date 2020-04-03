@@ -1,4 +1,4 @@
-import { injectableConstructor, singleton } from '@innolens/resolver';
+import { injectableConstructor, singleton } from '@innolens/resolver/web';
 
 import { Action, AnyAction } from './state-types';
 import { Store } from './store';

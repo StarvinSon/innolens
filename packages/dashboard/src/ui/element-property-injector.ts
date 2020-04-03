@@ -1,4 +1,4 @@
-import { Resolver } from '@innolens/resolver';
+import { Resolver } from '@innolens/resolver/web';
 import { UpdatingElement } from 'lit-element';
 import {
   directive, DirectiveFn, TemplateResult,

@@ -1,4 +1,4 @@
-import { singleton, injectableConstructor } from '@innolens/resolver';
+import { singleton, injectableConstructor } from '@innolens/resolver/node';
 import { ObjectId } from 'mongodb';
 
 import { SpaceAccessRecord, SpaceAccessRecordCollection } from '../db/space-access-record';

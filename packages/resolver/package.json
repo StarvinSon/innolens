@@ -4,10 +4,11 @@
   "license": "UNLICENSED",
   "homepage": "https://i.cs.hku.hk/fyp/2019/fyp19027/",
   "repository": "https://github.com/StarvinSon/innolens/tree/develop/packages/resolver",
-  "main": "./node/index.js",
-  "module": "./web/index.js",
   "scripts": {
+    "clean": "shx rm -rf ./node ./web ./*.tsbuildinfo",
+    "lint": "run-s lint:*",
     "lint:es": "eslint --config ./.eslintrc.js --ignore-path ./.eslintignore --ext .js,.ts .",
+    "build": "run-s build:*",
     "build:node": "tsc --build ./tsconfig-node.json",
     "build:web": "tsc --build ./tsconfig-web.json"
   },
@@ -17,7 +18,9 @@
   "devDependencies": {
     "@innolens/eslint-config": "*",
     "eslint": "^6.8.0",
+    "npm-run-all": "^4.1.5",
     "reflect-metadata": "^0.1.13",
+    "shx": "^0.3.2",
     "typescript": "^3.8.3"
   },
   "private": true

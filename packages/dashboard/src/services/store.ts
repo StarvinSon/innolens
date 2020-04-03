@@ -1,4 +1,4 @@
-import { singleton, injectableConstructor } from '@innolens/resolver';
+import { singleton, injectableConstructor } from '@innolens/resolver/web';
 import {
   combineReducers, Store as ReduxStore, createStore as createReduxStore,
   ReducersMapObject

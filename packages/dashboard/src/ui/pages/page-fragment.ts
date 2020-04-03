@@ -1,4 +1,4 @@
-import { Resolver } from '@innolens/resolver';
+import { Resolver } from '@innolens/resolver/web';
 import { TemplateResult, html } from 'lit-html';
 import { classMap } from 'lit-html/directives/class-map';
 

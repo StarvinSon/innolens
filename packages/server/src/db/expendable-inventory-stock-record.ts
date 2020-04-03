@@ -1,7 +1,7 @@
 import {
   decorate, singleton, name,
   injectableFactory
-} from '@innolens/resolver';
+} from '@innolens/resolver/node';
 import { ObjectId, Collection } from 'mongodb';
 
 import { Db } from './db';

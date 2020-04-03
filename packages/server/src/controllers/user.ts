@@ -1,4 +1,4 @@
-import { singleton, injectableConstructor } from '@innolens/resolver';
+import { singleton, injectableConstructor } from '@innolens/resolver/node';
 import { NOT_IMPLEMENTED } from 'http-status-codes';
 
 import { UserService } from '../services/user';

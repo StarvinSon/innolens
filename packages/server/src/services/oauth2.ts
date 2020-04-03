@@ -1,7 +1,7 @@
 import { randomBytes } from 'crypto';
 import { promisify } from 'util';
 
-import { singleton, injectableConstructor } from '@innolens/resolver';
+import { singleton, injectableConstructor } from '@innolens/resolver/node';
 import { ObjectId } from 'mongodb';
 
 import { OAuth2Token, OAuth2Collection } from '../db/oauth2';

@@ -33,7 +33,7 @@ git clone https://github.com/StarvinSon/innolens.git innolens
 cd innolens
 ```
 
-For Node.JS modules (server, dashboard):
+For Node.JS modules (e.g. server, dashboard):
 
 ```shell
 # Make sure yarn has the right version
@@ -41,6 +41,9 @@ yarn --version
 
 # Install the dependencies
 yarn install
+
+# Build all packages
+yarn workspaces run build
 ```
 
 For Python modules:
@@ -74,3 +77,13 @@ deactivate
 ```
 
 For more information about each package, see the `README.md` in each package folder.
+
+## 3. Commands
+
+| Command | Description |
+| --- | --- |
+| yarn workspaces run clean | Clean all builds from all packages |
+| yarn workspaces run build | Build all packages |
+| yarn workspaces run lint | Lint all packages. For some packages, building is required before linting |
+
+There are extra commands for each of the packages. Refer to the documentation of the individual packages for more information.

@@ -1,7 +1,7 @@
 import {
   decorate, singleton, name,
   injectableFactory
-} from '@innolens/resolver';
+} from '@innolens/resolver/node';
 import {
   Logger as WinstonLogger, createLogger as createWinstonLogger,
   format, transports

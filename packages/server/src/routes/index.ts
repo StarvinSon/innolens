@@ -2,7 +2,7 @@ import * as Api from '@innolens/api/node';
 import {
   decorate, singleton, name,
   injectableFactory
-} from '@innolens/resolver';
+} from '@innolens/resolver/node';
 import KoaRouter from '@koa/router';
 import { DefaultState, DefaultContext } from 'koa';
 

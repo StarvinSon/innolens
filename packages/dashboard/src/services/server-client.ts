@@ -1,4 +1,4 @@
-import { injectableConstructor, singleton } from '@innolens/resolver';
+import { injectableConstructor, singleton } from '@innolens/resolver/web';
 
 import { OAuth2Service } from './oauth2';
 

@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import {
   createResolver, decorate, singleton,
   name, injectableFactory
-} from '@innolens/resolver';
+} from '@innolens/resolver/node';
 import { ObjectId } from 'mongodb';
 import yargs from 'yargs';
 

@@ -1,7 +1,7 @@
 import {
   decorate, map, singleton,
   name, injectableFactory
-} from '@innolens/resolver';
+} from '@innolens/resolver/node';
 import { MongoClient, connect } from 'mongodb';
 
 import { ServerOptions } from '../server-options';

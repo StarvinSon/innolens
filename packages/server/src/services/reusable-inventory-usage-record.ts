@@ -1,4 +1,4 @@
-import { singleton, injectableConstructor } from '@innolens/resolver';
+import { singleton, injectableConstructor } from '@innolens/resolver/node';
 import { ObjectId } from 'mongodb';
 
 import { ReusableInventoryUsageRecord, ReusableInventoryUsageRecordCollection } from '../db/reusable-inventory-usage-record';

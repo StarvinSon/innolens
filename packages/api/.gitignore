@@ -3,3 +3,4 @@
 /web/
 /tsconfig-node.tsbuildinfo
 /tsconfig-web.tsbuildinfo
+/*.log

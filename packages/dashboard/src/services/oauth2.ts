@@ -2,7 +2,7 @@ import * as Api from '@innolens/api/web';
 import {
   injectableConstructor, singleton,
   map
-} from '@innolens/resolver';
+} from '@innolens/resolver/web';
 
 import { DashboardOptions } from '../dashboard-options';
 import { mergeObject } from '../utils/immutable/object';

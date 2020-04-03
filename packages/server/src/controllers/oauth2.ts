@@ -1,5 +1,5 @@
 import * as Api from '@innolens/api/node';
-import { singleton, injectableConstructor } from '@innolens/resolver';
+import { singleton, injectableConstructor } from '@innolens/resolver/node';
 import {
   BAD_REQUEST, INTERNAL_SERVER_ERROR, UNAUTHORIZED,
   getStatusText

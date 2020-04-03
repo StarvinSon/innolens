@@ -1,4 +1,4 @@
-import { createToken } from '@innolens/resolver';
+import { createToken } from '@innolens/resolver/node';
 
 
 export interface ServerOptions {
