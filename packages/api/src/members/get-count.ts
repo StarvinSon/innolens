@@ -8,7 +8,7 @@ type ResponseData = number;
 
 export interface ResponseBody extends CommonResponse.ResponseBody<ResponseData> {}
 
-export const responseBodySchema = CommonResponse.responseBodySchema({
+export const responseBodyJsonSchema = CommonResponse.responseBodyJsonSchema({
   type: 'integer'
 });
 

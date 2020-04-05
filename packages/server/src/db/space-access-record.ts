@@ -12,7 +12,7 @@ export interface SpaceAccessRecord {
   spaceId: string;
   memberId: string;
   time: Date;
-  action: string;
+  action: 'enter' | 'exit';
 }
 
 
@@ -51,14 +51,14 @@ export const SpaceAccessRecordCollection = decorate(
               bsonType: 'date'
             },
             action: {
-              bsonType: 'string'
+              enum: ['enter', 'exit']
             }
           }
         }
       },
       indexes: [
         {
-          key: { spaceId: 1 }
+          key: { spaceId: 1, time: 1 }
         }
       ]
     })

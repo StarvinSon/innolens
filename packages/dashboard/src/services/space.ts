@@ -1,12 +1,10 @@
 import * as Api from '@innolens/api/web';
 import { injectableConstructor, singleton } from '@innolens/resolver/web';
 
-import { mergeArray } from '../utils/immutable/array';
-import { mergeObject } from '../utils/immutable/object';
-
-import { ServerClient } from './server-client';
-import { Action, AnyAction } from './state-types';
-import { Store } from './store';
+import { Debouncer } from './debouncer';
+import { EffectQueue } from './effect-queue';
+import { FileService } from './file';
+import { ServerClient, JsonBody } from './server-client';
 
 
 export interface Space {
@@ -14,63 +12,88 @@ export interface Space {
   readonly spaceName: string;
 }
 
-export interface SpaceServiceState {
-  readonly spaces: ReadonlyArray<Space> | null;
+export const spaceMemberCountHistoryGroupByValues =
+  Api.Spaces.GetSpaceMemberCountHistory.groupByQueryValues;
+
+export type SpaceMemberCountHistoryGroupByValues =
+  Api.Spaces.GetSpaceMemberCountHistory.GroupByQueryValue;
+
+export interface SpaceMemberCountHistory {
+  readonly groups: ReadonlyArray<string>;
+  readonly records: ReadonlyArray<SpaceMemberCountRecord>;
 }
 
-
-const SET_SPACES_ACTION_TYPE = 'space/spaces/SET';
-interface SetSpacesAction extends Action<typeof SET_SPACES_ACTION_TYPE> {
-  readonly spaces: ReadonlyArray<Space>;
+export interface SpaceMemberCountRecord {
+  readonly periodStartTime: Date;
+  readonly periodEndTime: Date;
+  readonly enterCounts: SpaceMemberCountRecordValues;
+  readonly uniqueEnterCounts: SpaceMemberCountRecordValues;
+  readonly exitCounts: SpaceMemberCountRecordValues;
+  readonly uniqueExitCounts: SpaceMemberCountRecordValues;
+  readonly stayCounts: SpaceMemberCountRecordValues;
+  readonly uniqueStayCounts: SpaceMemberCountRecordValues;
 }
 
-declare global {
-  namespace App {
-    interface ActionMap {
-      [SET_SPACES_ACTION_TYPE]: SetSpacesAction;
-    }
-  }
+export interface SpaceMemberCountRecordValues {
+  readonly [group: string]: number;
 }
 
-
-const KEY = 'space';
-
-@injectableConstructor(Store, ServerClient)
+@injectableConstructor({
+  serverClient: ServerClient,
+  fileService: FileService
+})
 @singleton()
 export class SpaceService extends EventTarget {
-  private readonly _store: Store;
   private readonly _serverClient: ServerClient;
+  private readonly _fileService: FileService;
 
-  private _countHistoryUpdateState: {
-    readonly type: 'idle';
-  } | {
-    readonly type: 'updating';
-    readonly promise: Promise<ReadonlyArray<Space>>;
-  } = {
-    type: 'idle'
-  };
+  private _spaces: ReadonlyArray<Space> | null = null;
 
-  public constructor(store: Store, oauth2Service: ServerClient) {
+  private _spaceMemberCountHistoryCache: {
+    readonly spaceId: string;
+    readonly groupBy: SpaceMemberCountHistoryGroupByValues;
+    readonly pastHours: number;
+    readonly data: SpaceMemberCountHistory | null
+  } | null = null;
+
+  private readonly _debouncer = new Debouncer();
+  private readonly _effectQueue = new EffectQueue();
+
+
+  public constructor(deps: {
+    readonly serverClient: ServerClient;
+    readonly fileService: FileService;
+  }) {
     super();
-    this._store = store;
-    this._serverClient = oauth2Service;
-    store.addReducer(KEY, this._reduce.bind(this));
+    ({
+      serverClient: this._serverClient,
+      fileService: this._fileService
+    } = deps);
+    if (process.env.NODE_ENV === 'development') {
+      (globalThis as any).spaceService = this;
+    }
   }
 
-  private get _state(): SpaceServiceState {
-    return this._store.getState(KEY);
-  }
 
   public get spaces(): ReadonlyArray<Space> | null {
-    return this._state.spaces;
+    return this._spaces;
+  }
+
+  public async importSpaces(file: File): Promise<void> {
+    const fileId = await this._fileService.upload(file);
+    await this._serverClient.fetchOk(
+      Api.Spaces.PostSpaces.path,
+      {
+        method: 'POST',
+        body: new JsonBody(Api.Spaces.PostSpaces.toRequestBodyJson({
+          fileId
+        }))
+      }
+    );
   }
 
   public async updateSpaces(): Promise<ReadonlyArray<Space>> {
-    if (this._countHistoryUpdateState.type === 'updating') {
-      return this._countHistoryUpdateState.promise;
-    }
-
-    const promise = Promise.resolve().then(async () => {
+    return this._debouncer.performTask('spaces', async () => {
       const json = await this._serverClient.fetchJsonOk(
         Api.Spaces.GetSpaces.path,
         {
@@ -78,63 +101,97 @@ export class SpaceService extends EventTarget {
         }
       );
       const { data } = Api.Spaces.GetSpaces.fromResponseBodyJson(json);
-      this._store.dispatch({
-        type: SET_SPACES_ACTION_TYPE,
-        spaces: data
-      });
+      this._spaces = data;
+      Promise.resolve().then(() => this._notifyUpdated('spaces'));
       return data;
     });
-
-    const updateState: SpaceService['_countHistoryUpdateState'] = {
-      type: 'updating',
-      promise
-    };
-    this._countHistoryUpdateState = updateState;
-    try {
-      return await this._countHistoryUpdateState.promise;
-    } finally {
-      if (this._countHistoryUpdateState === updateState) {
-        this._countHistoryUpdateState = {
-          type: 'idle'
-        };
-      }
-    }
   }
 
-  public async importSpaces(file: File): Promise<void> {
-    const form = new FormData();
-    form.set('file', file);
+
+  public async importSpaceAccessRecords(
+    spaceId: string,
+    deleteFromTime: Date | null,
+    deleteToTime: Date | null,
+    file: File
+  ): Promise<void> {
+    const fileId = await this._fileService.upload(file);
     await this._serverClient.fetchOk(
-      Api.Spaces.PostSpaces.path,
+      Api.Spaces.PostSpaceAccessRecords.path(spaceId),
       {
         method: 'POST',
-        body: form
+        body: new JsonBody(Api.Spaces.PostSpaceAccessRecords.toRequestBodyJson({
+          deleteFromTime,
+          deleteToTime,
+          fileId
+        }))
       }
     );
   }
 
-  private _reduce(
-    state: SpaceServiceState = {
-      spaces: null
-    },
-    action: AnyAction
-  ): SpaceServiceState {
-    switch (action.type) {
-      case SET_SPACES_ACTION_TYPE: {
-        return mergeObject(
-          state,
+
+  private _getSpaceMemberCountHistoryQuery(
+    spaceId: string,
+    groupBy: SpaceMemberCountHistoryGroupByValues,
+    pastHours: number
+  ): string {
+    const params = new URLSearchParams();
+    params.set('spaceId', spaceId);
+    params.set('groupBy', groupBy);
+    params.set('pastHours', String(pastHours));
+    return params.toString();
+  }
+
+  public getSpaceMemberCountHistory(
+    spaceId: string,
+    groupBy: SpaceMemberCountHistoryGroupByValues,
+    pastHours: number
+  ): SpaceMemberCountHistory | null {
+    if (
+      this._spaceMemberCountHistoryCache !== null
+      && this._spaceMemberCountHistoryCache.spaceId === spaceId
+      && this._spaceMemberCountHistoryCache.groupBy === groupBy
+      && this._spaceMemberCountHistoryCache.pastHours === pastHours
+    ) {
+      return this._spaceMemberCountHistoryCache.data;
+    }
+    return null;
+  }
+
+  public async updateSpaceMemberCountHistory(
+    spaceId: string,
+    groupBy: SpaceMemberCountHistoryGroupByValues,
+    pastHours: number
+  ): Promise<SpaceMemberCountHistory> {
+    const query = this._getSpaceMemberCountHistoryQuery(spaceId, groupBy, pastHours);
+    return this._debouncer.performTask(`history?${query}`, async () =>
+      this._effectQueue.queue('history', async (applyEffect) => {
+        const url = new URL(
+          Api.Spaces.GetSpaceMemberCountHistory.path(spaceId),
+          globalThis.location.href
+        );
+        url.search = query;
+        const json = await this._serverClient.fetchJsonOk(
+          url.href,
           {
-            spaces: mergeArray<Space>(
-              state.spaces,
-              action.spaces,
-              mergeObject
-            )
+            cache: 'no-store'
           }
         );
-      }
-      default: {
-        return state;
-      }
-    }
+        const { data } = Api.Spaces.GetSpaceMemberCountHistory.fromResponseBodyJson(json);
+        applyEffect(() => {
+          this._spaceMemberCountHistoryCache = {
+            spaceId,
+            groupBy,
+            pastHours,
+            data
+          };
+          Promise.resolve().then(() => this._notifyUpdated('space-member-count-history'));
+        });
+        return data;
+      }));
+  }
+
+
+  private _notifyUpdated(type: string): void {
+    this.dispatchEvent(new Event(`${type}-updated`));
   }
 }

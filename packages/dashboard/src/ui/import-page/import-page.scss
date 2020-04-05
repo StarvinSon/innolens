@@ -4,19 +4,19 @@
 @use '../elevation-shadow';
 
 
-@mixin _card-title() {
+@mixin _card-title-typography() {
   @include typography.h4();
 }
 
-@mixin _card-message() {
+@mixin _card-message-typography() {
   font-family: monospace;
 }
 
-@mixin _form-label() {
+@mixin _form-label-typography() {
   @include typography.base();
 }
 
-@mixin _form-file-input() {
+@mixin _form-file-input-typography() {
   @include typography.base();
 }
 
@@ -50,7 +50,7 @@
   }
 
   &__title {
-    @include _card-title();
+    @include _card-title-typography();
     margin: 0rem;
     color: var(theme.$on-background);
   }
@@ -60,7 +60,7 @@
   }
 
   &__message {
-    @include _card-message();
+    @include _card-message-typography();
     margin: 0rem;
     margin-top: 2rem;
     color: var(theme.$on-background);
@@ -76,7 +76,7 @@
   flex-direction: column;
 
   &__label {
-    @include _form-label();
+    @include _form-label-typography();
     color: var(theme.$on-background);
 
     &:not(:first-child) {
@@ -85,7 +85,7 @@
   }
 
   &__file-input {
-    @include _form-file-input();
+    @include _form-file-input-typography();
     color: var(theme.$on-background);
   }
 

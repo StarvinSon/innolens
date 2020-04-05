@@ -15,11 +15,16 @@ export class Validator<T> {
 
   private _lastValidationError = '';
 
-  public constructor(schema: object) {
+  public constructor(schema: object, defSchemas?: Readonly<Record<string, object>>) {
     this._ajv = new Ajv({
       strictDefaults: true,
       strictKeywords: true
     });
+    if (defSchemas !== undefined) {
+      for (const [id, def] of Object.entries(defSchemas)) {
+        this._ajv.addSchema(def, id);
+      }
+    }
     this._validationFunc = this._ajv.compile(schema);
   }
 

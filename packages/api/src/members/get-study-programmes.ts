@@ -8,7 +8,7 @@ type ResponseData = ReadonlyArray<string>;
 
 export interface ResponseBody extends CommonResponse.ResponseBody<ResponseData> {}
 
-export const responseBodySchema = CommonResponse.responseBodySchema({
+export const responseBodyJsonSchema = CommonResponse.responseBodyJsonSchema({
   type: 'array',
   items: {
     type: 'string'

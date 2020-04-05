@@ -4,30 +4,47 @@ import { ToJson } from '../conversion';
 export const path = '/api/spaces';
 
 
-export const requestFileColumns = [
-  'space_id',
-  'space_name'
-] as const;
-
 export interface RequestBody {
-  readonly file: ReadonlyArray<Readonly<Record<(typeof requestFileColumns)[number], string>>>;
+  readonly fileId: string;
 }
 
-export const requestBodySchema: object = {
+export type RequestBodyJson = ToJson<RequestBody>;
+
+export const requestBodyJsonSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['file'],
+  required: ['fileId'],
   properties: {
-    file: {
-      type: 'array',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        required: requestFileColumns,
-        properties: Object.fromEntries(requestFileColumns.map((name) => [name, { type: 'string' }]))
-      }
+    fileId: {
+      type: 'string'
     }
   }
 };
 
-export const fromRequestBodyJson = (json: ToJson<RequestBody>): RequestBody => json;
+export const toRequestBodyJson = (obj: RequestBody): RequestBodyJson => obj;
+
+export const fromRequestBodyJson = (json: RequestBodyJson): RequestBody => json;
+
+
+export interface FileRecord {
+  readonly space_id: string;
+  readonly space_name: string;
+}
+
+export type FileRecordJson = ToJson<FileRecord>;
+
+export const fileRecordJsonSchema: object = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['space_id', 'space_name'],
+  properties: {
+    space_id: {
+      type: 'string'
+    },
+    space_name: {
+      type: 'string'
+    }
+  }
+};
+
+export const fromFileRecordJson = (json: FileRecordJson): FileRecord => json;

@@ -5,3 +5,6 @@ export const fromAsync = async <T>(iterable: Iterable<T> | AsyncIterable<T>): Pr
   }
   return result;
 };
+
+export const contains = <T>(arr: ReadonlyArray<T>, val: unknown): val is T =>
+  arr.includes(val as any);

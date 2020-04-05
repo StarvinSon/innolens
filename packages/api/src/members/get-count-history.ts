@@ -37,7 +37,7 @@ interface ResponseData {
 
 export interface ResponseBody extends CommonResponse.ResponseBody<ResponseData> {}
 
-export const responseBodySchema = CommonResponse.responseBodySchema({
+export const responseBodyJsonSchema = CommonResponse.responseBodyJsonSchema({
   type: 'object',
   additionalProperties: false,
   required: ['categories', 'records'],

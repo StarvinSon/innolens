@@ -5,13 +5,17 @@ export interface ResponseBody<T> {
   readonly data: T;
 }
 
-export const responseBodySchema = (dataSchema: object): object => ({
+export const responseBodyJsonSchema = (
+  dataSchema: object,
+  definitions?: Readonly<Record<string, object>>
+): object => ({
   type: 'object',
   additionalProperties: false,
   required: ['data'],
   properties: {
     data: dataSchema
-  }
+  },
+  definitions: definitions ?? {}
 });
 
 export const toResponseBodyJson = <T>(toJsonData: (data: T) => ToJson<T>) =>

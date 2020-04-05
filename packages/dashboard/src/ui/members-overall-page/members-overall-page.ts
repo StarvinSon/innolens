@@ -41,6 +41,10 @@ export class MembersOverallPage extends LitElement {
 
 
   @property({ attribute: false })
+  public interactable = false;
+
+
+  @property({ attribute: false })
   private _historyCategory: MemberCountHistoryCategory = 'department';
 
   @property({ attribute: false })
@@ -117,6 +121,10 @@ export class MembersOverallPage extends LitElement {
       this._pieChartDataDeps = [countHistory];
     }
     return this._pieChartDataCache;
+  }
+
+  protected shouldUpdate(changedProps: PropertyValues): boolean {
+    return super.shouldUpdate(changedProps) && this.interactable;
   }
 
   protected render(): TemplateResult {

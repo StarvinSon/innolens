@@ -3,8 +3,11 @@ import { Validator } from '../../utils/validator';
 import { Middleware } from '../middleware';
 
 
-export const validateResponseBody = (schema: object): MethodDecorator => wrapMethod((method) => {
-  const validator = new Validator(schema);
+export const validateResponseBody = (
+  schema: object,
+  defSchemas?: Readonly<Record<string, object>>
+): MethodDecorator => wrapMethod((method) => {
+  const validator = new Validator(schema, defSchemas);
   const validate: Middleware = async function(this: object, ctx, next) {
     await Reflect.apply(method, this, [ctx, next]);
     if (!validator.validate(ctx.body)) {

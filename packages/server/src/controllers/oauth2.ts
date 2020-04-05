@@ -154,7 +154,7 @@ export class OAuth2Controller extends useParseRequestBody(useAuthenticateClient(
   ])
   @authenticateClient()
   @parseRequestBody('application/x-www-form-urlencoded')
-  @validateRequestBody(Api.OAuth2.PostToken.Base.requestBodySchema)
+  @validateRequestBody(Api.OAuth2.PostToken.Base.requestBodyJsonSchema)
   public async postToken(ctx: Context): Promise<void> {
     const body = Api.OAuth2.PostToken.Base.fromRequestBodyJson(getRequestBody(ctx));
     switch (body.grant_type) {
@@ -170,8 +170,8 @@ export class OAuth2Controller extends useParseRequestBody(useAuthenticateClient(
     }
   }
 
-  @validateRequestBody(Api.OAuth2.PostToken.Password.requestBodySchema)
-  @validateResponseBody(Api.OAuth2.PostToken.Password.responseBodySchema)
+  @validateRequestBody(Api.OAuth2.PostToken.Password.requestBodyJsonSchema)
+  @validateResponseBody(Api.OAuth2.PostToken.Password.responseBodyJsonSchema)
   private async _handlePasswordGrant(ctx: Context): Promise<void> {
     const client = getAuthenticatedClient(ctx);
 
@@ -206,8 +206,8 @@ export class OAuth2Controller extends useParseRequestBody(useAuthenticateClient(
     });
   }
 
-  @validateRequestBody(Api.OAuth2.PostToken.Refresh.requestBodySchema)
-  @validateResponseBody(Api.OAuth2.PostToken.Refresh.responseBodySchema)
+  @validateRequestBody(Api.OAuth2.PostToken.Refresh.requestBodyJsonSchema)
+  @validateResponseBody(Api.OAuth2.PostToken.Refresh.responseBodyJsonSchema)
   private async _handleRefreshTokenGrant(ctx: Context): Promise<void> {
     const body = Api.OAuth2.PostToken.Refresh.fromRequestBodyJson(getRequestBody(ctx));
     const { refresh_token: refreshToken } = body;

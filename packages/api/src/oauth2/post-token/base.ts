@@ -5,7 +5,7 @@ export interface RequestBody {
   readonly grant_type: string;
 }
 
-export const requestBodySchema: object = {
+export const requestBodyJsonSchema: object = {
   type: 'object',
   required: ['grant_type'],
   properties: {

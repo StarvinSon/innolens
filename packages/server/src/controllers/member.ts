@@ -58,7 +58,7 @@ export class MemberController extends useParseRequestBody(useAuthenticateUser(Ob
   }
 
   @authenticateUser()
-  @validateResponseBody(Api.Members.GetDepartments.responseBodySchema)
+  @validateResponseBody(Api.Members.GetDepartments.responseBodyJsonSchema)
   public async getDepartments(ctx: Context): Promise<void> {
     const departments = await this._memberService.getDepartments();
     ctx.body = Api.Members.GetDepartments.toResponseBodyJson({
@@ -67,7 +67,7 @@ export class MemberController extends useParseRequestBody(useAuthenticateUser(Ob
   }
 
   @authenticateUser()
-  @validateResponseBody(Api.Members.GetTypesOfStudy.responseBodySchema)
+  @validateResponseBody(Api.Members.GetTypesOfStudy.responseBodyJsonSchema)
   public async getTypesOfStudy(ctx: Context): Promise<void> {
     const typesOfStudy = await this._memberService.getTypesOfStudy();
     ctx.body = Api.Members.GetTypesOfStudy.toResponseBodyJson({
@@ -76,7 +76,7 @@ export class MemberController extends useParseRequestBody(useAuthenticateUser(Ob
   }
 
   @authenticateUser()
-  @validateResponseBody(Api.Members.GetStudyProgrammes.responseBodySchema)
+  @validateResponseBody(Api.Members.GetStudyProgrammes.responseBodyJsonSchema)
   public async getStudyProgrammes(ctx: Context): Promise<void> {
     const studyProgrammes = await this._memberService.getStudyProgrammes();
     ctx.body = Api.Members.GetStudyProgrammes.toResponseBodyJson({
@@ -85,7 +85,7 @@ export class MemberController extends useParseRequestBody(useAuthenticateUser(Ob
   }
 
   @authenticateUser()
-  @validateResponseBody(Api.Members.GetYearsOfStudy.responseBodySchema)
+  @validateResponseBody(Api.Members.GetYearsOfStudy.responseBodyJsonSchema)
   public async getYearsOfStudy(ctx: Context): Promise<void> {
     const yearsOfStudy = await this._memberService.getYearsOfStudy();
     ctx.body = Api.Members.GetYearsOfStudy.toResponseBodyJson({
@@ -94,7 +94,7 @@ export class MemberController extends useParseRequestBody(useAuthenticateUser(Ob
   }
 
   @authenticateUser()
-  @validateResponseBody(Api.Members.GetAffiliatedStudentInterestGroups.responseBodySchema)
+  @validateResponseBody(Api.Members.GetAffiliatedStudentInterestGroups.responseBodyJsonSchema)
   public async getAffiliatedStudentInterestGroups(ctx: Context): Promise<void> {
     const interestGroups = await this._memberService.getAffiliatedStudentInterestGroups();
     ctx.body = Api.Members.GetAffiliatedStudentInterestGroups.toResponseBodyJson({
@@ -103,7 +103,7 @@ export class MemberController extends useParseRequestBody(useAuthenticateUser(Ob
   }
 
   @authenticateUser()
-  @validateResponseBody(Api.Members.GetCount.responseBodySchema)
+  @validateResponseBody(Api.Members.GetCount.responseBodyJsonSchema)
   public async getCount(ctx: Context): Promise<void> {
     const filter: Writable<Parameters<MemberService['getCount']>[0]> = {};
     const keys = [
@@ -126,7 +126,7 @@ export class MemberController extends useParseRequestBody(useAuthenticateUser(Ob
   }
 
   @authenticateUser()
-  @validateResponseBody(Api.Members.GetCountHistory.responseBodySchema)
+  @validateResponseBody(Api.Members.GetCountHistory.responseBodyJsonSchema)
   public async getCountHistory(ctx: Context): Promise<void> {
     const { category, range } = ctx.query as Record<string, string>;
     if (
@@ -156,7 +156,7 @@ export class MemberController extends useParseRequestBody(useAuthenticateUser(Ob
   @authenticateUser()
   @parseRequestBody('multipart/form-data')
   @parseRequestBodyCsv('file')
-  @validateRequestBody(Api.Members.PostMembers.requestBodySchema)
+  @validateRequestBody(Api.Members.PostMembers.requestBodyJsonSchema)
   public async postMembers(ctx: Context): Promise<void> {
     const { file } = Api.Members.PostMembers.fromRequestBodyJson(getRequestBody(ctx));
     await this._memberService.import(file.map((record) => ({

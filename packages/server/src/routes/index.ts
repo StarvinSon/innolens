@@ -6,6 +6,7 @@ import {
 import KoaRouter from '@koa/router';
 import { DefaultState, DefaultContext } from 'koa';
 
+import { FileController } from '../controllers/file';
 import { MemberController } from '../controllers/member';
 import { OAuth2Controller } from '../controllers/oauth2';
 import { SpaceController } from '../controllers/space';
@@ -21,8 +22,9 @@ const bindControllerMethods = <T extends Readonly<Record<string, object>>>(obj: 
 export interface Router extends KoaRouter<DefaultState, DefaultContext> {}
 
 export const Router = decorate(
-  name('createRoutes'),
+  name('Router'),
   injectableFactory({
+    file: FileController,
     member: MemberController,
     oauth2: OAuth2Controller,
     space: SpaceController,
@@ -30,6 +32,7 @@ export const Router = decorate(
   }),
   singleton(),
   (_controllers: {
+    file: FileController,
     member: MemberController,
     oauth2: OAuth2Controller,
     space: SpaceController,
@@ -37,6 +40,9 @@ export const Router = decorate(
   }): Router => {
     const controllers = bindControllerMethods(_controllers);
     const router: Router = new KoaRouter();
+
+    // file
+    router.post(Api.Files.PostFile.path, controllers.file.postFile);
 
     // member
     router.get(Api.Members.GetDepartments.path, controllers.member.getDepartments);
@@ -53,7 +59,9 @@ export const Router = decorate(
 
     // space
     router.post(Api.Spaces.PostSpaces.path, controllers.space.postSpaces);
+    router.post(Api.Spaces.PostSpaceAccessRecords.path(':spaceId'), controllers.space.postSpaceAccessRecords);
     router.get(Api.Spaces.GetSpaces.path, controllers.space.getSpaces);
+    router.get(Api.Spaces.GetSpaceMemberCountHistory.path(':spaceId'), controllers.space.getSpaceMemberCountHistory);
 
     // fallback
     router.get(':subPath(.*)', controllers.static.get);

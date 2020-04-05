@@ -1,5 +1,6 @@
 @use '../theme';
 @use '../typography';
+@use './variables';
 
 
 @mixin _title() {
@@ -41,7 +42,7 @@
   &::before {
     content: '';
     display: block;
-    padding-bottom: 67%;
+    padding-bottom: var(variables.$content-aspect-ratio, 67%);
   }
 
   &__content {

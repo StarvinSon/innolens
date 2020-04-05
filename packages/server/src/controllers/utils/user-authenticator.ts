@@ -53,6 +53,15 @@ export const getUserAuthenticationResult = (ctx: Context): UserAuthenticationRes
   return result;
 };
 
+export const getOAuth2Token = (ctx: Context): OAuth2Token => {
+  const result = getUserAuthenticationResult(ctx);
+  if (result.type === 'failed') {
+    Error.captureStackTrace(result.error, getOAuth2Token);
+    throw result.error;
+  }
+  return result.oauth2Token;
+};
+
 export const getAuthenticatedUser = async (ctx: Context): Promise<User> => {
   const result = getUserAuthenticationResult(ctx);
   if (result.type === 'failed') {
@@ -66,7 +75,6 @@ export const getAuthenticatedUser = async (ctx: Context): Promise<User> => {
 export const useAuthenticateUser$oauth2ServiceSym = Symbol('useAuthenticateUser$oauth2Service');
 export const useAuthenticateUser$clientServiceSym = Symbol('useAuthenticateUser$clientService');
 export const useAuthenticateUser$userServiceSym = Symbol('useAuthenticateUser$userService');
-
 
 declare abstract class UseAuthenticateUser {
   public constructor(...args: Array<any>);

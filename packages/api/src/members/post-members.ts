@@ -20,7 +20,7 @@ export interface RequestBody {
   file: ReadonlyArray<Readonly<Record<(typeof requestFileColumns)[number], string>>>;
 }
 
-export const requestBodySchema: object = {
+export const requestBodyJsonSchema: object = {
   type: 'object',
   additionalProperties: false,
   required: ['file'],

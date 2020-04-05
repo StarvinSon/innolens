@@ -40,10 +40,11 @@ const validateInternal = (ctx: Context, validator: Validator<unknown>): RequestB
 
 export const validateRequestBody = (
   schema: object,
+  defSchemas?: Readonly<Record<string, object>>,
   options?: { readonly noThrow?: boolean; }
 ): MethodDecorator => {
   const { noThrow = false } = options ?? {};
-  const validator = new Validator(schema);
+  const validator = new Validator(schema, defSchemas);
 
   return wrapMethod((method) => {
     const validate: Middleware = async function(this: object, ctx, next) {

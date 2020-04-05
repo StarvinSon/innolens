@@ -8,7 +8,7 @@ export interface RequestBody {
   readonly scope: string;
 }
 
-export const requestBodySchema: object = {
+export const requestBodyJsonSchema: object = {
   type: 'object',
   required: ['grant_type', 'username', 'password', 'scope'],
   additionalProperties: false,
@@ -43,7 +43,7 @@ export interface ResponseBody {
   readonly refresh_token?: string;
 }
 
-export const responseBodySchema: object = {
+export const responseBodyJsonSchema: object = {
   type: 'object',
   additionalProperties: false,
   required: [

@@ -1,0 +1,15 @@
+:host {
+  display: block;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.date-input {
+  /*! empty */
+}
+
+.time-input {
+  /*! empty */
+}

@@ -42,6 +42,10 @@ export class MembersGroupsPage extends LitElement {
 
 
   @property({ attribute: false })
+  public interactable = false;
+
+
+  @property({ attribute: false })
   private _selectedDepartments: ReadonlyArray<string> = [];
 
   @property({ attribute: false })
@@ -131,6 +135,10 @@ export class MembersGroupsPage extends LitElement {
       this._lineChartDataDeps = [countHistory];
     }
     return this._lineChartDataCache;
+  }
+
+  protected shouldUpdate(changedProps: PropertyValues): boolean {
+    return super.shouldUpdate(changedProps) && this.interactable;
   }
 
   protected render(): TemplateResult {

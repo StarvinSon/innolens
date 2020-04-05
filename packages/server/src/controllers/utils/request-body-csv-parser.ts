@@ -1,4 +1,3 @@
-
 import { createReadStream } from 'fs';
 
 import parseCsv from 'csv-parse';
