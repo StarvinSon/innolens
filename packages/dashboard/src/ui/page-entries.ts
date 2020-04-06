@@ -82,32 +82,15 @@ export const pageEntries: ReadonlyArray<PageEntry | PageGroupEntry> = [
     ]
   },
   {
-    type: 'pageGroupEntry',
+    type: 'pageEntry',
     name: 'Spaces',
-    pages: [
-      {
-        type: 'pageEntry',
-        name: 'All spaces',
-        href: '/spaces',
-        pathRegExp: /^\/spaces$/,
-        load: async () => void import(
-          /* webpackChunkName: 'spaces-page' */
-          './spaces-page'
-        ),
-        tagName: 'inno-spaces-page'
-      },
-      {
-        type: 'pageEntry',
-        name: 'Spaces (Old)',
-        href: '/spaces-old',
-        pathRegExp: /^\/spaces-old$/,
-        load: async () => void import(
-          /* webpackChunkName: 'spaces-page-old' */
-          './spaces-page-old'
-        ),
-        tagName: 'inno-spaces-page-old'
-      }
-    ]
+    href: '/spaces',
+    pathRegExp: /^\/spaces$/,
+    load: async () => void import(
+      /* webpackChunkName: 'spaces-page' */
+      './spaces-page'
+    ),
+    tagName: 'inno-spaces-page'
   },
   {
     type: 'pageGroupEntry',
