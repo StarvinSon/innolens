@@ -4,5 +4,5 @@ from .machine import Machine
 
 
 class MetalLaserCutMachine(Machine):
-  machine_id = 'metal_laser_cut_machine'
-  machine_name = 'Metal Laser Cut Machine'
+  type_id = 'metal_laser_cut_machine'
+  type_name = 'Metal Laser Cut Machine'

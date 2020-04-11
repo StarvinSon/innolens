@@ -1,26 +1,25 @@
 from __future__ import annotations
 
-from typing import Any, MutableSet, MutableMapping, Mapping, Tuple, Iterator
+from typing import Any, Mapping, MutableMapping, MutableSet, Iterator, Tuple
 
 import pandas as pd
 
 from ..engine.object import Object
 from ..utils.time import hk_timezone
 
-from .machine import Machine
+from .reusable_inventory import ReusableInventory
 
 
-def get_machine_type_df(world: Object) -> pd.DataFrame:
+def get_reusable_inventory_type_df(world: Object) -> pd.DataFrame:
 
   def iterate_rows() -> Iterator[Mapping[str, Any]]:
     type_ids: MutableSet[str] = set()
-    for machine in world.find_components(Machine, recursive=True):
-      type_id = machine.type_id
-      if type_id not in type_ids:
-        type_ids.add(type_id)
+    for inventory in world.find_components(ReusableInventory, recursive=True):
+      if inventory.type_id not in type_ids:
+        type_ids.add(inventory.type_id)
         yield {
-          'type_id': machine.type_id,
-          'type_name': machine.type_name
+          'type_id': inventory.type_id,
+          'type_name': inventory.type_name
         }
 
   rows = list(iterate_rows())
@@ -34,21 +33,21 @@ def get_machine_type_df(world: Object) -> pd.DataFrame:
   assert df.notna().all(axis=None)
   return df
 
-def get_machine_instance_dfs(world: Object) -> Mapping[str, pd.DataFrame]:
+def get_reusable_inventory_instance_dfs(world: Object) -> Mapping[str, pd.DataFrame]:
   type_instances: MutableMapping[str, MutableMapping[str, Mapping[str, Any]]] = {}
 
-  for machine in world.find_components(Machine, recursive=True):
-    instances = type_instances.get(machine.type_id)
+  for inventory in world.find_components(ReusableInventory, recursive=True):
+    instances = type_instances.get(inventory.type_id)
     if instances is None:
       instances = {}
-      type_instances[machine.type_id] = instances
+      type_instances[inventory.type_id] = instances
 
-    if machine.instance_id in instances:
-      raise Exception(f'Duplicated machine with id {machine.type_id} and instance id {machine.instance_id}')
+    if inventory.instance_id in instances:
+      raise Exception(f'Duplicated inventory with id {inventory.type_id} and instance id {inventory.instance_id}')
 
-    instances[machine.instance_id] = {
-      'instance_id': machine.instance_id,
-      'instance_name': machine.instance_name
+    instances[inventory.instance_id] = {
+      'instance_id': inventory.instance_id,
+      'instance_name': inventory.instance_name
     }
 
   def iterate_dfs() -> Iterator[Tuple[str, pd.DataFrame]]:
@@ -66,23 +65,21 @@ def get_machine_instance_dfs(world: Object) -> Mapping[str, pd.DataFrame]:
   return dict(iterate_dfs())
 
 
-def get_machine_access_record_dfs(world: Object) -> Mapping[Tuple[str, str], pd.DataFrame]:
+def get_reusable_inventory_access_record_dfs(world: Object) -> Mapping[Tuple[str, str], pd.DataFrame]:
 
   def iterate_entries() -> Iterator[Tuple[Tuple[str, str], pd.DataFrame]]:
     ids: MutableSet[Tuple[str, str]] = set()
+    for inventory in world.find_components(ReusableInventory, recursive=True):
+      if (inventory.type_id, inventory.instance_id) in ids:
+        raise Exception(f'Duplicated inventory type id {inventory.type_id} with instance id {inventory.instance_id}')
+      ids.add((inventory.type_id, inventory.instance_id))
 
-    for machine in world.find_components(Machine, recursive=True):
-      if (machine.type_id, machine.instance_id) in ids:
-        raise Exception(f'Duplicated machine with id {machine.type_id} and instance id {machine.instance_id}')
-      ids.add((machine.type_id, machine.instance_id))
-
-      rows = list(
-        {
+      rows = list({
           'time': time.astimezone(hk_timezone).isoformat(),
           'member_id': member_id,
           'action': action
         }
-        for time, member_id, action in machine.log
+        for time, member_id, action in inventory.log
       )
       df = pd.DataFrame({
         name: pd.Series((row[name] for row in rows), dtype=dtype)
@@ -93,6 +90,6 @@ def get_machine_access_record_dfs(world: Object) -> Mapping[Tuple[str, str], pd.
         }.items()
       })
       assert df.notna().all(axis=None)
-      yield ((machine.type_id, machine.instance_id), df)
+      yield ((inventory.type_id, inventory.instance_id), df)
 
   return dict(iterate_entries())

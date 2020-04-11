@@ -30,6 +30,7 @@ python -m [Command]
 | ------- | ----- |
 | innolens_simulator | Run the simulator. The output is written to `./simulation_result` by default |
 | mypy --config-file ./mypy.ini --package innolens_simulator | Use mypy to type check the code |
+| pyflakes ./innolens_simulator | Use pyflakes to check if there is any unused imports |
 
 ### 4.2. Type Safety
 

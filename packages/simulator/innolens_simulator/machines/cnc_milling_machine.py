@@ -4,5 +4,5 @@ from .machine import Machine
 
 
 class CNCMillingMachine(Machine):
-  machine_id = 'cnc_milling_machine'
-  machine_name = 'CNC Milling Machine'
+  type_id = 'cnc_milling_machine'
+  type_name = 'CNC Milling Machine'

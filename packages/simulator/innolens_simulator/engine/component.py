@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Callable, TypeVar
+from typing import TYPE_CHECKING, Callable, TypeVar
 from typing_extensions import Final
 
 if TYPE_CHECKING:

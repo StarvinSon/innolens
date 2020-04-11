@@ -8,7 +8,7 @@ from ..engine.object import Object
 from ..users.member import Member
 from ..spaces.inno_wing import InnoWing
 from ..spaces.ar_vr_room import ArVrRoom
-from ..inventories.vr_gadget import VrGadget
+from ..reusable_inventories.vr_gadget import VrGadget
 
 
 class InnoLensMember(Component):

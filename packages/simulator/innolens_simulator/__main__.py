@@ -4,15 +4,14 @@ from argparse import ArgumentParser
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Mapping
-from typing_extensions import Final
 
 import pandas as pd
 
 from .engine import create_engine
 from .users import add_users, get_members_df
 from .spaces import add_spaces, get_space_df, get_space_access_record_dfs
-from .machines import get_machine_df, get_machine_access_record_dfs
-from .inventories import get_inventory_df, get_inventory_access_record_dfs
+from .machines import get_machine_type_df, get_machine_instance_dfs, get_machine_access_record_dfs
+from .reusable_inventories import get_reusable_inventory_type_df, get_reusable_inventory_instance_dfs, get_reusable_inventory_access_record_dfs
 from .utils.time import hk_timezone
 
 
@@ -38,20 +37,31 @@ engine.run()
 
 dfs: Mapping[str, pd.DataFrame] = {
   'members.csv': get_members_df(engine.world),
+
   'spaces.csv': get_space_df(engine.world),
-  'machines.csv': get_machine_df(engine.world),
-  'inventories.csv': get_inventory_df(engine.world),
   **{
     f'space_access_records/{space_id}.csv': df
     for space_id, df in get_space_access_record_dfs(engine.world).items()
   },
+
+  'machine_types.csv': get_machine_type_df(engine.world),
   **{
-    f'machine_access_records/{machine_id}/{instance_id}.csv': df
-    for (machine_id, instance_id), df in get_machine_access_record_dfs(engine.world).items()
+    f'machine_instances/{type_id}.csv': df
+    for type_id, df in get_machine_instance_dfs(engine.world).items()
   },
   **{
-    f'inventory_access_records/{inventory_id}/{instance_id}.csv': df
-    for (inventory_id, instance_id), df in get_inventory_access_record_dfs(engine.world).items()
+    f'machine_access_records/{type_id}/{instance_id}.csv': df
+    for (type_id, instance_id), df in get_machine_access_record_dfs(engine.world).items()
+  },
+
+  'reusable_inventory_types.csv': get_reusable_inventory_type_df(engine.world),
+  **{
+    f'reusable_inventory_instances/{type_id}.csv': df
+    for type_id, df in get_reusable_inventory_instance_dfs(engine.world).items()
+  },
+  **{
+    f'reusable_inventory_access_records/{inventory_id}/{instance_id}.csv': df
+    for (inventory_id, instance_id), df in get_reusable_inventory_access_record_dfs(engine.world).items()
   }
 }
 

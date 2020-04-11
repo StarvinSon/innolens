@@ -10,8 +10,8 @@ from ..users.member import Member
 
 
 class Machine(Component):
-  machine_id: ClassVar[str] = ''
-  machine_name: ClassVar[str] = ''
+  type_id: ClassVar[str] = ''
+  type_name: ClassVar[str] = ''
 
   instance_id: str = ''
   instance_name: str = ''
@@ -27,11 +27,11 @@ class Machine(Component):
     return self.__log
 
   def _on_late_init(self) -> None:
-    assert self.machine_id != ''
-    assert self.machine_name != ''
+    assert self.type_id != ''
+    assert self.type_name != ''
     assert self.instance_id != ''
     if self.instance_name == '':
-      self.instance_name = f'{self.machine_name} {self.instance_id}'
+      self.instance_name = f'{self.type_name} {self.instance_id}'
 
   def acquire(self, member: Member) -> None:
     self.__log.append((self.engine.clock.current_time, member.member_id, 'acquire'))

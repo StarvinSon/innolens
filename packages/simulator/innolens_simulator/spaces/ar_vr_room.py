@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ..engine.object import Object
-from ..inventories.vr_gadget import VrGadget
+from ..reusable_inventories.vr_gadget import VrGadget
 
 from .space import Space
 

@@ -9,9 +9,9 @@ from ..engine.component import Component
 from ..users.member import Member
 
 
-class Inventory(Component):
-  inventory_id: ClassVar[str] = ''
-  inventory_name: ClassVar[str] = ''
+class ReusableInventory(Component):
+  type_id: ClassVar[str] = ''
+  type_name: ClassVar[str] = ''
 
   instance_id: str = ''
   instance_name: str = ''
@@ -27,11 +27,11 @@ class Inventory(Component):
     return self.__log
 
   def _on_late_init(self) -> None:
-    assert self.inventory_id != ''
-    assert self.inventory_name != ''
+    assert self.type_id != ''
+    assert self.type_name != ''
     assert self.instance_id != ''
     if self.instance_name == '':
-      self.instance_name = f'{self.inventory_name} {self.instance_id}'
+      self.instance_name = f'{self.type_name} {self.instance_id}'
 
   def acquire(self, member: Member) -> None:
     self.__log.append((self.engine.clock.current_time, member.member_id, 'acquire'))
