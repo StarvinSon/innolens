@@ -1,2 +1,4 @@
-/node/
-/web/
+/*
+!/tools-src
+!/runtime-src
+!/legacy-src

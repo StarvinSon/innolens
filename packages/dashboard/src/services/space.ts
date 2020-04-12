@@ -1,10 +1,10 @@
-import * as Api from '@innolens/api/web';
+import * as Api from '@innolens/api/legacy/web';
 import { injectableConstructor, singleton } from '@innolens/resolver/web';
 
 import { Debouncer } from './debouncer';
 import { EffectQueue } from './effect-queue';
 import { FileService } from './file';
-import { ServerClient, JsonBody } from './server-client';
+import { ServerService, JsonBody } from './server';
 
 
 export interface Space {
@@ -39,12 +39,12 @@ export interface SpaceMemberCountRecordValues {
 }
 
 @injectableConstructor({
-  serverClient: ServerClient,
+  serverClient: ServerService,
   fileService: FileService
 })
 @singleton()
 export class SpaceService extends EventTarget {
-  private readonly _serverClient: ServerClient;
+  private readonly _serverClient: ServerService;
   private readonly _fileService: FileService;
 
   private _spaces: ReadonlyArray<Space> | null = null;
@@ -61,7 +61,7 @@ export class SpaceService extends EventTarget {
 
 
   public constructor(deps: {
-    readonly serverClient: ServerClient;
+    readonly serverClient: ServerService;
     readonly fileService: FileService;
   }) {
     super();

@@ -1,11 +1,11 @@
-import * as Api from '@innolens/api/web';
+import * as Api from '@innolens/api/legacy/web';
 import { injectableConstructor, singleton } from '@innolens/resolver/web';
 
 import { mergeArray } from '../utils/immutable/array';
 import { mergeObject } from '../utils/immutable/object';
 import { mergeObjectMap } from '../utils/immutable/object-map';
 
-import { ServerClient } from './server-client';
+import { ServerService } from './server';
 import { Action, AnyAction } from './state-types';
 import { Store } from './store';
 
@@ -98,15 +98,15 @@ declare global {
 
 const KEY = 'member';
 
-@injectableConstructor(Store, ServerClient)
+@injectableConstructor(Store, ServerService)
 @singleton()
 export class MemberService extends EventTarget {
   private readonly _store: Store;
-  private readonly _serverClient: ServerClient;
+  private readonly _serverClient: ServerService;
 
   private readonly _updatingPromises: Map<string, Promise<any>> = new Map();
 
-  public constructor(store: Store, oauth2Service: ServerClient) {
+  public constructor(store: Store, oauth2Service: ServerService) {
     super();
     this._reduce = this._reduce.bind(this);
     this._onStateUpdated = this._onStateUpdated.bind(this);

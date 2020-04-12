@@ -7,23 +7,24 @@ import { ObjectId, Collection } from 'mongodb';
 import { Db } from './db';
 
 
-export interface MachineUsage {
+export interface MachineAccessRecord {
   readonly _id: ObjectId;
-  readonly machineId: string;
+  readonly typeId: string;
+  readonly instanceId: string;
   readonly memberId: string;
   readonly time: Date;
-  readonly action: string;
+  readonly action: 'acquire' | 'release';
 }
 
 
-export interface MachineUsageCollection extends Collection<MachineUsage> {}
+export interface MachineAccessRecordCollection extends Collection<MachineAccessRecord> {}
 
-export const MachineUsageCollection = decorate(
-  name('MachineUsageCollection'),
+export const MachineAccessRecordCollection = decorate(
+  name('MachineAccessRecordCollection'),
   injectableFactory(Db),
   singleton(),
-  async (db: Db): Promise<MachineUsageCollection> =>
-    db.defineCollection('machineUsage', {
+  async (db: Db): Promise<MachineAccessRecordCollection> =>
+    db.defineCollection('machineAccessRecords', {
       validationLevel: 'strict',
       validationAction: 'error',
       validator: {
@@ -32,7 +33,8 @@ export const MachineUsageCollection = decorate(
           additionalProperties: false,
           required: [
             '_id',
-            'machineId',
+            'typeId',
+            'instanceId',
             'memberId',
             'time',
             'action'
@@ -41,24 +43,27 @@ export const MachineUsageCollection = decorate(
             _id: {
               bsonType: 'objectId'
             },
-            machineId: {
+            typeId: {
               bsonType: 'string'
             },
             memberId: {
+              bsonType: 'string'
+            },
+            instanceId: {
               bsonType: 'string'
             },
             time: {
               bsonType: 'date'
             },
             action: {
-              bsonType: 'string'
+              enum: ['acquire', 'release']
             }
           }
         }
       },
       indexes: [
         {
-          key: { machineId: 1 }
+          key: { typeId: 1, instanceId: 1, time: 1 }
         }
       ]
     })

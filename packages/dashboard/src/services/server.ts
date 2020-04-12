@@ -32,7 +32,7 @@ export interface FetchInit extends Omit<RequestInit, 'body'> {
   oauth2Service: OAuth2Service
 })
 @singleton()
-export class ServerClient {
+export class ServerService {
   private readonly _oauth2Service: OAuth2Service;
 
   public constructor(options: {

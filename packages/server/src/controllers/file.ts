@@ -1,4 +1,4 @@
-import * as Api from '@innolens/api/node';
+import * as Api from '@innolens/api/legacy/node';
 import { singleton, injectableConstructor } from '@innolens/resolver/node';
 import { CREATED } from 'http-status-codes';
 

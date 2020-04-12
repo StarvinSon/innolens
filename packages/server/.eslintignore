@@ -1,1 +1,5 @@
-/out/
+/*
+!/src
+!/tools-src
+/src/controllers/glues/
+/src/routes/glue.ts

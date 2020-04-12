@@ -1,13 +1,18 @@
+// This tsconfig.json is for eslint config, lit-analyzer and VSCode language server
 {
-  "extends": "../tsconfig-web.json",
   "compilerOptions": {
-    "lib": ["ES2020", "DOM"],
+    "target": "ES2020",
+    "moduleResolution": "node",
+    "strict": true,
+    "esModuleInterop": true,
+    "noEmit": true,
+    "experimentalDecorators": true,
     "plugins": [
       {
         "name": "ts-lit-plugin",
         "strict": true,
         "htmlTemplateTags": [
-          "html"
+          "hml"
         ],
         "rules": {
           "no-unknown-event": "warning"
@@ -15,8 +20,8 @@
       }
     ]
   },
-  "references": [
-    { "path": "../api/tsconfig-web.json" },
-    { "path": "../resolver/tsconfig-web.json" }
+  "include": [
+    "./tools-src/**/*.ts",
+    "./src/**/*.ts"
   ]
 }

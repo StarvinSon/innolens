@@ -4,7 +4,14 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Launch Server",
+      "name": "Code Generator",
+      "program": "${workspaceFolder}/tools/code-generator.js",
+      "console": "integratedTerminal"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Server",
       "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/nodemon",
       "program": "${workspaceFolder}/out/index.js",
       "env": {

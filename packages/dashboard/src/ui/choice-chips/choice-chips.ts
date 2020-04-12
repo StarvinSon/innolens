@@ -29,7 +29,7 @@ export class ChoiceChips extends LitElement {
   public selectAttribute: string = '';
 
   @property({ type: String })
-  public selectId: string | ReadonlyArray<string> | null = null;
+  public selectId: string | ReadonlyArray<string> | null | false = false;
 
 
   private _selectedChips: ReadonlyArray<ChoiceChip> = [];
@@ -63,7 +63,7 @@ export class ChoiceChips extends LitElement {
 
     const oldSelectedChips = this._selectedChips;
     let newSelectedChips: ReadonlyArray<ChoiceChip>;
-    if (this.selectId === null) {
+    if (this.selectId === null || this.selectId === false) {
       newSelectedChips = mergeArray(oldSelectedChips, []);
     } else {
       newSelectedChips = mergeArray(oldSelectedChips, chips.filter((chip) => {
@@ -74,7 +74,7 @@ export class ChoiceChips extends LitElement {
       }));
     }
 
-    if (oldSelectedChips !== newSelectedChips) {
+    if (oldSelectedChips !== newSelectedChips && this.selectId !== false) {
       this._selectedChips = newSelectedChips;
       for (const chip of chips) {
         chip.selected = newSelectedChips.includes(chip);

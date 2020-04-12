@@ -1,17 +1,10 @@
-// @ts-check
-const { stringifyRequest } = require('loader-utils');
+import { stringifyRequest } from 'loader-utils';
+import { loader as WebpackLoader } from 'webpack';
 
 
-/**
- * @type {import('webpack').loader.Loader}
- */
-const loader = function() {};
+const loader: WebpackLoader.Loader = function() {};
 
-/**
- * @type {import('webpack').loader.Loader['pitch']}
- * @this {import('webpack').loader.LoaderContext}
- */
-const pitchLoader = function(remainingRequest, precedingRequest) {
+const pitchLoader: WebpackLoader.Loader['pitch'] = function(this: WebpackLoader.LoaderContext, remainingRequest, precedingRequest) {
   return (
   // eslint-disable-next-line @typescript-eslint/indent
 `
@@ -25,5 +18,4 @@ export const classes = info.locals;
 };
 
 loader.pitch = pitchLoader;
-
 module.exports = loader;

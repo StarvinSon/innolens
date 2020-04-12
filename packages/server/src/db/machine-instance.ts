@@ -7,22 +7,21 @@ import { ObjectId, Collection } from 'mongodb';
 import { Db } from './db';
 
 
-export interface Machine {
+export interface MachineInstance {
   readonly _id: ObjectId;
-  readonly machineId: string;
-  readonly machineName: string;
-  readonly spaceId: string;
+  readonly typeId: string;
+  readonly instanceId: string;
+  readonly instanceName: string;
 }
 
+export interface MachineInstanceCollection extends Collection<MachineInstance> {}
 
-export interface MachineCollection extends Collection<Machine> {}
-
-export const MachineCollection = decorate(
-  name('MachineCollection'),
+export const MachineInstanceCollection = decorate(
+  name('MachineInstanceCollection'),
   injectableFactory(Db),
   singleton(),
-  async (db: Db): Promise<MachineCollection> =>
-    db.defineCollection('machines', {
+  async (db: Db): Promise<MachineInstanceCollection> =>
+    db.defineCollection('machineInstances', {
       validationLevel: 'strict',
       validationAction: 'error',
       validator: {
@@ -31,21 +30,21 @@ export const MachineCollection = decorate(
           additionalProperties: false,
           required: [
             '_id',
-            'machineId',
-            'machineName',
-            'spaceId'
+            'typeId',
+            'instanceId',
+            'instanceName'
           ],
           properties: {
             _id: {
               bsonType: 'objectId'
             },
-            machineId: {
+            typeId: {
               bsonType: 'string'
             },
-            machineName: {
+            instanceId: {
               bsonType: 'string'
             },
-            spaceId: {
+            instanceName: {
               bsonType: 'string'
             }
           }
@@ -53,7 +52,7 @@ export const MachineCollection = decorate(
       },
       indexes: [
         {
-          key: { machineId: 1 },
+          key: { typeId: 1, instanceId: 1 },
           unique: true
         }
       ]

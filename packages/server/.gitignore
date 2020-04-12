@@ -1,5 +1,8 @@
 /node_modules/
 /out/
+/tools/
+/src/controllers/glues/
+/src/routes/glue.ts
 /server.config.js
-/tsconfig.tsbuildinfo
+/*.tsbuildinfo
 /*.log

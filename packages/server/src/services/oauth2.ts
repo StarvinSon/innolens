@@ -40,6 +40,15 @@ export class OAuth2Service {
     } = options);
   }
 
+  public async checkAccessToken(accessToken: string, currDate = new Date()): Promise<boolean> {
+    const count = await this._oauth2Collection.tokens.countDocuments({
+      accessToken,
+      accessTokenExpireDate: { $gt: currDate },
+      revoked: false
+    });
+    return count > 0;
+  }
+
   public async findByAccessToken(
     accessToken: string,
     currDate = new Date()

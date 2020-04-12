@@ -5,11 +5,17 @@
   "homepage": "https://i.cs.hku.hk/fyp/2019/fyp19027/",
   "repository": "https://github.com/StarvinSon/innolens/tree/develop/packages/server",
   "scripts": {
-    "clean": "shx rm -rf ./out ./*.tsbuildinfo",
+    "clean": "shx rm -rf ./out ./tools ./*.tsbuildinfo",
     "lint": "run-s lint:*",
     "lint:es": "eslint --config ./.eslintrc.js --ignore-path ./.eslintignore --ext .js,.ts .",
-    "build": "tsc --build ./tsconfig.json",
-    "build:watch": "tsc --build ./tsconfig.json --watch",
+    "build": "run-s build:tools generate:glue build:server",
+    "build:watch": "run-p build:tools:watch generate:glue:watch build:server:watch",
+    "build:tools": "tsc --build ./tsconfig-tools.json",
+    "build:tools:watch": "tsc --build ./tsconfig-tools.json --watch",
+    "generate:glue": "node ./tools/glue-generator.js",
+    "generate:glue:watch": "nodemon --watch ../api/spec --watch ./tools --ext js,yaml ./tools/glue-generator.js",
+    "build:server": "tsc --build ./tsconfig-server.json",
+    "build:server:watch": "tsc --build ./tsconfig-server.json --watch",
     "start": "cross-env NODE_ENV=\"development\" DEBUG=\"koa*\" node ./out/index.js start --config ./server.config.js",
     "start:watch": "cross-env NODE_ENV=\"development\" DEBUG=\"koa*\" nodemon --config ./nodemon.json ./out/index.js -- start --config ./server.config.js",
     "deploy": "pm2 start ./ecosystem.config.js"
@@ -57,6 +63,7 @@
     "nodemon": "^2.0.2",
     "npm-run-all": "^4.1.5",
     "shx": "^0.3.2",
+    "ts-morph": "^7.0.2",
     "typescript": "^3.8.3"
   },
   "engines": {

@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig-node.json",
+  "compilerOptions": {
+    "outDir": "./legacy/node",
+    "rootDir": "./legacy-src",
+    "composite": true,
+    "tsBuildInfoFile": "./tsconfig-legacy-node.tsbuildinfo"
+  },
+  "include": [
+    "./legacy-src/**/*.ts"
+  ]
+}

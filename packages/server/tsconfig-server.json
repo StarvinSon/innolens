@@ -1,0 +1,17 @@
+{
+  "extends": "../tsconfig-node.json",
+  "compilerOptions": {
+    "outDir": "./out",
+    "rootDir": "./src",
+    "declaration": false,
+    "declarationMap": false
+  },
+  "include": [
+    "./src/**/*.ts"
+  ],
+  "references": [
+    { "path": "../api/tsconfig-legacy-node.json" },
+    { "path": "../api/tsconfig-runtime-node.json" },
+    { "path": "../resolver/tsconfig-node.json" }
+  ]
+}

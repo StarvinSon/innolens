@@ -104,7 +104,7 @@ export class SpaceService {
       throw new SpaceNotFoundError(spaceId);
     }
 
-    const deleteFilterQuery: FilterQuery<SpaceAccessRecord> = {
+    const deleteFilterQuery: FilterQuery<Writable<SpaceAccessRecord>> = {
       spaceId
     };
     if (deleteFromTime !== null || deleteToTime !== null) {
@@ -245,15 +245,15 @@ export class SpaceService {
 
     // Filter spans
     spans = spans.filter((s) => (
-      (s.enterTime === null || s.enterTime.valueOf() < endTime.valueOf())
-      && (s.exitTime === null || s.exitTime.valueOf() > startTime.valueOf())
+      (s.enterTime === null || s.enterTime.getTime() < endTime.getTime())
+      && (s.exitTime === null || s.exitTime.getTime() > startTime.getTime())
     ));
 
     // Sort spans
     spans.sort((a, b) => (
       a.enterTime === null ? -1
         : b.enterTime === null ? 1
-          : a.enterTime.valueOf() - b.enterTime.valueOf()
+          : a.enterTime.getTime() - b.enterTime.getTime()
     ));
 
     // Get groups

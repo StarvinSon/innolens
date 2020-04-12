@@ -1,0 +1,96 @@
+import { parseISO } from 'date-fns';
+
+
+export const decodeJsonNull = (val: unknown): null | undefined =>
+  val === null ? null : undefined;
+
+export const decodeJsonBoolean = (val: unknown): boolean | undefined =>
+  typeof val === 'boolean' ? val : undefined;
+
+export const decodeJsonInteger = (val: unknown): number | undefined =>
+  typeof val === 'number' && Number.isInteger(val) ? val : undefined;
+
+export const decodeJsonNumber = (val: unknown): number | undefined =>
+  typeof val === 'number' ? val : undefined;
+
+export const decodeJsonString = (val: unknown): string | undefined =>
+  typeof val === 'string' ? val : undefined;
+
+export const decodeJsonDate = (val: unknown): Date | undefined => {
+  let maybeDate: Date;
+  if (typeof val === 'string' && !Number.isNaN((maybeDate = parseISO(val)).getTime())) {
+    return maybeDate;
+  }
+  return undefined;
+};
+
+export const decodeJsonArray = <T>(
+  val: unknown,
+  itemParser: (item: unknown) => T | undefined
+): Array<T> | undefined => {
+  if (!Array.isArray(val)) return undefined;
+
+  const parsedItems: Array<T> = [];
+  for (const jsonItem of val) {
+    const parsedItem = itemParser(jsonItem);
+    if (parsedItem === undefined) return undefined;
+    parsedItems.push(parsedItem);
+  }
+  return parsedItems;
+};
+
+type DecodedJsonType<
+  M extends { readonly [key: string]: (item: unknown) => any },
+  A
+> = [A] extends [never]
+  ? {
+    readonly [P in keyof M]: Exclude<ReturnType<M[P]>, undefined>
+  }
+  : ({
+    readonly [P in keyof M]: Exclude<ReturnType<M[P]>, undefined>
+  } & {
+    readonly [key: string]: Exclude<A, undefined>
+  });
+
+/* eslint-disable @typescript-eslint/indent */
+export const decodeJsonObject = <
+  M extends { readonly [key: string]: (item: unknown) => any },
+  A = undefined
+>(
+  val: unknown,
+  required: ReadonlyArray<keyof M>,
+  properties: M,
+  additional?: (item: unknown) => A | undefined
+): DecodedJsonType<M, A> | undefined => {
+  /* eslint-enable @typescript-eslint/indent */
+  if (typeof val !== 'object' || val === null) return undefined;
+
+  const unprocessedKeys = new Set(Reflect.ownKeys(val));
+  const result: any = {};
+
+  for (
+    const [key, itemDecoder]
+    of Object.entries(properties) as Array<[keyof M, (item: unknown) => unknown]>
+  ) {
+    if ((val as any)[key] !== undefined) {
+      result[key] = itemDecoder((val as any)[key]);
+      if (result[key] === undefined) return undefined;
+    } else if (required.includes(key)) {
+      return undefined;
+    }
+    unprocessedKeys.delete(key);
+  }
+
+  if (unprocessedKeys.size > 0) {
+    if (additional === undefined) return undefined;
+    for (const key of unprocessedKeys) {
+      if ((val as any)[key] !== undefined) {
+        result[key] = additional((val as any)[key]);
+        if (result[key] === undefined) return undefined;
+      }
+      unprocessedKeys.delete(key);
+    }
+  }
+
+  return result;
+};

@@ -8,11 +8,11 @@ import { Db } from './db';
 
 
 export interface SpaceAccessRecord {
-  _id: ObjectId;
-  spaceId: string;
-  memberId: string;
-  time: Date;
-  action: 'enter' | 'exit';
+  readonly _id: ObjectId;
+  readonly spaceId: string;
+  readonly memberId: string;
+  readonly time: Date;
+  readonly action: 'enter' | 'exit';
 }
 
 

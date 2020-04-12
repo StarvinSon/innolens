@@ -1,11 +1,15 @@
+// This tsconfig.json is for eslint config and VSCode language server
 {
-  "extends": "../tsconfig-node.json",
   "compilerOptions": {
-    "outDir": "./out",
-    "rootDir": "./src"
+    "target": "ES2020",
+    "moduleResolution": "node",
+    "strict": true,
+    "esModuleInterop": true,
+    "noEmit": true,
+    "experimentalDecorators": true
   },
-  "references": [
-    { "path": "../api/tsconfig-node.json" },
-    { "path": "../resolver/tsconfig-node.json" }
+  "include": [
+    "./tools-src/**/*.ts",
+    "./src/**/*.ts"
   ]
 }

@@ -39,7 +39,7 @@ module.exports = (env, { publicPath = '/static/' }) => {
     {
       loader: 'ts-loader',
       options: {
-        configFile: resolve(rootPath, 'tsconfig.json'),
+        configFile: resolve(rootPath, 'tsconfig-dashboard.json'),
         projectReferences: true
       }
     }

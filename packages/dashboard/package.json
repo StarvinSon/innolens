@@ -5,14 +5,19 @@
   "homepage": "https://i.cs.hku.hk/fyp/2019/fyp19027/",
   "repository": "https://github.com/StarvinSon/innolens/tree/develop/packages/dashboard",
   "scripts": {
-    "clean": "shx rm -rf ./out",
+    "clean": "shx rm -rf ./out ./tools ./*.tsbuildinfo",
     "lint": "run-s lint:*",
     "lint:es": "eslint --config ./.eslintrc.js --ignore-path ./.eslintignore --ext .js,.ts .",
-    "lint:wc": "lit-analyzer src",
-    "build": "run-s build:prod",
-    "build:prod": "webpack --config ./webpack.config.js --env production --progress",
-    "build:dev": "webpack --config ./webpack.config.js --env development --progress",
-    "build:dev:watch": "webpack --config ./webpack.config.js --env development --progress --watch"
+    "lint:wc": "lit-analyzer ./src",
+    "build": "run-s build:tools generate:glue build:dashboard:prod",
+    "build:watch": "run-p build:tools:watch generate:glue:watch build:dashboard:dev:watch",
+    "build:tools": "tsc --build ./tsconfig-tools.json",
+    "build:tools:watch": "tsc --build ./tsconfig-tools.json --watch",
+    "generate:glue": "node ./tools/glue-generator.js",
+    "generate:glue:watch": "nodemon --watch ../api/spec --watch ./tools --ext js,yaml ./tools/glue-generator.js",
+    "build:dashboard:prod": "webpack --config ./webpack.config.js --env production --progress",
+    "build:dashboard:dev": "webpack --config ./webpack.config.js --env development --progress",
+    "build:dashboard:dev:watch": "webpack --config ./webpack.config.js --env development --progress --watch"
   },
   "dependencies": {
     "@babel/runtime-corejs3": "^7.9.2",
@@ -61,6 +66,7 @@
     "sass-loader": "^8.0.2",
     "shx": "^0.3.2",
     "ts-loader": "^6.2.2",
+    "ts-morph": "^7.0.2",
     "typescript": "^3.8.3",
     "webpack": "^4.42.1",
     "webpack-cli": "^3.3.11"

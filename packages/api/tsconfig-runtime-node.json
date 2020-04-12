@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig-node.json",
+  "compilerOptions": {
+    "outDir": "./runtime/node",
+    "rootDir": "./runtime-src",
+    "composite": true,
+    "tsBuildInfoFile": "./tsconfig-runtime-node.tsbuildinfo"
+  },
+  "include": [
+    "./runtime-src/**/*.ts"
+  ]
+}

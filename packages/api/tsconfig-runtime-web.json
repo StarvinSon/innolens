@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig-web.json",
+  "compilerOptions": {
+    "outDir": "./runtime/web",
+    "rootDir": "./runtime-src",
+    "composite": true,
+    "tsBuildInfoFile": "./tsconfig-runtime-web.tsbuildinfo"
+  },
+  "include": [
+    "./runtime-src/**/*.ts"
+  ]
+}

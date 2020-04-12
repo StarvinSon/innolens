@@ -17,8 +17,9 @@ declare abstract class FileControllerClass {
 }
 
 const createFileController =
-  <T extends new (...args: Array<any>) => any>(base: T): T & (typeof FileControllerClass) => {
-    abstract class FileControllerMixinImpl extends base {
+  <T extends Function>(base: T): T & (typeof FileControllerClass) => {
+    // eslint-disable-next-line max-len
+    abstract class FileControllerMixinImpl extends (base as any as new (...args: Array<any>) => any) {
       protected abstract readonly [fileControllerSyms.fileService]: FileService;
 
       protected getFile(scope: string, fileId: string): ReadStream {

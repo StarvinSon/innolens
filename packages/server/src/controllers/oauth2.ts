@@ -1,4 +1,4 @@
-import * as Api from '@innolens/api/node';
+import * as Api from '@innolens/api/legacy/node';
 import { singleton, injectableConstructor } from '@innolens/resolver/node';
 import {
   BAD_REQUEST, INTERNAL_SERVER_ERROR, UNAUTHORIZED,

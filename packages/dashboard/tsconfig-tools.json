@@ -1,0 +1,13 @@
+{
+  "extends": "../tsconfig-node.json",
+  "compilerOptions": {
+    "outDir": "./tools",
+    "rootDir": "./tools-src"
+  },
+  "references": [
+    { "path": "../api/tsconfig-tools.json" }
+  ],
+  "include": [
+    "./tools-src/**/*.ts"
+  ]
+}

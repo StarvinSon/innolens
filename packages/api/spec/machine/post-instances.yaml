@@ -1,0 +1,18 @@
+name: PostInstances
+
+method: post
+path: /api/machines/types/:typeId/instances
+
+authentication:
+  type: bearer
+
+requestBody:
+  contentType: application/json
+  schema:
+    type: object
+    required:
+      - fileId
+    additionalProperties: false
+    properties:
+      fileId:
+        type: string

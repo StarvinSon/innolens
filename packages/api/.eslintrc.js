@@ -7,7 +7,10 @@ module.exports = {
   parserOptions: {
     project: './tsconfig.json'
   },
-  rules: {
-    'import/export': 'off'
-  }
+  overrides: [{
+    files: ['./legacy-src/**/*.ts'],
+    rules: {
+      'import/export': 'off'
+    }
+  }]
 };

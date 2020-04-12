@@ -1,4 +1,4 @@
-import * as Api from '@innolens/api/web';
+import * as Api from '@innolens/api/legacy/web';
 import {
   injectableConstructor, singleton,
   map
@@ -132,6 +132,26 @@ export class OAuth2Service {
   private get _state(): OAuth2State {
     return this._store.getState(KEY);
   }
+
+
+  public async withAccessToken(
+    performFetch: (accessToken: string) => Promise<Response>
+  ): Promise<Response> {
+    /* eslint-disable no-await-in-loop */
+    for (let retry = false; ; retry = true) {
+      if (retry) {
+        this.removeToken();
+      }
+      const token = await this.requestAccessToken();
+
+      const res = await performFetch(token);
+      if (res.status !== 401 || retry) {
+        return res;
+      }
+    }
+    /* eslint-enable no-await-in-loop */
+  }
+
 
   public setPasswordCredentials(credentials: OAuth2PasswordCredentials): void {
     this._store.dispatch({

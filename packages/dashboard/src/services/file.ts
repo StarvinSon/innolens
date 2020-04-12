@@ -1,17 +1,17 @@
-import * as Api from '@innolens/api/web';
+import * as Api from '@innolens/api/legacy/web';
 import { injectableConstructor } from '@innolens/resolver/web';
 
-import { ServerClient } from './server-client';
+import { ServerService } from './server';
 
 
 @injectableConstructor({
-  serverClient: ServerClient
+  serverClient: ServerService
 })
 export class FileService {
-  private readonly _serverClient: ServerClient;
+  private readonly _serverClient: ServerService;
 
   public constructor(deps: {
-    readonly serverClient: ServerClient
+    readonly serverClient: ServerService
   }) {
     ({
       serverClient: this._serverClient
