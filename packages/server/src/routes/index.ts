@@ -10,6 +10,7 @@ import { FileController } from '../controllers/file';
 import { MachineController } from '../controllers/machine';
 import { MemberController } from '../controllers/member';
 import { OAuth2Controller } from '../controllers/oauth2';
+import { ReusableInventoryController } from '../controllers/reusable-inventory';
 import { SpaceController } from '../controllers/space';
 import { StaticController } from '../controllers/static';
 import { bindMethods } from '../utils/method-binder';
@@ -32,6 +33,7 @@ export const Router = decorate(
     oauth2: OAuth2Controller,
     space: SpaceController,
     machine: MachineController,
+    reusableInventory: ReusableInventoryController,
     static: StaticController
   }),
   singleton(),
@@ -41,7 +43,8 @@ export const Router = decorate(
     oauth2: OAuth2Controller,
     space: SpaceController,
     static: StaticController,
-    machine: MachineController
+    machine: MachineController,
+    reusableInventory: ReusableInventoryController
   }): Router => {
     const controllers = bindControllerMethods(_controllers);
     const router: Router = new KoaRouter();

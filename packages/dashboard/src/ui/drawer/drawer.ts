@@ -207,13 +207,16 @@ export class Drawer extends LitElement {
     entries: ReadonlyArray<PageEntry | PageGroupEntry>,
     slotName: string | null = null
   ): unknown {
+    /* eslint-disable @typescript-eslint/indent */
     return entries.map((entry) => entry.type === 'pageEntry'
       ? html`
         <inno-drawer-item
           slot="${ifString(slotName)}"
           .identation="${indentation}"
           .href="${entry.href}"
-          .highlight="${entry.pathRegExp.test(this._path)}">
+          .highlight="${entry.pathRegExp === undefined
+            ? entry.href === this._path
+            : entry.pathRegExp.test(this._path)}">
           ${entry.name}
         </inno-drawer-item>
       `
@@ -225,6 +228,7 @@ export class Drawer extends LitElement {
           ${this._renderPageOrPageGroupEntries(indentation + 1, entry.pages, 'items')}
         </inno-drawer-item-group>
       `);
+    /* eslint-enable @typescript-eslint/indent */
   }
 
   protected updated(changedProps: PropertyValues): void {

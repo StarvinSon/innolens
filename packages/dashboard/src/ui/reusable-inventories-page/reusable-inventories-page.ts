@@ -9,29 +9,47 @@ import '../choice-chips';
 import '../line-chart';
 import '../chart-card';
 import {
-  MachineService, MachineType, MachineMemberCountHistoryGroupByValues,
-  MachineInstance, MachineMemberCountRecord,
-  machineMemberCountHistoryGroupByValues,
-  MachineMemberCountRecordValues,
-  MachineMemberCountHistory
-} from '../../services/machine';
+  ReusableInventoryService, ReusableInventoryType, ReusableInventoryMemberCountHistoryGroupBy,
+  ReusableInventoryInstance, ReusableInventoryMemberCountType,
+  ReusableInventoryMemberCountHistory
+} from '../../services/reusable-inventory';
 import { mergeArray } from '../../utils/immutable/array';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
 
-import { css, classes } from './machines-page.scss';
+import { css, classes } from './reusable-inventories-page.scss';
 
 
 const pastDaysChoices = [1, 2, 7, 30, 60, 120, 360];
 
-
-type CountType = {
-  // eslint-disable-next-line max-len
-  [K in keyof MachineMemberCountRecord]: MachineMemberCountRecord[K] extends MachineMemberCountRecordValues ? K : never
-}[keyof MachineMemberCountRecord];
+const groupByChoices: ReadonlyArray<{
+  readonly type: ReusableInventoryMemberCountHistoryGroupBy,
+  readonly name: string
+}> = [
+  {
+    type: 'department',
+    name: 'Department'
+  },
+  {
+    type: 'typeOfStudy',
+    name: 'Type of Study'
+  },
+  {
+    type: 'studyProgramme',
+    name: 'Study Programme'
+  },
+  {
+    type: 'yearOfStudy',
+    name: 'Year of Study'
+  },
+  {
+    type: 'affiliatedStudentInterestGroup',
+    name: 'Affiliated Student Interest Group'
+  }
+];
 
 const countTypeChoices: ReadonlyArray<{
-  readonly type: CountType,
+  readonly type: ReusableInventoryMemberCountType,
   readonly name: string
 }> = [
   {
@@ -64,22 +82,22 @@ const countTypeChoices: ReadonlyArray<{
 const emptyArray: ReadonlyArray<never> = [];
 
 
-const TAG_NAME = 'inno-machines-page';
+const TAG_NAME = 'inno-reusable-inventories-page';
 
 declare global {
   interface HTMLElementTagNameMap {
-    [TAG_NAME]: MachinesPage;
+    [TAG_NAME]: ReusableInventoriesPage;
   }
 }
 
 @customElement(TAG_NAME)
-export class MachinesPage extends LitElement {
+export class ReusableInventoriesPage extends LitElement {
   public static readonly styles = css;
 
 
-  @injectableProperty(MachineService)
+  @injectableProperty(ReusableInventoryService)
   @observeProperty('_onDependencyInjected')
-  public machineService: MachineService | null;
+  public reusableInventoryService: ReusableInventoryService | null;
 
 
   @property({ attribute: false })
@@ -87,60 +105,61 @@ export class MachinesPage extends LitElement {
 
 
   @property({ attribute: false })
-  private _types: ReadonlyArray<MachineType> | null = null;
+  private _types: ReadonlyArray<ReusableInventoryType> | null = null;
 
   @property({ attribute: false })
   private _selectedTypeIds: ReadonlyArray<string> | null = null;
 
   @property({ attribute: false })
-  private _instances: ReadonlyArray<MachineInstance> | null = null;
+  private _instances: ReadonlyArray<ReusableInventoryInstance> | null = null;
 
   @property({ attribute: false })
   private _selectedInstanceIds: ReadonlyArray<string> | null = null;
 
   @property({ attribute: false })
-  private _selectedGroupBy: MachineMemberCountHistoryGroupByValues = 'all';
+  private _selectedGroupBy: ReusableInventoryMemberCountHistoryGroupBy | null = null;
 
   @property({ attribute: false })
   private _selectedPastDays = 7;
 
   @property({ attribute: false })
-  private _selectedCountType: CountType = 'useCounts';
+  private _selectedCountType: ReusableInventoryMemberCountType = 'useCounts';
 
   @property({ attribute: false })
-  private _countHistory: MachineMemberCountHistory | null = null;
+  private _countHistory: ReusableInventoryMemberCountHistory | null = null;
 
   @property({ attribute: false })
   private _lineChartData: import('../line-chart').LineChartData<Date> | null = null;
 
 
-  private _selectedTypeIdsDeps: readonly [ReadonlyArray<MachineType> | null] = [null];
+  private _selectedTypeIdsDeps: readonly [ReadonlyArray<ReusableInventoryType> | null] = [null];
 
-  private _selectedInstanceIdsDeps: readonly [ReadonlyArray<MachineInstance> | null] = [null];
+  // eslint-disable-next-line max-len
+  private _selectedInstanceIdsDeps: readonly [ReadonlyArray<ReusableInventoryInstance> | null] = [null];
 
   private _lineChartDataDeps: readonly [
-    MachineMemberCountHistory | null,
-    CountType | null
+    ReusableInventoryMemberCountHistory | null,
+    ReusableInventoryMemberCountType | null
   ] = [null, null];
 
 
   public constructor() {
     super();
-    this._onMachineServiceUpdated = this._onMachineServiceUpdated.bind(this);
-    this.machineService = null;
+    this._onReusableInventoryServiceUpdated = this._onReusableInventoryServiceUpdated.bind(this);
+    this.reusableInventoryService = null;
   }
 
 
   private _onDependencyInjected(): void {
-    if (this.machineService !== null) {
-      this.machineService.addEventListener('types-updated', this._onMachineServiceUpdated);
-      this.machineService.addEventListener('instances-updated', this._onMachineServiceUpdated);
-      this.machineService.addEventListener('member-count-history-updated', this._onMachineServiceUpdated);
+    if (this.reusableInventoryService !== null) {
+      this.reusableInventoryService.addEventListener('types-updated', this._onReusableInventoryServiceUpdated);
+      this.reusableInventoryService.addEventListener('instances-updated', this._onReusableInventoryServiceUpdated);
+      this.reusableInventoryService.addEventListener('member-count-history-updated', this._onReusableInventoryServiceUpdated);
       this._updateProperties();
     }
   }
 
-  private _onMachineServiceUpdated(): void {
+  private _onReusableInventoryServiceUpdated(): void {
     this.requestUpdate();
   }
 
@@ -155,11 +174,11 @@ export class MachinesPage extends LitElement {
   }
 
   private _updateProperties(): void {
-    if (this.machineService === null) return;
+    if (this.reusableInventoryService === null) return;
 
-    this._types = this.machineService.types;
+    this._types = this.reusableInventoryService.types;
     if (this._types === null) {
-      this.machineService.updateTypes();
+      this.reusableInventoryService.updateTypes();
     }
 
     if (this._selectedTypeIdsDeps[0] !== this._types) {
@@ -182,9 +201,9 @@ export class MachinesPage extends LitElement {
     } else if (this._selectedTypeIds.length !== 1) {
       this._instances = emptyArray;
     } else {
-      this._instances = this.machineService.getInstances(this._selectedTypeIds[0]);
+      this._instances = this.reusableInventoryService.getInstances(this._selectedTypeIds[0]);
       if (this._instances === null) {
-        this.machineService.updateInstances(this._selectedTypeIds[0]);
+        this.reusableInventoryService.updateInstances(this._selectedTypeIds[0]);
       }
     }
 
@@ -207,14 +226,15 @@ export class MachinesPage extends LitElement {
       this._countHistory = null;
     } else {
       const opts = [
+        this._selectedPastDays * 24,
         this._selectedTypeIds.length > 0 ? this._selectedTypeIds : undefined,
         this._selectedInstanceIds.length > 0 ? this._selectedInstanceIds : undefined,
-        this._selectedGroupBy,
-        this._selectedPastDays * 24
+        this._selectedGroupBy ?? undefined,
+        this._selectedCountType ?? undefined
       ] as const;
-      this._countHistory = this.machineService.getMemberCountHistory(...opts);
+      this._countHistory = this.reusableInventoryService.getMemberCountHistory(...opts);
       if (this._countHistory === null) {
-        this.machineService.updateMemberCountHistory(...opts);
+        this.reusableInventoryService.updateMemberCountHistory(...opts);
       }
     }
 
@@ -229,7 +249,7 @@ export class MachinesPage extends LitElement {
           lines: this._countHistory.groups.map((group) => ({
             name: group,
             values: this._countHistory!.records
-              .map((record) => record[this._selectedCountType][group])
+              .map((record) => record.counts[group])
           })),
           labels: this._countHistory.records.map((record) => record.periodEndTime),
           formatLabel: (time) => formatDate(time, 'd/L')
@@ -254,7 +274,15 @@ export class MachinesPage extends LitElement {
       <div class="${classes.options}">
 
         ${this._renderChipOptions({
-          title: 'Machine Type',
+          title: 'Filter - Past Days',
+          items: pastDaysChoices,
+          selectItem: (days) => days === this._selectedPastDays,
+          formatItem: (day) => html`${day} Days`,
+          onClick: (day) => this._onPastDaysChipClick(day)
+        })}
+
+        ${this._renderChipOptions({
+          title: 'Filter - Reusable Inventory Type',
           items: this._types === null ? emptyArray : [
             {
               typeId: null,
@@ -270,7 +298,7 @@ export class MachinesPage extends LitElement {
         })}
 
         ${this._renderChipOptions({
-          title: 'Machine Instance',
+          title: 'Filter - Reusable Inventory Instance',
           items: this._instances === null ? emptyArray : [
             {
               instanceId: null,
@@ -288,17 +316,16 @@ export class MachinesPage extends LitElement {
 
         ${this._renderChipOptions({
           title: 'Group By',
-          items: machineMemberCountHistoryGroupByValues,
-          selectItem: (groupBy) => this._selectedGroupBy === groupBy,
-          onClick: (groupBy) => this._onGroupByChipClick(groupBy)
-        })}
-
-        ${this._renderChipOptions({
-          title: 'Past Days',
-          items: pastDaysChoices,
-          selectItem: (days) => days === this._selectedPastDays,
-          formatItem: (day) => html`${day} Days`,
-          onClick: (day) => this._onPastDaysChipClick(day)
+          items: [
+            {
+              type: null,
+              name: 'None'
+            },
+            ...groupByChoices
+          ],
+          selectItem: (choice) => this._selectedGroupBy === choice.type,
+          formatItem: (choice) => choice.name,
+          onClick: (choice) => this._onGroupByChipClick(choice.type)
         })}
 
         ${this._renderChipOptions({
@@ -347,11 +374,15 @@ export class MachinesPage extends LitElement {
           <inno-line-chart
             class="${classes.lineChart}"
             .data="${this._lineChartData}">
-            <span slot="title">Machine Usage History</span>
+            <span slot="title">Reusable Inventory Usage History</span>
           </inno-line-chart>
         </inno-chart-card>
       </div>
     `;
+  }
+
+  private _onPastDaysChipClick(day: number): void {
+    this._selectedPastDays = day;
   }
 
   private _onTypeChipClick(typeId: string | null): void {
@@ -374,15 +405,11 @@ export class MachinesPage extends LitElement {
     }
   }
 
-  private _onGroupByChipClick(groupBy: MachineMemberCountHistoryGroupByValues): void {
+  private _onGroupByChipClick(groupBy: ReusableInventoryMemberCountHistoryGroupBy | null): void {
     this._selectedGroupBy = groupBy;
   }
 
-  private _onPastDaysChipClick(day: number): void {
-    this._selectedPastDays = day;
-  }
-
-  private _onCountTypeChipClick(type: CountType): void {
+  private _onCountTypeChipClick(type: ReusableInventoryMemberCountType): void {
     this._selectedCountType = type;
   }
 

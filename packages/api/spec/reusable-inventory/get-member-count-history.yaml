@@ -1,8 +1,12 @@
 name: GetMemberCountHistory
 
 method: get
-path: /api/machines/member-count-history
+path: /api/reusable-inventories/member-count-history
 query:
+  pastHours:
+    required: true
+    schema:
+      type: integer
   typeIds:
     schema:
       type: array
@@ -16,16 +20,20 @@ query:
   groupBy:
     schema:
       enum:
-        - all
         - department
         - typeOfStudy
         - studyProgramme
         - yearOfStudy
         - affiliatedStudentInterestGroup
-  pastHours:
-    required: true
+  countType:
     schema:
-      type: integer
+      enum:
+        - acquireCounts
+        - uniqueAcquireCounts
+        - releaseCounts
+        - uniqueReleaseCounts
+        - useCounts
+        - uniqueUseCounts
 
 authentication:
   type: bearer
@@ -50,24 +58,14 @@ responseBody:
             required:
               - periodStartTime
               - periodEndTime
-              - acquireCounts
-              - uniqueAcquireCounts
-              - releaseCounts
-              - uniqueReleaseCounts
-              - useCounts
-              - uniqueUseCounts
+              - counts
             additionalProperties: false
             properties:
               periodStartTime:
                 type: date
               periodEndTime:
                 type: date
-              acquireCounts: &count-schema
+              counts:
                 type: object
                 additionalProperties:
                   type: number
-              uniqueAcquireCounts: *count-schema
-              releaseCounts: *count-schema
-              uniqueReleaseCounts: *count-schema
-              useCounts: *count-schema
-              uniqueUseCounts: *count-schema

@@ -30,11 +30,12 @@ const writeRoutesGlueFile = (
                 getRelativeImportPath(sourceFile, `./src/controllers/glues/${pascalToKebabCase(indexSpec.name)}`),
                 `${pascalToPascalCase(indexSpec.name)}ControllerGlue`
               );
-              writer.write(`${pascalToCamelCase(indexSpec.name)}: ${controllerTypeExpr},`);
+              writer.writeLine(`${pascalToCamelCase(indexSpec.name)}: ${controllerTypeExpr},`);
             }
           });
         }).write('): void =>').block(() => { // eslint-disable-line newline-per-chained-call
           for (const [indexSpec, endptSpecs] of specs) {
+            writer.newLine();
             writer.writeLine(`// ${indexSpec.name}`);
             for (const endptSpec of endptSpecs) {
               writer
@@ -43,7 +44,6 @@ const writeRoutesGlueFile = (
                 .write(`controllers.${pascalToCamelCase(indexSpec.name)}.${pascalToCamelCase(endptSpec.name)}.bind(controllers.${pascalToCamelCase(indexSpec.name)})`)
                 .write(')').newLine(); // eslint-disable-line newline-per-chained-call
             }
-            writer.newLine();
           }
         });
       }

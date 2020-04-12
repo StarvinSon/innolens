@@ -1,0 +1,57 @@
+@use '../layout';
+@use '../theme';
+@use '../typography';
+@use '../line-chart';
+
+
+:host {
+  display: block;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.content {
+  display: flex;
+  height: 100%;
+}
+
+.options {
+  box-sizing: border-box;
+  flex-basis: 40%;
+  padding: 2rem 1rem;
+  overflow-y: auto;
+
+  & > :not(:first-child) {
+    margin-top: 2rem;
+  }
+}
+
+.option {
+  /* empty */
+
+  &__label {
+    @include typography.base();
+    color: var(theme.$on-background);
+  }
+
+  &__chips {
+    margin-top: 1rem;
+  }
+}
+
+.chart-cards {
+  box-sizing: border-box;
+  flex-basis: 60%;
+  padding: 2rem 1rem;
+  overflow-y: auto;
+
+  & > :not(:first-child) {
+    margin-top: 2rem;
+  }
+}
+
+.line-chart {
+  #{line-chart.$content-aspect-ratio}: 50%;
+}

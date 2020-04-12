@@ -38,7 +38,7 @@ export class Pages extends PropertyInjectorElement(LitElement) {
   private readonly _fragmentManager = new FragmentManager(this);
 
 
-  private readonly _pageStates: Map<RegExp, {
+  private readonly _pageStates: WeakMap<PageEntry, {
     readonly type: 'loading';
     readonly promise: Promise<void>;
   } | {
@@ -99,7 +99,7 @@ export class Pages extends PropertyInjectorElement(LitElement) {
       return;
     }
 
-    const state = this._pageStates.get(matchedEntry.pathRegExp);
+    const state = this._pageStates.get(matchedEntry);
     if (state === undefined) {
       const promise = Promise.resolve().then(async () => {
         try {
@@ -107,11 +107,11 @@ export class Pages extends PropertyInjectorElement(LitElement) {
           if (matchedEntry.tagName.includes('-')) {
             await customElements.whenDefined(matchedEntry.tagName);
           }
-          this._pageStates.set(matchedEntry.pathRegExp, {
+          this._pageStates.set(matchedEntry, {
             type: 'loaded'
           });
         } catch (err) {
-          this._pageStates.set(matchedEntry.pathRegExp, {
+          this._pageStates.set(matchedEntry, {
             type: 'error',
             error: err
           });
@@ -119,7 +119,7 @@ export class Pages extends PropertyInjectorElement(LitElement) {
           this._updatePageFragment();
         }
       });
-      this._pageStates.set(matchedEntry.pathRegExp, {
+      this._pageStates.set(matchedEntry, {
         type: 'loading',
         promise
       });
@@ -142,7 +142,7 @@ export class Pages extends PropertyInjectorElement(LitElement) {
       }
       case 'loaded': {
         const fm = new PageFragment(matchedEntry.tagName, () => this.resolver);
-        this._pageStates.set(matchedEntry.pathRegExp, {
+        this._pageStates.set(matchedEntry, {
           type: 'connected',
           fragment: fm
         });
@@ -161,25 +161,36 @@ export class Pages extends PropertyInjectorElement(LitElement) {
   }
 
   private _findMatchedPagEntry(): PageEntry | null {
-    const entryStack: Array<PageEntry | PageGroupEntry> = pageEntries.slice();
-    let entry: PageEntry | PageGroupEntry | undefined;
-    while ((entry = entryStack.pop()) !== undefined) {
-      if (entry.type === 'pageEntry' && entry.pathRegExp.test(this._path)) {
+    for (const entry of this._iteratePageEntries(pageEntries)) {
+      if (
+        (entry.pathRegExp !== undefined && entry.pathRegExp.test(this._path))
+        || entry.href === this._path
+      ) {
         return entry;
-      }
-      if (entry.type === 'pageGroupEntry') {
-        entryStack.push(...entry.pages);
       }
     }
     return null;
+  }
+
+  private *_iteratePageEntries(
+    entries: Iterable<PageEntry | PageGroupEntry>
+  ): IterableIterator<PageEntry> {
+    for (const entry of entries) {
+      if (entry.type === 'pageEntry') {
+        yield entry;
+      } else {
+        yield* this._iteratePageEntries(entry.pages);
+      }
+    }
   }
 
   private _showPage(fm: Fragment | null): void {
     if (fm !== null) {
       this._fragmentManager.showFragment(fm);
     }
-    for (const state of this._pageStates.values()) {
-      if (state.type === 'connected' && state.fragment !== fm) {
+    for (const entry of this._iteratePageEntries(pageEntries)) {
+      const state = this._pageStates.get(entry);
+      if (state !== undefined && state.type === 'connected' && state.fragment !== fm) {
         this._fragmentManager.hideFragment(state.fragment);
       }
     }

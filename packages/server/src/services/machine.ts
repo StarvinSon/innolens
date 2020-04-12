@@ -53,7 +53,7 @@ export class MachineInstanceNotFoundError extends Error {
 }
 
 
-export { MachineType as Machine, MachineAccessRecord };
+export { MachineType, MachineInstance, MachineAccessRecord };
 
 export const machineMemberCountHistoryGroupBys = [
   'all',
@@ -141,8 +141,7 @@ export class MachineService {
   }
 
   private async _hasAllTypes(typeIds: ReadonlyArray<string>): Promise<boolean> {
-    const promises = new Set(typeIds
-      .map(async (id) => this._hasType(id)));
+    const promises = new Set(typeIds.map(async (id) => this._hasType(id)));
     while (promises.size > 0) {
       // eslint-disable-next-line no-await-in-loop
       const result = await raceSettled(promises);

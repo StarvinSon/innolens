@@ -1,0 +1,23 @@
+name: GetInstances
+
+method: get
+path: /api/reusable-inventories/types/:typeId/instances
+
+authentication:
+  type: bearer
+
+responseBody:
+  data:
+    schema:
+      type: array
+      items:
+        type: object
+        required:
+          - instanceId
+          - instanceName
+        additionalProperties: false
+        properties:
+          instanceId:
+            type: string
+          instanceName:
+            type: string

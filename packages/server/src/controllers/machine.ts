@@ -3,10 +3,9 @@ import { parseISO } from 'date-fns';
 import createHttpError from 'http-errors';
 import { CREATED, BAD_REQUEST, NOT_FOUND } from 'http-status-codes';
 
-import { MachineInstance } from '../db/machine-instance';
 import { FileService } from '../services/file';
 import {
-  MachineService, MachineTypeNotFoundError,
+  MachineService, MachineTypeNotFoundError, MachineInstance,
   MachineMemberCountHistory, MachineInstanceNotFoundError
 } from '../services/machine';
 import { OAuth2Service } from '../services/oauth2';
