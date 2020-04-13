@@ -22,7 +22,7 @@ export const ReusableInventoryInstanceCollection = decorate(
   injectableFactory(Db),
   singleton(),
   async (db: Db): Promise<ReusableInventoryInstanceCollection> =>
-    db.defineCollection('ReusableInventoryInstances', {
+    db.defineCollection('reusableInventoryInstances', {
       validationLevel: 'strict',
       validationAction: 'error',
       validator: {

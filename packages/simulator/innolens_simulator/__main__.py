@@ -11,6 +11,7 @@ from .engine import create_engine
 from .users import add_users, get_members_df
 from .spaces import add_spaces, get_space_df, get_space_access_record_dfs
 from .machines import get_machine_type_df, get_machine_instance_dfs, get_machine_access_record_dfs
+from .expendable_inventories import get_expendable_inventory_type_df, get_expendable_inventory_quantity_set_record_dfs, get_expendable_inventory_access_record_dfs
 from .reusable_inventories import get_reusable_inventory_type_df, get_reusable_inventory_instance_dfs, get_reusable_inventory_access_record_dfs
 from .utils.time import hk_timezone
 
@@ -62,6 +63,16 @@ dfs: Mapping[str, pd.DataFrame] = {
   **{
     f'reusable_inventory_access_records/{inventory_id}/{instance_id}.csv': df
     for (inventory_id, instance_id), df in get_reusable_inventory_access_record_dfs(engine.world).items()
+  },
+
+  'expendable_inventory_types.csv': get_expendable_inventory_type_df(engine.world),
+  **{
+    f'expendable_inventory_quantity_set_records/{inventory_id}.csv': df
+    for inventory_id, df in get_expendable_inventory_quantity_set_record_dfs(engine.world).items()
+  },
+  **{
+    f'expendable_inventory_access_records/{inventory_id}.csv': df
+    for inventory_id, df in get_expendable_inventory_access_record_dfs(engine.world).items()
   }
 }
 

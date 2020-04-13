@@ -1,0 +1,23 @@
+name: GetTypes
+
+method: get
+path: /api/expendable-inventories/types
+
+authentication:
+  type: bearer
+
+responseBody:
+  data:
+    schema:
+      type: array
+      items:
+        type: object
+        additionalProperties: false
+        required:
+          - typeId
+          - typeName
+        properties:
+          typeId:
+            type: string
+          typeName:
+            type: string

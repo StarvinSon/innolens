@@ -7,44 +7,49 @@ import { ObjectId, Collection } from 'mongodb';
 import { Db } from './db';
 
 
-export interface ExpendableInventoryStockRecord {
+export interface ExpendableInventoryAccessRecord {
   readonly _id: ObjectId;
-  readonly inventoryId: string;
+  readonly typeId: string;
   readonly time: Date;
-  readonly quantity: number;
+  readonly memberId: string;
+  readonly quantity: number; // how many does the member take?
 }
 
 
-export interface ExpendableInventoryStockRecordCollection
-  extends Collection<ExpendableInventoryStockRecord> {}
+// eslint-disable-next-line max-len
+export interface ExpendableInventoryAccessRecordCollection extends Collection<ExpendableInventoryAccessRecord> {}
 
-export const ExpendableInventoryStockRecordCollection = decorate(
-  name('ExpendableInventoryStockRecordCollection'),
+export const ExpendableInventoryAccessRecordCollection = decorate(
+  name('ExpendableInventoryAccessRecordCollection'),
   injectableFactory(Db),
   singleton(),
-  async (db: Db): Promise<ExpendableInventoryStockRecordCollection> =>
-    db.defineCollection('expendableInventoryStockRecords', {
+  async (db: Db): Promise<ExpendableInventoryAccessRecordCollection> =>
+    db.defineCollection('expendableInventoryAccessRecords', {
       validationLevel: 'strict',
       validationAction: 'error',
       validator: {
         $jsonSchema: {
           bsonType: 'object',
-          additionalProperties: false,
           required: [
             '_id',
-            'inventoryId',
+            'typeId',
             'time',
+            'memberId',
             'quantity'
           ],
+          additionalProperties: false,
           properties: {
             _id: {
               bsonType: 'objectId'
             },
-            inventoryId: {
+            typeId: {
               bsonType: 'string'
             },
             time: {
               bsonType: 'date'
+            },
+            memberId: {
+              bsonType: 'string'
             },
             quantity: {
               bsonType: 'int'
@@ -53,7 +58,9 @@ export const ExpendableInventoryStockRecordCollection = decorate(
         }
       },
       indexes: [
-        { key: { inventoryId: 1 } }
+        {
+          key: { typeId: 1, time: 1 }
+        }
       ]
     })
 );

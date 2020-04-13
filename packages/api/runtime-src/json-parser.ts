@@ -55,7 +55,7 @@ type DecodedJsonType<
 /* eslint-disable @typescript-eslint/indent */
 export const decodeJsonObject = <
   M extends { readonly [key: string]: (item: unknown) => any },
-  A = undefined
+  A = never
 >(
   val: unknown,
   required: ReadonlyArray<keyof M>,

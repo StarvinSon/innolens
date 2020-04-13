@@ -30,7 +30,7 @@ const writeRoutesGlueFile = (
                 getRelativeImportPath(sourceFile, `./src/controllers/glues/${pascalToKebabCase(indexSpec.name)}`),
                 `${pascalToPascalCase(indexSpec.name)}ControllerGlue`
               );
-              writer.writeLine(`${pascalToCamelCase(indexSpec.name)}: ${controllerTypeExpr},`);
+              writer.writeLine(`readonly ${pascalToCamelCase(indexSpec.name)}: ${controllerTypeExpr},`);
             }
           });
         }).write('): void =>').block(() => { // eslint-disable-line newline-per-chained-call

@@ -13,6 +13,7 @@ from ..machines.waterjet_cutting_machine import WaterjetCuttingMachine
 from ..machines.cnc_milling_machine import CNCMillingMachine
 from ..machines.acrylic_laser_cut_machine import AcrylicLaserCutMachine
 from ..machines.metal_laser_cut_machine import MetalLaserCutMachine
+from ..expendable_inventories.wood_plank import WoodPlank
 from ..utils.random.int import randint_nd
 
 
@@ -28,6 +29,8 @@ class COMP3356RoboticsMember(Component):
   __laser_cutting_room: LaserCuttingRoom
   __acrylic_laser_cut_machine: AcrylicLaserCutMachine
   __metal_laser_cut_machine: MetalLaserCutMachine
+
+  __wood_plank: WoodPlank
 
   __activity_period: Optional[Tuple[datetime, datetime]]
 
@@ -67,6 +70,10 @@ class COMP3356RoboticsMember(Component):
     metal_laser_cut_machine = laser_cutting_room.attached_object.find_component(MetalLaserCutMachine, recursive=True)
     assert metal_laser_cut_machine is not None
     self.__metal_laser_cut_machine = metal_laser_cut_machine
+
+    wood_plank = machine_room.attached_object.find_component(WoodPlank, recursive=True)
+    assert wood_plank is not None
+    self.__wood_plank = wood_plank
 
   def _on_next_tick(self) -> None:
     curr_time = self.engine.clock.current_time
@@ -120,6 +127,12 @@ class COMP3356RoboticsMember(Component):
       self.__metal_laser_cut_machine
     ):
       machine.acquire(self.__member)
+    for expendable_inventory in (
+      self.__wood_plank,
+    ):
+      quantity = min(expendable_inventory.quantity, randint_nd(lower=1, upper=3, mean=2, stddev=0.5))
+      if quantity > 0:
+        expendable_inventory.acquire(self.__member, quantity)
 
   def __on_activity_end(self) -> None:
     for machine in (

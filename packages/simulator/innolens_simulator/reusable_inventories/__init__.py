@@ -43,7 +43,7 @@ def get_reusable_inventory_instance_dfs(world: Object) -> Mapping[str, pd.DataFr
       type_instances[inventory.type_id] = instances
 
     if inventory.instance_id in instances:
-      raise Exception(f'Duplicated inventory with id {inventory.type_id} and instance id {inventory.instance_id}')
+      raise Exception(f'Duplicated reusable inventory with id {inventory.type_id} and instance id {inventory.instance_id}')
 
     instances[inventory.instance_id] = {
       'instance_id': inventory.instance_id,
@@ -71,10 +71,11 @@ def get_reusable_inventory_access_record_dfs(world: Object) -> Mapping[Tuple[str
     ids: MutableSet[Tuple[str, str]] = set()
     for inventory in world.find_components(ReusableInventory, recursive=True):
       if (inventory.type_id, inventory.instance_id) in ids:
-        raise Exception(f'Duplicated inventory type id {inventory.type_id} with instance id {inventory.instance_id}')
+        raise Exception(f'Duplicated reusable inventory type id {inventory.type_id} with instance id {inventory.instance_id}')
       ids.add((inventory.type_id, inventory.instance_id))
 
-      rows = list({
+      rows = list(
+        {
           'time': time.astimezone(hk_timezone).isoformat(),
           'member_id': member_id,
           'action': action

@@ -1,0 +1,31 @@
+name: PostQuantitySetAndAccessRecords
+
+method: post
+path: /api/expendable-inventories/types/:typeId/quantity-set-and-access-records
+
+authentication:
+  type: bearer
+
+requestBody:
+  contentType: application/json
+  schema:
+    type: object
+    required:
+      - deleteFromTime
+      - deleteToTime
+      - quantitySetRecordsFileId
+      - accessRecordsFileId
+    additionalProperties: false
+    properties:
+      deleteFromTime:
+        anyOf:
+          - type: 'null'
+          - type: date
+      deleteToTime:
+        anyOf:
+          - type: 'null'
+          - type: date
+      quantitySetRecordsFileId:
+        type: string
+      accessRecordsFileId:
+        type: string

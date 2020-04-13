@@ -7,20 +7,20 @@ import { ObjectId, Collection } from 'mongodb';
 import { Db } from './db';
 
 
-export interface ReusableInventoryType {
+export interface ExpendableInventoryType {
   readonly _id: ObjectId;
   readonly typeId: string;
   readonly typeName: string;
 }
 
-export interface ReusableInventoryTypeCollection extends Collection<ReusableInventoryType> {}
+export interface ExpendableInventoryTypeCollection extends Collection<ExpendableInventoryType> {}
 
-export const ReusableInventoryTypeCollection = decorate(
-  name('ReusableInventoryTypeCollection'),
+export const ExpendableInventoryTypeCollection = decorate(
+  name('ExpendableInventoryTypeCollection'),
   injectableFactory(Db),
   singleton(),
-  async (db: Db): Promise<ReusableInventoryTypeCollection> =>
-    db.defineCollection('reusableInventoryTypes', {
+  async (db: Db): Promise<ExpendableInventoryTypeCollection> =>
+    db.defineCollection('expendableInventoryTypes', {
       validationLevel: 'strict',
       validationAction: 'error',
       validator: {

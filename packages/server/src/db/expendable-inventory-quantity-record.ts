@@ -7,39 +7,37 @@ import { ObjectId, Collection } from 'mongodb';
 import { Db } from './db';
 
 
-export interface ReusableInventoryAccessRecord {
+export interface ExpendableInventoryQuantityRecord {
   readonly _id: ObjectId;
   readonly typeId: string;
-  readonly instanceId: string;
-  readonly memberId: string;
   readonly time: Date;
-  readonly action: 'acquire' | 'release';
+  readonly quantity: number;
+  readonly mode: 'access' | 'set';
 }
 
 
 // eslint-disable-next-line max-len
-export interface ReusableInventoryAccessRecordCollection extends Collection<ReusableInventoryAccessRecord> {}
+export interface ExpendableInventoryQuantityRecordCollection extends Collection<ExpendableInventoryQuantityRecord> {}
 
-export const ReusableInventoryAccessRecordCollection = decorate(
-  name('ReusableInventoryAccessRecordCollection'),
+export const ExpendableInventoryQuantityRecordCollection = decorate(
+  name('ExpendableInventoryQuantityRecordCollection'),
   injectableFactory(Db),
   singleton(),
-  async (db: Db): Promise<ReusableInventoryAccessRecordCollection> =>
-    db.defineCollection('reusableInventoryAccessRecords', {
+  async (db: Db): Promise<ExpendableInventoryQuantityRecordCollection> =>
+    db.defineCollection('expendableInventoryQuantityRecords', {
       validationLevel: 'strict',
       validationAction: 'error',
       validator: {
         $jsonSchema: {
           bsonType: 'object',
-          additionalProperties: false,
           required: [
             '_id',
             'typeId',
-            'instanceId',
-            'memberId',
             'time',
-            'action'
+            'quantity',
+            'mode'
           ],
+          additionalProperties: false,
           properties: {
             _id: {
               bsonType: 'objectId'
@@ -47,24 +45,21 @@ export const ReusableInventoryAccessRecordCollection = decorate(
             typeId: {
               bsonType: 'string'
             },
-            memberId: {
-              bsonType: 'string'
-            },
-            instanceId: {
-              bsonType: 'string'
-            },
             time: {
               bsonType: 'date'
             },
-            action: {
-              enum: ['acquire', 'release']
+            quantity: {
+              bsonType: 'int'
+            },
+            mode: {
+              enum: ['access', 'set']
             }
           }
         }
       },
       indexes: [
         {
-          key: { typeId: 1, instanceId: 1, time: 1 }
+          key: { typeId: 1, time: 1 }
         }
       ]
     })

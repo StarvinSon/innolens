@@ -1,0 +1,62 @@
+name: GetAggregatedAccessHistory
+
+method: get
+path: /api/expendable-inventories/aggregated-access-history
+query:
+  pastHours:
+    required: true
+    schema:
+      type: integer
+  typeIds:
+    schema:
+      type: array
+      items:
+        type: string
+  groupBy:
+    schema:
+      enum:
+        - department
+        - typeOfStudy
+        - studyProgramme
+        - yearOfStudy
+        - affiliatedStudentInterestGroup
+  countType:
+    schema:
+      enum:
+        - total
+        - uniqueMember
+
+authentication:
+  type: bearer
+
+responseBody:
+  data:
+    schema:
+      type: object
+      required:
+        - groups
+        - records
+      additionalProperties: false
+      properties:
+        groups:
+          type: array
+          items:
+            type: string
+        records:
+          type: array
+          items:
+            type: object
+            required:
+              - startTime
+              - endTime
+              - counts
+            additionalProperties: false
+            properties:
+              startTime:
+                type: date
+              endTime:
+                type: date
+              counts:
+                type: object
+                additionalProperties:
+                  type: number
