@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from argparse import ArgumentParser, Namespace
 from datetime import datetime, timedelta, timezone
-from typing import MutableSequence, Iterator, Mapping, Any, Optional, Iterable, Iterator, Sequence, Callable, TypeVar
+from typing import MutableSequence, Iterator, Mapping, Any, Optional, Sequence, Callable, TypeVar
 from typing_extensions import Final
 from pathlib import Path
 from logging import INFO

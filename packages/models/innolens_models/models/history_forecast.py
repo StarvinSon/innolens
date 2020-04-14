@@ -2,26 +2,28 @@ from __future__ import annotations
 
 from argparse import ArgumentParser, Namespace
 from datetime import datetime, timedelta, timezone
-from typing import MutableSequence, Iterator, Mapping, Any, Optional, Sequence, Callable, TypeVar
+from typing import MutableSequence, Mapping, Any, Optional, Iterator, Sequence, Callable, TypeVar
 from typing_extensions import Final
 from pathlib import Path
-from logging import INFO
+import logging
 from pprint import pprint
 from math import floor
+import os.path
+import re
 
+import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 import pandas as pd
 
 from ..cli import Cli
-from .utils.estimator_metrics import to_estimator_metrics
 
 
 hk_timezone: Final = timezone(timedelta(hours=8))
 
 
-class AccessRecordCli(Cli):
-  name: Final[str] = 'access_record'
+class HistoryForecastCli(Cli):
+  name: Final[str] = 'history_forecast'
 
   def configure_parser(self, parser: ArgumentParser) -> None:
     subparsers = parser.add_subparsers(
@@ -30,18 +32,17 @@ class AccessRecordCli(Cli):
       dest='action'
     )
     for sub_cli in (
-      AccessRecordPreprocessorCli(),
-      AccessRecordModelTrainingCli(),
-      AccessRecordModelEvaluationCli()
+      HistoryForecastPreprocessorCli(),
+      HistoryForecastModelTrainingCli()
     ):
       subparser = subparsers.add_parser(name=sub_cli.name)
       sub_cli.configure_parser(subparser)
-      subparser.set_defaults(_AccessRecordCli__handler=sub_cli.handle)
+      subparser.set_defaults(_HistoryForecastCli__handler=sub_cli.handle)
 
   def handle(self, args: Namespace) -> None:
-    args._AccessRecordCli__handler(args)
+    args._HistoryForecastCli__handler(args)
 
-class AccessRecordPreprocessorCli(Cli):
+class HistoryForecastPreprocessorCli(Cli):
   name: Final[str] = 'preprocess'
 
   def configure_parser(self, parser: ArgumentParser) -> None:
@@ -115,105 +116,46 @@ class AccessRecordPreprocessorCli(Cli):
       evaluation_fraction=evaluation_fraction
     )
 
-class AccessRecordModelTrainingCli(Cli):
+class HistoryForecastModelTrainingCli(Cli):
   name: Final[str] = 'train'
 
   def configure_parser(self, parser: ArgumentParser) -> None:
     parser.add_argument(
-      '--model-dir',
-      help='The dir storing the model internal data',
+      '--checkpoint-dir',
+      help='The dir storing the checkpoints',
       required=True
     )
     parser.add_argument(
       '--training-data',
-      help='Path to the training data csv',
-      required=True
-    )
-    parser.add_argument(
-      '--learning-rate',
-      help='The learning rate for training',
-      type=int
-    )
-    # parser.add_argument(
-    #   '--l1',
-    #   help='L1 regularization parameter',
-    #   type=float
-    # )
-    # parser.add_argument(
-    #   '--l2',
-    #   help='L2 regularization parameter',
-    #   type=float
-    # )
-    parser.add_argument(
-      '--steps',
-      help='Number of steps for training',
-      type=int
-    )
-    parser.add_argument(
-      '--log-steps',
-      help='Number of step between each log during training',
-      type=int
+      help='Path to the training data csv'
     )
     parser.add_argument(
       '--evaluation-data',
       help='Path to the evaluation data csv'
     )
     parser.add_argument(
-      '--evaluation-prediction',
-      help='Path to the evaluation prediction csv'
+      '--log-dir',
+      help='The dir storing the log for TensorBoard'
+    )
+    parser.add_argument(
+      '--ui',
+      help='Show UI or not',
+      action='store_true'
     )
 
   def handle(self, args: Namespace) -> None:
-    model_dir_path: str = args.model_dir
-    training_data_path: str = args.training_data
-    learning_rate: Optional[int] = args.learning_rate
-    # l1: Optional[float] = args.l1
-    # l2: Optional[float] = args.l2
-    steps: Optional[int] = args.steps
-    log_steps: Optional[int] = args.log_steps
+    checkpoint_dir_path: str = args.checkpoint_dir
+    training_data_path: Optional[str] = args.training_data
     evaluation_data_path: Optional[str] = args.evaluation_data
-    evaluation_prediction_path: Optional[str] = args.evaluation_prediction
+    log_dir_path: Optional[str] = args.log_dir
+    show_ui: bool = args.ui
 
-    train_or_evaluate_model(
-      model_dir_path=model_dir_path,
-      training_data_path=training_data_path,
-      training_learning_rate=learning_rate,
-      # training_l1=l1,
-      # training_l2=l2,
-      training_steps=steps,
-      training_log_steps=log_steps,
-      evaluation_data_path=evaluation_data_path,
-      evaluation_prediction_path=evaluation_prediction_path
-    )
-
-class AccessRecordModelEvaluationCli(Cli):
-  name: Final[str] = 'evaluate'
-
-  def configure_parser(self, parser: ArgumentParser) -> None:
-    parser.add_argument(
-      '--model-dir',
-      help='The dir storing the model internal data',
-      required=True
-    )
-    parser.add_argument(
-      '--data',
-      help='Path to the training data csv',
-      required=True
-    ),
-    parser.add_argument(
-      '--prediction',
-      help='Path to the prediction csv'
-    )
-
-  def handle(self, args: Namespace) -> None:
-    model_dir_path: str = args.model_dir
-    data_path: str = args.data
-    prediction_path: Optional[str] = args.prediction
-
-    train_or_evaluate_model(
-      model_dir_path=model_dir_path,
-      evaluation_data_path=data_path,
-      evaluation_prediction_path=prediction_path
+    train_model(
+      checkpoint_dir_path=str(Path(checkpoint_dir_path)),
+      training_data_path=None if training_data_path is None else str(Path(training_data_path)),
+      evaluation_data_path=None if evaluation_data_path is None else str(Path(evaluation_data_path)),
+      log_dir_path=None if log_dir_path is None else str(Path(log_dir_path)),
+      show_ui=show_ui
     )
 
 
@@ -390,6 +332,13 @@ def preprocess(
   df = to_data_frame(rows)
   assert df.notna().all(axis=None)
 
+  # Debug purpose:
+  # If the model can learn this pattern, then it should work
+  # from math import pi
+  # def sin_count(a: int) -> Any:
+  #   return np.sin(np.arange(df.shape[0]) * a * pi / 180)
+  # df['stay_count'] = sin_count(1) + sin_count(2) + sin_count(3)
+
   evaluation_start_idx = floor(df.shape[0] * (1 - evaluation_fraction))
   training_df = df.iloc[:evaluation_start_idx]
   evaluation_df = df.iloc[evaluation_start_idx:]
@@ -403,181 +352,220 @@ def preprocess(
     output_df.to_csv(str(output_path_obj), index=False)
 
 
-def train_or_evaluate_model(
+def train_model(
   *,
-  model_dir_path: str,
+  checkpoint_dir_path: str,
   training_data_path: Optional[str] = None,
-  training_learning_rate: Optional[int] = None,
-  # training_l1: Optional[float] = None,
-  # training_l2: Optional[float] = None,
-  training_steps: Optional[int] = None,
-  training_log_steps: Optional[int] = None,
   evaluation_data_path: Optional[str] = None,
-  evaluation_prediction_path: Optional[str] = None
+  log_dir_path: Optional[str] = None,
+  show_ui: bool = False
 ) -> None:
-  tf.get_logger().setLevel(INFO)
+  logging.getLogger().setLevel(logging.INFO)
+  tf.get_logger().setLevel(logging.INFO)
 
-  model = AccessRecordModel(
-    model_dir_path=model_dir_path,
-    learning_rate=training_learning_rate,
-    # l1=training_l1,
-    # l2=training_l2,
-    log_steps=training_log_steps
+  model = HistoryForecastModel(
+    checkpoint_dir_path=checkpoint_dir_path,
+    log_dir_path=log_dir_path
   )
 
   if training_data_path is not None:
-    model.train(training_data_path, steps=training_steps)
+    model.train(training_data_path, show_ui=show_ui)
 
   if evaluation_data_path is not None:
-    result = model.evaluate(evaluation_data_path, dataset=evaluation_prediction_path is not None)
-    if 'dataset' in result:
-      df = pd.DataFrame.from_records(result['dataset'].as_numpy_iterator())
-      df.to_csv(evaluation_prediction_path, index=False)
-    pprint(result['metrics'])
+    result = model.evaluate(evaluation_data_path, show_ui=show_ui)
+    pprint(result)
 
-class AccessRecordModel:
-  __tf_model: Final[Any]
+class HistoryForecastModel:
+  __checkpoint_dir_path: Final[str]
+  __log_dir_path: Final[Optional[str]]
+
+  __model: Final[Any]
+  __input_size: Final = 24 * 2 * 14 # 2 week
+  __input_shift: Final = 24 * 2 # 1 day
+  __predict_size: Final = 24 * 2 # 1 day
+  __mean: float
+  __stddev: float
+  __last_epoch: int
 
   def __init__(
     self,
     *,
-    model_dir_path: str,
-    learning_rate: Optional[float] = None,
-    # l1: Optional[float] = None,
-    # l2: Optional[float] = None,
-    log_steps: Optional[int] = None
+    checkpoint_dir_path: str,
+    log_dir_path: Optional[str] = None
   ):
     super().__init__()
 
-    if learning_rate is None:
-      learning_rate = 0.001
-    # if l1 is None:
-    #   l1 = 0.0
-    # if l2 is None:
-    #   l2 = 0.0
-    if log_steps is None:
-      log_steps = 100
+    self.__checkpoint_dir_path = checkpoint_dir_path
+    self.__log_dir_path = log_dir_path
 
-    weekday_feature_column = tf.feature_column.categorical_column_with_identity(
-      key='start_time_weekday',
-      num_buckets=7
-    )
-    hour_feature_column = tf.feature_column.categorical_column_with_identity(
-      key='start_time_hour',
-      num_buckets=24
-    )
-    minute_feature_column = tf.feature_column.categorical_column_with_vocabulary_list(
-      key='start_time_minute',
-      vocabulary_list=[0, 30],
-      num_oov_buckets=0
-    )
-    # crossed_column = tf.feature_column.crossed_column(
-    #   keys=(weekday_feature_column, hour_feature_column, minute_feature_column),
-    #   hash_bucket_size=1000
-    # )
-
-    model = tf.estimator.DNNRegressor(
-      hidden_units=[128], # TODO: tune hidden layer
-      feature_columns=(
-        tf.feature_column.indicator_column(weekday_feature_column),
-        tf.feature_column.indicator_column(hour_feature_column),
-        tf.feature_column.indicator_column(minute_feature_column),
-        # crossed_column,
+    model = tf.keras.models.Sequential([
+      tf.keras.layers.LSTM(
+        32,
+        input_shape=(self.__input_size, 1),
+        # return_sequences=True
       ),
-      model_dir=model_dir_path,
-      # weight_column=FEATURE_KEY_LABEL_WEIGHT,
-      optimizer=tf.keras.optimizers.Adam(
-        learning_rate=learning_rate
-      ),
-      config=tf.estimator.RunConfig(
-        log_step_count_steps=log_steps
-      )
+      # tf.keras.layers.LSTM(16, activation='relu'),
+      tf.keras.layers.Dense(self.__predict_size)
+    ])
+    self.__model = model
+
+    model.compile(
+      optimizer=tf.keras.optimizers.RMSprop(clipvalue=1.0),
+      loss='mae',
+      metrics=['mae', 'mse']
     )
 
-    for name, keras_metrics_factory in {
-      'mse': tf.keras.metrics.MeanSquaredError,
-      'rmse': tf.keras.metrics.RootMeanSquaredError,
-      'mae': tf.keras.metrics.MeanAbsoluteError
-    }.items():
-      model = tf.estimator.add_metrics(model, to_estimator_metrics(name, keras_metrics_factory))
+    self.__mean = 0.0
+    self.__stddev = 1.0
+    self.__last_epoch = 0
 
-    self.__tf_model = model
+    latest_ckpt = tf.train.latest_checkpoint(self.__checkpoint_dir_path)
+    if latest_ckpt is not None:
+      match = re.search(r'\d+', Path(latest_ckpt).name)
+      if match is not None:
+        self.__last_epoch = int(match[0])
 
-  def train(self, path: str, *, steps: Optional[int] = None) -> None:
-    if steps is None:
-      steps = 10000
+        model.load_weights(latest_ckpt)
+        logging.info(f'Load checkpoint from {latest_ckpt}')
 
-    input_fn = lambda: self.__to_training_dataset(self.__load_dataset(path))
-    self.__tf_model.train(
-      input_fn=input_fn,
-      steps=steps
-    )
+        std_path = Path(self.__checkpoint_dir_path) / 'standardize_params.npz'
+        arrs = np.load(std_path)
+        self.__mean = np.float64(arrs['mean'])
+        self.__stddev = np.float64(arrs['stddev'])
 
-  def evaluate(self, path: str, *, dataset: bool = False) -> Any:
-    input_fn = lambda: self.__to_evaluation_dataset(self.__load_dataset(path))
-    metrics = self.__tf_model.evaluate(
-      input_fn=input_fn
-    )
-    result = { 'metrics': metrics }
+  def train(
+    self,
+    path: str,
+    *,
+    epochs: Optional[int] = None,
+    steps_per_epoch: Optional[int] = None,
+    show_ui: bool = False
+  ) -> None:
+    if epochs is None:
+      epochs = 20
+    if steps_per_epoch is None:
+      steps_per_epoch = 10
 
-    if dataset:
-      def generate() -> Iterator[Any]:
-        ds = self.__load_dataset(path)
-
-        input_fn = lambda: self.__to_evaluation_dataset(self.__load_dataset(path))
-        predictions = self.__tf_model.predict(input_fn=input_fn)
-
-        for (features, label), prediction in zip(ds, predictions):
-          yield {
-            **features,
-            'label': label,
-            'prediction': prediction['predictions'][0]
-          }
-
-      result['dataset'] = tf.data.Dataset.from_generator(
-        generate,
-        {
-          'start_time_weekday': tf.int32,
-          'start_time_hour': tf.int32,
-          'start_time_minute': tf.int32,
-          'label': tf.int32,
-          'prediction': tf.float32
-        },
-        {
-          'start_time_weekday': tf.TensorShape([]),
-          'start_time_hour': tf.TensorShape([]),
-          'start_time_minute': tf.TensorShape([]),
-          'label': tf.TensorShape([]),
-          'prediction': tf.TensorShape([])
+    if self.__last_epoch == 0:
+      series = pd.read_csv(
+        path,
+        usecols=['stay_count'],
+        dtype={
+          'stay_count': np.float64
         }
+      )['stay_count']
+      self.__mean = series.mean()
+      self.__stddev = series.std()
+      std_path = Path(self.__checkpoint_dir_path) / 'standardize_params.npz'
+      std_path.parent.mkdir(parents=True, exist_ok=True)
+      np.savez(
+        std_path,
+        mean=self.__mean,
+        stddev=self.__stddev
       )
+
+    training_ds = self.__load_training_ds(path)
+    validation_ds = self.__load_validation_ds(path)
+
+    callbacks = []
+    callbacks.append(tf.keras.callbacks.ModelCheckpoint(
+      filepath=os.path.join(self.__checkpoint_dir_path, 'checkpoint-{epoch:04d}'),
+      verbose=1,
+      save_weights_only=True
+    ))
+    if self.__log_dir_path is not None:
+      callbacks.append(tf.keras.callbacks.TensorBoard(self.__log_dir_path))
+
+    training_history = self.__model.fit(
+      training_ds,
+      initial_epoch=self.__last_epoch,
+      epochs=self.__last_epoch + epochs,
+      steps_per_epoch=10,
+      validation_data=validation_ds,
+      validation_steps=10,
+      callbacks=callbacks
+    )
+
+    self.last_epoch = training_history.epoch[-1]
+
+    if show_ui:
+      fig = plt.figure()
+      ax = fig.add_subplot()
+      ax.plot(training_history.epoch, training_history.history['loss'], label='Training loss')
+      ax.plot(training_history.epoch, training_history.history['val_loss'], label='Validation loss')
+      ax.legend()
+      plt.show()
+
+      examples = list(validation_ds.unbatch().take(3).as_numpy_iterator())
+      self.visualize_examples(examples)
+
+  def evaluate(self, path: str, *, show_ui: bool = False) -> Any:
+    evaluation_ds = self.__load_evaluation_ds(path)
+
+    callbacks = []
+    if self.__log_dir_path is not None:
+      callbacks.append(tf.keras.callbacks.TensorBoard(self.__log_dir_path))
+
+    result = self.__model.evaluate(
+      evaluation_ds,
+      callbacks=callbacks
+    )
+
+    if show_ui:
+      examples = list(evaluation_ds.unbatch().take(3).as_numpy_iterator())
+      self.visualize_examples(examples)
 
     return result
 
-  def __load_dataset(self, path: str) -> Any:
-    return tf.data.experimental.make_csv_dataset(
+  def predict(self, X_batch: Any) -> Any:
+    return self.__model.predict(X_batch)
+
+  def visualize_examples(self, examples: Any) -> None:
+    for X, Y in examples:
+      prediction = self.predict(X.reshape((1, -1, 1)))[0]
+
+      fig = plt.figure()
+      ax = fig.add_subplot()
+      ax.plot(range(-X.shape[0], 0), X, label='Input')
+      ax.plot(range(0, Y.shape[0]), Y, label='Label', linestyle=' ', marker='o', alpha=0.4)
+      ax.plot(range(0, prediction.shape[0]), prediction, label='Predict', linestyle=' ', marker='o', alpha=0.4)
+      ax.grid(True)
+      ax.legend()
+      fig.tight_layout()
+      plt.show()
+
+  def __load_ds(self, path: str) -> Any:
+    ds = tf.data.experimental.make_csv_dataset(
       file_pattern=path,
       header=True,
       select_columns=[
-        'start_time_weekday',
-        'start_time_hour',
-        'start_time_minute',
-        'unique_stay_count'
+        'stay_count'
       ],
       column_defaults=[
-        tf.int32,
-        tf.int32,
-        tf.int32,
-        tf.int32
+        tf.float64
       ],
-      label_name='unique_stay_count',
       shuffle=False,
       batch_size=1,
       num_epochs=1
     ).unbatch()
+    ds = ds.map(lambda x: x['stay_count'])
 
-  def __to_training_dataset(self, ds: Any) -> Any:
-    return ds.shuffle(2000).batch(100).repeat()
+    ds = ds.window(size=self.__input_size + self.__predict_size, shift=self.__input_shift, drop_remainder=True)
+    ds = ds.flat_map(lambda sub: sub.batch(self.__input_size + self.__predict_size))
+    ds = ds.map(lambda x: (
+      (tf.reshape(x[:-self.__predict_size], [-1, 1]) - self.__mean) / self.__stddev,
+      x[-self.__predict_size:]
+    ))
+    return ds
 
-  def __to_evaluation_dataset(self, ds: Any) -> Any:
-    return ds.batch(100)
+  def __load_training_ds(self, path: str) -> Any:
+    ds = self.__load_ds(path)
+    return ds.cache().shuffle(10000).batch(128).repeat()
+
+  def __load_validation_ds(self, path: str) -> Any:
+    ds = self.__load_ds(path)
+    return ds.batch(128).repeat()
+
+  def __load_evaluation_ds(self, path: str) -> Any:
+    ds = self.__load_ds(path)
+    return ds.batch(128)

@@ -3,5 +3,20 @@
   // Hover to view descriptions of existing attributes.
   // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
   "version": "0.2.0",
-  "configurations": []
+  "configurations": [
+    {
+      "name": "Train History Forecast Model",
+      "type": "python",
+      "request": "launch",
+      "module": "innolens_models",
+      "args": [
+        "history_forecast", "train",
+        "--checkpoint-dir", "${workspaceFolder}/checkpoints/history_forecast",
+        "--training-data", "${workspaceFolder}/preprocessed/history_forecast/training.csv",
+        "--evaluation-data", "${workspaceFolder}/preprocessed/history_forecast/evaluation.csv",
+        "--log-dir", "${workspaceFolder}/logs/history_forecast",
+        "--ui"
+      ]
+    }
+  ]
 }

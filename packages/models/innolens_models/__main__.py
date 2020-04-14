@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 
 from .models.access_record import AccessRecordCli
 from .models.user_count import UserCountCli
+from .models.history_forecast import HistoryForecastCli
 
 
 parser = ArgumentParser(
@@ -17,7 +18,8 @@ subparsers = parser.add_subparsers(
 )
 for sub_cli in (
   AccessRecordCli(),
-  UserCountCli()
+  UserCountCli(),
+  HistoryForecastCli()
 ):
   subparser = subparsers.add_parser(name=sub_cli.name)
   sub_cli.configure_parser(subparser)

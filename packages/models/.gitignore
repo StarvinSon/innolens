@@ -1,4 +1,6 @@
 /.mypy_cache/
+/checkpoints/
+/logs/
 /tensorflow_models/
 __pycache__/
 *.csv
