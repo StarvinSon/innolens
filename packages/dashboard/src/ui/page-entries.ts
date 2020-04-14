@@ -22,10 +22,10 @@ export const pageEntries: ReadonlyArray<PageEntry | PageGroupEntry> = [
     load: async () => {
       await import(
         /* webpackChunkName: 'home-page' */
-        './home-page'
+        './user-pages'
       );
     },
-    tagName: 'inno-home-page'
+    tagName: 'inno-user-pages'
   },
   {
     type: 'pageGroupEntry',

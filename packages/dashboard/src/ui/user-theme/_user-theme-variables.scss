@@ -1,0 +1,42 @@
+@function _name($name) {
+  @return --inno-user-theme-#{$name};
+}
+
+
+$background-elevation-0dp: _name('background-elevation-0dp');
+$background-elevation-1dp: _name('background-elevation-1dp');
+$background-elevation-2dp: _name('background-elevation-2dp');
+$background-elevation-3dp: _name('background-elevation-3dp');
+$background-elevation-4dp: _name('background-elevation-4dp');
+$background-elevation-5dp: _name('background-elevation-5dp');
+$background-elevation-6dp: _name('background-elevation-6dp');
+$background-elevation-7dp: _name('background-elevation-7dp');
+$background-elevation-8dp: _name('background-elevation-8dp');
+$background-elevation-9dp: _name('background-elevation-9dp');
+$background-elevation-10dp: _name('background-elevation-10dp');
+$background-elevation-11dp: _name('background-elevation-11dp');
+$background-elevation-12dp: _name('background-elevation-12dp');
+$background-elevation-13dp: _name('background-elevation-13dp');
+$background-elevation-14dp: _name('background-elevation-14dp');
+$background-elevation-15dp: _name('background-elevation-15dp');
+$background-elevation-16dp: _name('background-elevation-16dp');
+$background-elevation-17dp: _name('background-elevation-17dp');
+$background-elevation-18dp: _name('background-elevation-18dp');
+$background-elevation-19dp: _name('background-elevation-19dp');
+$background-elevation-20dp: _name('background-elevation-20dp');
+$background-elevation-21dp: _name('background-elevation-21dp');
+$background-elevation-22dp: _name('background-elevation-22dp');
+$background-elevation-23dp: _name('background-elevation-23dp');
+$background-elevation-24dp: _name('background-elevation-24dp');
+$on-background: _name('on-background');
+
+$primary: _name('primary');
+$on-primary: _name('on-primary');
+
+$separator: _name('separator');
+
+$chart-0: _name('chart-0');
+$chart-1: _name('chart-1');
+$chart-2: _name('chart-2');
+$chart-3: _name('chart-3');
+$chart-4: _name('chart-4');
