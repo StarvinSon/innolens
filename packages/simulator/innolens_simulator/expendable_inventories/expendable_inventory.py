@@ -50,6 +50,6 @@ class ExpendableInventory(Component):
     if quantity > self.__quantity:
       raise ValueError(f'Expendable inventory {self.type_name} overdrawn')
     if quantity == 0:
-      raise ValueError(f'quantity must be > 0')
+      raise ValueError('quantity must be > 0')
     self.__access_log.append((self.engine.clock.current_time, member.member_id, quantity))
     self.__quantity -= quantity
