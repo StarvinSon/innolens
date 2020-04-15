@@ -4,10 +4,10 @@ import {
 } from 'lit-element';
 import moment from 'moment';
 
-import '../icon-button';
+import logo from '../../images/logo-2-horizontal.png';
+import '../button';
 import '../user-theme';
 import '../typography';
-import { menuIcon } from '../icons/menu';
 
 import { css, classes } from './user-top-bar.scss';
 
@@ -39,15 +39,13 @@ export class TopBar extends LitElement {
 
   protected render(): TemplateResult {
     return html`
-      <div class="${classes.left}">
-        <inno-icon-button
-          class="${classes.drawerIcon}"
-          @click="${this._onDrawerButtonClick}">
-          ${menuIcon(classes.drawerIcon_svg)}
-        </inno-icon-button>
-        <h1 class="${classes.logo}">InnoLens User Dashboard</h1>
-      </div>
-      <div class="${classes.right}">
+      <inno-button
+        class="${classes.drawerButton}"
+        @click="${this._onDrawerButtonClick}">
+        <img src="${logo}" width="256" height="48" />
+      </inno-button>
+
+      <div class="${classes.info}">
         ${this.currentTime}
       </div>
     `;

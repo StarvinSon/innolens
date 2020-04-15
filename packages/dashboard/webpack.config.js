@@ -81,6 +81,13 @@ module.exports = (env, { publicPath = '/static/' }) => {
     }
   ];
 
+  /** @type {import('webpack').RuleSetUse} */
+  const imageUse = [
+    {
+      loader: 'file-loader'
+    }
+  ];
+
   return {
     // Entry and Context
     context: rootPath,
@@ -119,6 +126,11 @@ module.exports = (env, { publicPath = '/static/' }) => {
           include: srcPath,
           test: /\.scss$/i,
           use: scssUse
+        },
+        {
+          include: srcPath,
+          test: /\.(png|svg|jpg|gif)$/i,
+          use: imageUse
         }
       ]
     },
