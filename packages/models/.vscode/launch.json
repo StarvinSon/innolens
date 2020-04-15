@@ -13,6 +13,18 @@
         "history_forecast", "train",
         "--checkpoint-dir", "${workspaceFolder}/checkpoints/history_forecast",
         "--training-data", "${workspaceFolder}/preprocessed/history_forecast/training.csv",
+        "--log-dir", "${workspaceFolder}/logs/history_forecast",
+        "--ui"
+      ]
+    },
+    {
+      "name": "Eval History Forecast Model",
+      "type": "python",
+      "request": "launch",
+      "module": "innolens_models",
+      "args": [
+        "history_forecast", "train",
+        "--checkpoint-dir", "${workspaceFolder}/checkpoints/history_forecast",
         "--evaluation-data", "${workspaceFolder}/preprocessed/history_forecast/evaluation.csv",
         "--log-dir", "${workspaceFolder}/logs/history_forecast",
         "--ui"

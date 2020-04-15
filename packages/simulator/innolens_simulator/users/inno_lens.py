@@ -62,7 +62,9 @@ class InnoLensMember(Component):
       self.__member.membership_start_time <= current_time
       and (
         time_equals(shifted_time, weekday=0, hour=10, minute=0) # Mon 10:00
+        or time_equals(shifted_time, weekday=1, hour=11, minute=0) # Tue 11:00
         or time_equals(shifted_time, weekday=2, hour=12, minute=0) # Wed 12:00
+        or time_equals(shifted_time, weekday=3, hour=13, minute=0) # Wed 13:00
         or time_equals(shifted_time, weekday=4, hour=14, minute=0) # Fri 14:00
       )
     ):

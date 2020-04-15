@@ -7,7 +7,7 @@ from typing_extensions import Final
 from pathlib import Path
 import logging
 from pprint import pprint
-from math import floor
+from math import floor, ceil
 import os.path
 import re
 
@@ -83,17 +83,6 @@ class HistoryForecastPreprocessorCli(Cli):
       type=rename('datetime', lambda s: datetime.fromisoformat(s)),
       required=True
     )
-    parser.add_argument(
-      '--time-step',
-      help='Time step',
-      type=rename('timedelta', lambda s: timedelta(**eval(f'dict({s})'))),
-      required=True
-    )
-    parser.add_argument(
-      '--evaluation-fraction',
-      help='Fraction of data to be the evaluation data',
-      type=float
-    )
 
   def handle(self, args: Namespace) -> None:
     input_path: str = args.input
@@ -102,8 +91,6 @@ class HistoryForecastPreprocessorCli(Cli):
     evaluation_data_path: str = args.evaluation_data
     start_time: datetime = args.start_time
     end_time: datetime = args.end_time
-    time_step: timedelta = args.time_step
-    evaluation_fraction: Optional[float] = args.evaluation_fraction
 
     preprocess(
       input_path=input_path,
@@ -111,9 +98,7 @@ class HistoryForecastPreprocessorCli(Cli):
       training_data_path=training_data_path,
       evaluation_data_path=evaluation_data_path,
       start_time=start_time,
-      end_time=end_time,
-      time_step=time_step,
-      evaluation_fraction=evaluation_fraction
+      end_time=end_time
     )
 
 class HistoryForecastModelTrainingCli(Cli):
@@ -165,12 +150,8 @@ def preprocess(
   training_data_path: str,
   evaluation_data_path: str,
   start_time: datetime,
-  end_time: datetime,
-  time_step: timedelta,
-  evaluation_fraction: Optional[float] = None
+  end_time: datetime
 ) -> None:
-  if evaluation_fraction is None:
-    evaluation_fraction = 0.2
 
   def load_access_records(path: str) -> pd.DataFrame:
     df = pd.read_csv(
@@ -188,12 +169,7 @@ def preprocess(
     assert df.columns.to_list() == ['time', 'member_id', 'action']
     return df
 
-  def iterate_spans(
-    df: pd.DataFrame,
-    start_time: pd.Timestamp,
-    end_time: pd.Timestamp,
-    time_step: pd.Timedelta
-  ) -> Iterator[Mapping[str, Any]]:
+  def iterate_spans(df: pd.DataFrame) -> Iterator[Mapping[str, Any]]:
     df = df.sort_values('time')
 
     staying_uids = {}
@@ -217,8 +193,7 @@ def preprocess(
   def iterate_rows(
     spans: Sequence[Mapping[str, Any]],
     start_time: pd.Timestamp,
-    end_time: pd.Timestamp,
-    time_step: pd.Timedelta
+    end_time: pd.Timestamp
   ) -> Iterator[Mapping[str, Any]]:
 
     def time_components(prefix: str, time: pd.Timestamp) -> Mapping[str, Any]:
@@ -234,7 +209,7 @@ def preprocess(
       }
 
     period_start_time = start_time
-    period_end_time = period_start_time + time_step
+    period_end_time = period_start_time + timedelta(minutes=30)
     i = 0
     curr_spans: MutableSequence[Mapping[str, Any]] = []
     while period_end_time <= end_time:
@@ -284,7 +259,7 @@ def preprocess(
         if span['exit_time'] > period_end_time
       ]
       period_start_time = period_end_time
-      period_end_time = period_start_time + time_step
+      period_end_time = period_start_time + timedelta(minutes=30)
 
   def to_data_frame(rows: Sequence[Mapping[str, Any]]) -> pd.DataFrame:
 
@@ -317,17 +292,11 @@ def preprocess(
     })
 
   input_df = load_access_records(input_path)
-  spans = list(iterate_spans(
-    df=input_df,
-    start_time=start_time,
-    end_time=end_time,
-    time_step=time_step
-  ))
+  spans = list(iterate_spans(df=input_df))
   rows = list(iterate_rows(
     spans=spans,
     start_time=start_time,
-    end_time=end_time,
-    time_step=time_step
+    end_time=end_time
   ))
   df = to_data_frame(rows)
   assert df.notna().all(axis=None)
@@ -336,12 +305,12 @@ def preprocess(
   # If the model can learn this pattern, then it should work
   # from math import pi
   # def sin_count(a: int) -> Any:
-  #   return np.sin(np.arange(df.shape[0]) * a * pi / 180)
+  #   return (5 * np.sin(np.arange(df.shape[0]) * a * pi / 180)).astype(np.int32)
   # df['stay_count'] = sin_count(1) + sin_count(2) + sin_count(3)
 
-  evaluation_start_idx = floor(df.shape[0] * (1 - evaluation_fraction))
-  training_df = df.iloc[:evaluation_start_idx]
-  evaluation_df = df.iloc[evaluation_start_idx:]
+  training_count = floor(df.shape[0] * 0.8 / (24 * 2)) * (24 * 2)
+  training_df = df.iloc[:training_count]
+  evaluation_df = df.iloc[training_count:]
 
   for output_path, output_df in {
     training_data_path: training_df,
@@ -382,7 +351,7 @@ class HistoryForecastModel:
   __model: Final[Any]
   __input_size: Final = 24 * 2 * 14 # 2 week
   __input_shift: Final = 24 * 2 # 1 day
-  __predict_size: Final = 24 * 2 # 1 day
+  __predict_size: Final = 2 * 24 * 2 # 2 days
   __mean: float
   __stddev: float
   __last_epoch: int
@@ -401,16 +370,16 @@ class HistoryForecastModel:
     model = tf.keras.models.Sequential([
       tf.keras.layers.LSTM(
         32,
-        input_shape=(self.__input_size, 1),
-        # return_sequences=True
+        input_shape=(self.__input_size, 1)
       ),
-      # tf.keras.layers.LSTM(16, activation='relu'),
       tf.keras.layers.Dense(self.__predict_size)
     ])
     self.__model = model
 
     model.compile(
-      optimizer=tf.keras.optimizers.RMSprop(clipvalue=1.0),
+      optimizer=tf.keras.optimizers.RMSprop(
+        # clipvalue=1.0
+      ),
       loss='mae',
       metrics=['mae', 'mse']
     )
@@ -442,7 +411,7 @@ class HistoryForecastModel:
     show_ui: bool = False
   ) -> None:
     if epochs is None:
-      epochs = 20
+      epochs = 10
     if steps_per_epoch is None:
       steps_per_epoch = 10
 
@@ -464,8 +433,10 @@ class HistoryForecastModel:
         stddev=self.__stddev
       )
 
-    training_ds = self.__load_training_ds(path)
-    validation_ds = self.__load_validation_ds(path)
+    ds = self.__load_ds(path)
+    train_ds = ds.skip(7).shuffle(10000).batch(128).repeat()
+    val_ds = ds.take(7).batch(128).repeat()
+    example_ds = ds.take(7).shuffle(1000).take(6)
 
     callbacks = []
     callbacks.append(tf.keras.callbacks.ModelCheckpoint(
@@ -477,62 +448,39 @@ class HistoryForecastModel:
       callbacks.append(tf.keras.callbacks.TensorBoard(self.__log_dir_path))
 
     training_history = self.__model.fit(
-      training_ds,
+      train_ds,
       initial_epoch=self.__last_epoch,
       epochs=self.__last_epoch + epochs,
       steps_per_epoch=10,
-      validation_data=validation_ds,
+      validation_data=val_ds,
       validation_steps=10,
       callbacks=callbacks
     )
-
     self.last_epoch = training_history.epoch[-1]
 
     if show_ui:
-      fig = plt.figure()
-      ax = fig.add_subplot()
-      ax.plot(training_history.epoch, training_history.history['loss'], label='Training loss')
-      ax.plot(training_history.epoch, training_history.history['val_loss'], label='Validation loss')
-      ax.legend()
-      plt.show()
-
-      examples = list(validation_ds.unbatch().take(3).as_numpy_iterator())
-      self.visualize_examples(examples)
+      examples = list(example_ds.as_numpy_iterator())
+      self.__visualize_examples(examples, 'Validation')
 
   def evaluate(self, path: str, *, show_ui: bool = False) -> Any:
-    evaluation_ds = self.__load_evaluation_ds(path)
+    ds = self.__load_ds(path)
+    exmaple_ds = ds.shuffle(1000).take(6)
+    eval_ds = ds.batch(128)
 
     callbacks = []
     if self.__log_dir_path is not None:
       callbacks.append(tf.keras.callbacks.TensorBoard(self.__log_dir_path))
 
     result = self.__model.evaluate(
-      evaluation_ds,
+      eval_ds,
       callbacks=callbacks
     )
 
     if show_ui:
-      examples = list(evaluation_ds.unbatch().take(3).as_numpy_iterator())
-      self.visualize_examples(examples)
+      examples = list(exmaple_ds.as_numpy_iterator())
+      self.__visualize_examples(examples, 'Evaluation')
 
     return result
-
-  def predict(self, X_batch: Any) -> Any:
-    return self.__model.predict(X_batch)
-
-  def visualize_examples(self, examples: Any) -> None:
-    for X, Y in examples:
-      prediction = self.predict(X.reshape((1, -1, 1)))[0]
-
-      fig = plt.figure()
-      ax = fig.add_subplot()
-      ax.plot(range(-X.shape[0], 0), X, label='Input')
-      ax.plot(range(0, Y.shape[0]), Y, label='Label', linestyle=' ', marker='o', alpha=0.4)
-      ax.plot(range(0, prediction.shape[0]), prediction, label='Predict', linestyle=' ', marker='o', alpha=0.4)
-      ax.grid(True)
-      ax.legend()
-      fig.tight_layout()
-      plt.show()
 
   def __load_ds(self, path: str) -> Any:
     ds = tf.data.experimental.make_csv_dataset(
@@ -549,23 +497,29 @@ class HistoryForecastModel:
       num_epochs=1
     ).unbatch()
     ds = ds.map(lambda x: x['stay_count'])
-
+    ds = ds.map(lambda x: (x - self.__mean) / self.__stddev)
     ds = ds.window(size=self.__input_size + self.__predict_size, shift=self.__input_shift, drop_remainder=True)
-    ds = ds.flat_map(lambda sub: sub.batch(self.__input_size + self.__predict_size))
+    ds = ds.flat_map(lambda sub: sub.batch(self.__input_size + self.__predict_size).map(lambda x: tf.reshape(x, [self.__input_size + self.__predict_size])))
     ds = ds.map(lambda x: (
-      (tf.reshape(x[:-self.__predict_size], [-1, 1]) - self.__mean) / self.__stddev,
+      tf.reshape(x[:-self.__predict_size], [-1, 1]),
       x[-self.__predict_size:]
     ))
     return ds
 
-  def __load_training_ds(self, path: str) -> Any:
-    ds = self.__load_ds(path)
-    return ds.cache().shuffle(10000).batch(128).repeat()
+  def __visualize_examples(self, examples: Sequence[Any], title: str) -> None:
+    fig = plt.figure()
+    axs = fig.subplots(ceil(len(examples) / 2), 2).reshape((-1,))
+    for i, ((X, Y), ax) in enumerate(zip(examples, axs)):
+      prediction = self.__model.predict(X.reshape((1, -1, 1)))[0]
+      ax.set_title(f'{title} {i}')
+      ax.plot(range(-X.shape[0], 0), X, label='Input')
+      ax.plot(range(0, Y.shape[0]), Y, label='Label', marker='o', alpha=0.4)
+      ax.plot(range(0, prediction.shape[0]), prediction, label='Predict', marker='o', alpha=0.4)
+      ax.grid(True)
+      ax.legend()
+    fig.tight_layout()
+    plt.show()
 
-  def __load_validation_ds(self, path: str) -> Any:
-    ds = self.__load_ds(path)
-    return ds.batch(128).repeat()
-
-  def __load_evaluation_ds(self, path: str) -> Any:
-    ds = self.__load_ds(path)
-    return ds.batch(128)
+  def predict(self, X_batch: Any) -> Any:
+    predictions = self.__model.predict((X_batch - self.__mean) / self.__stddev)
+    return predictions * self.__stddev + self.__mean
