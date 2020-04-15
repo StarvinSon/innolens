@@ -38,7 +38,7 @@ python -m innolens_models user_count preprocess --input ../simulator/simulation_
 Train:
 ```shell
 # For history forecast
-python -m innolens_models history_forecast train --checkpoint-dir ./checkpoints/history_forecast --training-data ./preprocessed/history_forecast/training.csv --evaluation-data ./preprocessed/history_forecast/evaluation.csv --log-dir ./logs/history_forecast
+python -m innolens_models history_forecast train --checkpoint-dir ./checkpoints/history_forecast --training-data ./preprocessed/history_forecast/training.csv --evaluation-data ./preprocessed/history_forecast/evaluation.csv --log-dir ./logs/history_forecast --ui
 
 # For access record
 python -m innolens_models access_record train --model-dir ./tensorflow_models/access_record_dnn_0 --training-data ./preprocessed/inno_wing_access_records_training.csv --evaluation-data ./preprocessed/inno_wing_access_records_evaluation.csv --evaluation-prediction ./access_record_evaluation_prediction.csv
