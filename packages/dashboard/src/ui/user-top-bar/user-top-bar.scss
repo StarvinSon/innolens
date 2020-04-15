@@ -10,11 +10,18 @@
   letter-spacing: 0.0625em;
 }
 
+@mixin _time-typography() {
+  @include typography.base();
+
+  font-size: 1.5rem;
+}
+
 
 :host {
   @include elevation-shadow.box-shadow(4);
 
   display: flex;
+  justify-content: space-between;
   position: fixed;
   box-sizing: border-box;
   top: 0rem;
@@ -30,6 +37,17 @@
 
 :host([hidden]) {
   display: block;
+}
+
+.left {
+  display: flex;
+  align-items: center;
+}
+
+.right {
+  @include _time-typography();
+
+  color: var(user-theme.$secondary-text);
 }
 
 .drawer-icon {

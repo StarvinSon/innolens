@@ -1,7 +1,8 @@
 import {
   LitElement, TemplateResult, html,
-  customElement
+  customElement, property
 } from 'lit-element';
+import moment from 'moment';
 
 import '../icon-button';
 import '../user-theme';
@@ -26,14 +27,29 @@ declare global {
 export class TopBar extends LitElement {
   public static readonly styles = css;
 
+  @property({ attribute: false })
+  private currentTime: string = moment().format('ddd D MMM  HH:mm');
+
+  public constructor() {
+    super();
+    setInterval(() => {
+      this.currentTime = moment().format('ddd D MMM  HH:mm');
+    }, 1000);
+  }
+
   protected render(): TemplateResult {
     return html`
-      <inno-icon-button
-        class="${classes.drawerIcon}"
-        @click="${this._onDrawerButtonClick}">
-        ${menuIcon(classes.drawerIcon_svg)}
-      </inno-icon-button>
-      <h1 class="${classes.logo}">InnoLens User Dashboard</h1>
+      <div class="${classes.left}">
+        <inno-icon-button
+          class="${classes.drawerIcon}"
+          @click="${this._onDrawerButtonClick}">
+          ${menuIcon(classes.drawerIcon_svg)}
+        </inno-icon-button>
+        <h1 class="${classes.logo}">InnoLens User Dashboard</h1>
+      </div>
+      <div class="${classes.right}">
+        ${this.currentTime}
+      </div>
     `;
   }
 
