@@ -1,5 +1,5 @@
 import { singleton, injectableConstructor } from '@innolens/resolver/node';
-import { subHours, addHours } from 'date-fns';
+import { add as addDate } from 'date-fns';
 import { FilterQuery, QuerySelector } from 'mongodb';
 
 // eslint-disable-next-line import/order
@@ -260,13 +260,12 @@ export class ExpendableInventoryService {
 
 
   public async getAggregatedQuantityHistory(
-    pastHours: number,
+    startTime: Date,
+    endTime: Date,
+    timeStep: Duration,
     typeIds: ReadonlyArray<string> | null,
     groupBy: ExpendableInventoryAggregatedQuantityHistoryGroupBy | null
   ): Promise<ExpendableInventoryAggregatedQuantityHistory> {
-    const endTime = new Date();
-    const startTime = subHours(endTime, pastHours);
-
     if (typeIds !== null && !await this._hasAllTypes(typeIds)) {
       throw new ExpendableInventoryTypeNotFoundError(typeIds);
     }
@@ -365,9 +364,9 @@ export class ExpendableInventoryService {
       latestQuantityRecords.set(lastQuantityRecord.typeId, lastQuantityRecord);
     }
     for (
-      let time = addHours(startTime, 1);
+      let time = addDate(startTime, timeStep);
       time <= endTime;
-      time = addHours(time, 1)
+      time = addDate(time, timeStep)
     ) {
       while (i < quantityRecords.length && quantityRecords[i].time <= time) {
         latestQuantityRecords.set(quantityRecords[i].typeId, quantityRecords[i]);
@@ -399,14 +398,13 @@ export class ExpendableInventoryService {
   }
 
   public async getAggregatedAccessHistory(
-    pastHours: number,
+    startTime: Date,
+    endTime: Date,
+    timeStep: Duration,
     typeIds: ReadonlyArray<string> | null,
     groupBy: ExpendableInventoryAggregatedAccessHistoryGroupBy | null,
     countType: ExpendableInventoryAggregatedAccessHistoryCountType | null
   ): Promise<ExpendableInventoryAggregatedAccessHistory> {
-    const historyEndTime = new Date();
-    const historyStartTime = subHours(historyEndTime, pastHours);
-
     if (typeIds !== null && !await this._hasAllTypes(typeIds)) {
       throw new ExpendableInventoryTypeNotFoundError(typeIds);
     }
@@ -421,8 +419,8 @@ export class ExpendableInventoryService {
             }
           },
           time: {
-            $gte: historyStartTime,
-            $lt: historyEndTime
+            $gte: startTime,
+            $lt: endTime
           }
         }
       },
@@ -510,16 +508,14 @@ export class ExpendableInventoryService {
     let i = 0;
     const historyRecords: Array<ExpendableInventoryAggregatedAccessRecord> = [];
     for (
-      let startTime = historyStartTime;
-      startTime < historyEndTime;
-      startTime = addHours(startTime, 1)
+      let periodStartTime = startTime, periodEndTime = addDate(periodStartTime, timeStep);
+      periodEndTime <= endTime;
+      periodStartTime = periodEndTime, periodEndTime = addDate(periodEndTime, timeStep)
     ) {
-      const endTime = addHours(startTime, 1);
-
       const recordsWithinPeriod: Array<Record> = [];
       while (
         i < accessRecords.length
-        && accessRecords[i].time < endTime
+        && accessRecords[i].time < periodEndTime
       ) {
         recordsWithinPeriod.push(accessRecords[i]);
         i += 1;
@@ -529,8 +525,8 @@ export class ExpendableInventoryService {
         readonly counts: Writable<ExpendableInventoryAggregatedAccessRecord['counts']>;
       }
       const historyRecord: WritableRecord = {
-        startTime,
-        endTime,
+        startTime: periodStartTime,
+        endTime: periodEndTime,
         counts: {}
       };
       for (const groupFilter of groupFilters) {
