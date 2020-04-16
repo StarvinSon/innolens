@@ -1,5 +1,5 @@
 @use '../elevation-shadow';
-@use '../user-theme';
+@use '../theme';
 @use '../typography';
 
 
@@ -31,7 +31,7 @@
   width: 100%;
   height: 6rem;
   align-items: center;
-  background: var(user-theme.$background-elevation-4dp);
+  background: var(theme.$background-elevation-4dp);
   z-index: 4;
 }
 
@@ -48,12 +48,12 @@
   @include _time-typography();
 
   margin-right: 1rem;
-  color: var(user-theme.$secondary-text);
+  color: var(theme.$secondary-text);
 }
 
 .logo {
   @include _logo-typography();
 
   margin: 0rem;
-  color: var(user-theme.$on-background);
+  color: var(theme.$on-background);
 }

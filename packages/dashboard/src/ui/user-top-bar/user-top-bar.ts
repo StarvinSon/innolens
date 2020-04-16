@@ -1,12 +1,12 @@
+import { format as formatDate } from 'date-fns';
 import {
   LitElement, TemplateResult, html,
   customElement, property
 } from 'lit-element';
-import moment from 'moment';
 
 import logo from '../../images/logo-2-horizontal.png';
 import '../button';
-import '../user-theme';
+import '../theme';
 import '../typography';
 
 import { css, classes } from './user-top-bar.scss';
@@ -28,12 +28,12 @@ export class TopBar extends LitElement {
   public static readonly styles = css;
 
   @property({ attribute: false })
-  private currentTime: string = moment().format('ddd D MMM  HH:mm');
+  private currentTime: string = formatDate(new Date(), 'eee d MMM  HH:mm');
 
   public constructor() {
     super();
     setInterval(() => {
-      this.currentTime = moment().format('ddd D MMM  HH:mm');
+      this.currentTime = formatDate(new Date(), 'eee d MMM  HH:mm');
     }, 1000);
   }
 

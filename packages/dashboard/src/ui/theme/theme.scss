@@ -2,44 +2,91 @@
 @use './theme-variables' as vars;
 
 
-@function _overlay($overlay-transparency) {
+@function _black-overlay($overlay-transparency) {
   @return color.mix(#121212, white, $weight: 100% - $overlay-transparency);
 }
 
+@function _white-overlay($overlay-transparency) {
+  @return color.mix(white, #121212, $weight: 100% - $overlay-transparency);
+}
 
-:root {
+:root[theme="black"] {
   // See: https://material.io/design/color/dark-theme.html
-  #{vars.$background-elevation-0dp}: _overlay(0%);
-  #{vars.$background-elevation-1dp}: _overlay(5%);
-  #{vars.$background-elevation-2dp}: _overlay(7%);
-  #{vars.$background-elevation-3dp}: _overlay(8%);
-  #{vars.$background-elevation-4dp}: _overlay(9%);
-  #{vars.$background-elevation-5dp}: _overlay(9%);
-  #{vars.$background-elevation-6dp}: _overlay(11%);
-  #{vars.$background-elevation-7dp}: _overlay(11%);
-  #{vars.$background-elevation-8dp}: _overlay(12%);
-  #{vars.$background-elevation-9dp}: _overlay(12%);
-  #{vars.$background-elevation-10dp}: _overlay(12%);
-  #{vars.$background-elevation-11dp}: _overlay(12%);
-  #{vars.$background-elevation-12dp}: _overlay(14%);
-  #{vars.$background-elevation-13dp}: _overlay(14%);
-  #{vars.$background-elevation-14dp}: _overlay(14%);
-  #{vars.$background-elevation-15dp}: _overlay(14%);
-  #{vars.$background-elevation-16dp}: _overlay(15%);
-  #{vars.$background-elevation-17dp}: _overlay(15%);
-  #{vars.$background-elevation-18dp}: _overlay(15%);
-  #{vars.$background-elevation-19dp}: _overlay(15%);
-  #{vars.$background-elevation-20dp}: _overlay(15%);
-  #{vars.$background-elevation-21dp}: _overlay(15%);
-  #{vars.$background-elevation-22dp}: _overlay(15%);
-  #{vars.$background-elevation-23dp}: _overlay(15%);
-  #{vars.$background-elevation-24dp}: _overlay(16%);
+  #{vars.$background-elevation-0dp}: _black-overlay(0%);
+  #{vars.$background-elevation-1dp}: _black-overlay(5%);
+  #{vars.$background-elevation-2dp}: _black-overlay(7%);
+  #{vars.$background-elevation-3dp}: _black-overlay(8%);
+  #{vars.$background-elevation-4dp}: _black-overlay(9%);
+  #{vars.$background-elevation-5dp}: _black-overlay(9%);
+  #{vars.$background-elevation-6dp}: _black-overlay(11%);
+  #{vars.$background-elevation-7dp}: _black-overlay(11%);
+  #{vars.$background-elevation-8dp}: _black-overlay(12%);
+  #{vars.$background-elevation-9dp}: _black-overlay(12%);
+  #{vars.$background-elevation-10dp}: _black-overlay(12%);
+  #{vars.$background-elevation-11dp}: _black-overlay(12%);
+  #{vars.$background-elevation-12dp}: _black-overlay(14%);
+  #{vars.$background-elevation-13dp}: _black-overlay(14%);
+  #{vars.$background-elevation-14dp}: _black-overlay(14%);
+  #{vars.$background-elevation-15dp}: _black-overlay(14%);
+  #{vars.$background-elevation-16dp}: _black-overlay(15%);
+  #{vars.$background-elevation-17dp}: _black-overlay(15%);
+  #{vars.$background-elevation-18dp}: _black-overlay(15%);
+  #{vars.$background-elevation-19dp}: _black-overlay(15%);
+  #{vars.$background-elevation-20dp}: _black-overlay(15%);
+  #{vars.$background-elevation-21dp}: _black-overlay(15%);
+  #{vars.$background-elevation-22dp}: _black-overlay(15%);
+  #{vars.$background-elevation-23dp}: _black-overlay(15%);
+  #{vars.$background-elevation-24dp}: _black-overlay(16%);
   #{vars.$on-background}: white;
 
   #{vars.$primary}: #0080FF;
   #{vars.$on-primary}: white;
 
   #{vars.$separator}: white;
+
+  #{vars.$chart-0}: red;
+  #{vars.$chart-1}: orange;
+  #{vars.$chart-2}: green;
+  #{vars.$chart-3}: blue;
+  #{vars.$chart-4}: purple;
+}
+
+:root[theme="white"] {
+  // See: https://material.io/design/color/dark-theme.html
+  #{vars.$background-elevation-0dp}: _white-overlay(0%);
+  #{vars.$background-elevation-1dp}: _white-overlay(5%);
+  #{vars.$background-elevation-2dp}: _white-overlay(7%);
+  #{vars.$background-elevation-3dp}: _white-overlay(8%);
+  #{vars.$background-elevation-4dp}: _white-overlay(9%);
+  #{vars.$background-elevation-5dp}: _white-overlay(9%);
+  #{vars.$background-elevation-6dp}: _white-overlay(11%);
+  #{vars.$background-elevation-7dp}: _white-overlay(11%);
+  #{vars.$background-elevation-8dp}: _white-overlay(12%);
+  #{vars.$background-elevation-9dp}: _white-overlay(12%);
+  #{vars.$background-elevation-10dp}: _white-overlay(12%);
+  #{vars.$background-elevation-11dp}: _white-overlay(12%);
+  #{vars.$background-elevation-12dp}: _white-overlay(14%);
+  #{vars.$background-elevation-13dp}: _white-overlay(14%);
+  #{vars.$background-elevation-14dp}: _white-overlay(14%);
+  #{vars.$background-elevation-15dp}: _white-overlay(14%);
+  #{vars.$background-elevation-16dp}: _white-overlay(15%);
+  #{vars.$background-elevation-17dp}: _white-overlay(15%);
+  #{vars.$background-elevation-18dp}: _white-overlay(15%);
+  #{vars.$background-elevation-19dp}: _white-overlay(15%);
+  #{vars.$background-elevation-20dp}: _white-overlay(15%);
+  #{vars.$background-elevation-21dp}: _white-overlay(15%);
+  #{vars.$background-elevation-22dp}: _white-overlay(15%);
+  #{vars.$background-elevation-23dp}: _white-overlay(15%);
+  #{vars.$background-elevation-24dp}: _white-overlay(16%);
+  #{vars.$on-background}: #121212;
+  #{vars.$secondary-text}: #565656;
+  #{vars.$carousel-indicator-active}: #787878;
+  #{vars.$carousel-indicator-inactive}: #bcbcbc;
+
+  #{vars.$primary}: #0080FF;
+  #{vars.$on-primary}: #121212;
+
+  #{vars.$separator}: #121212;
 
   #{vars.$chart-0}: red;
   #{vars.$chart-1}: orange;

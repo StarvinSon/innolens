@@ -1,9 +1,15 @@
 import {
   customElement, LitElement, TemplateResult,
-  html
+  html, PropertyValues, property
 } from 'lit-element';
 import '@lit-element-bootstrap/carousel';
-import '../user-theme';
+
+import '../theme';
+import '../user-current-page';
+import '../user-registered-page';
+import { MemberService } from '../../services/member';
+import { injectableProperty } from '../../utils/property-injector';
+import { observeProperty } from '../../utils/property-observer';
 
 import { css, classes } from './user-pages.scss';
 
@@ -20,19 +26,67 @@ declare global {
 export class UserPages extends LitElement {
   public static readonly styles = css;
 
+
+  @injectableProperty(MemberService)
+  @observeProperty('_onDependencyInjected')
+  public memberService: MemberService | null = null;
+
+  @property({ attribute: false })
+  public interactable = false;
+
+
+  private _onDependencyInjected(): void {
+    this.requestUpdate();
+  }
+
+  protected shouldUpdate(changedProps: PropertyValues): boolean {
+    return super.shouldUpdate(changedProps) && this.interactable;
+  }
+
   protected render(): TemplateResult {
     return html`
       <bs-carousel interval="10000">
-        <bs-carousel-indicators slot="indicators">
-          <bs-carousel-indicator index="0"></bs-carousel-indicator>
-          <bs-carousel-indicator index="1"></bs-carousel-indicator>
+        <bs-carousel-indicators class="${classes.indicators}" slot="indicators">
+          <bs-carousel-indicator class="${classes.indicator}" index="0" active></bs-carousel-indicator>
+          <bs-carousel-indicator class="${classes.indicator}" index="1"></bs-carousel-indicator>
+          <bs-carousel-indicator class="${classes.indicator}" index="2"></bs-carousel-indicator>
+          <bs-carousel-indicator class="${classes.indicator}" index="3"></bs-carousel-indicator>
+          <bs-carousel-indicator class="${classes.indicator}" index="4"></bs-carousel-indicator>
+          <bs-carousel-indicator class="${classes.indicator}" index="5"></bs-carousel-indicator>
+          <bs-carousel-indicator class="${classes.indicator}" index="6"></bs-carousel-indicator>
+          <bs-carousel-indicator class="${classes.indicator}" index="7"></bs-carousel-indicator>
+          <bs-carousel-indicator class="${classes.indicator}" index="8"></bs-carousel-indicator>
         </bs-carousel-indicators>
 
         <bs-carousel-item class="${classes.carouselItem}" active>
-          <img class="${classes.image}" src="https://www.w3schools.com/w3css/img_lights.jpg">
+          <inno-user-registered-page 
+            class="${classes.image}"
+            .memberService="${this.memberService}"
+          ></inno-user-registered-page>
         </bs-carousel-item>
         <bs-carousel-item class="${classes.carouselItem}">
-          <img class="${classes.image}" src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Image_created_with_a_mobile_phone.png/1200px-Image_created_with_a_mobile_phone.png">
+          <inno-user-current-page class="${classes.image}"></inno-user-current-page>
+        </bs-carousel-item>
+        <bs-carousel-item class="${classes.carouselItem}">
+          <inno-user-current-page class="${classes.image}"></inno-user-current-page>
+        </bs-carousel-item>
+        <bs-carousel-item class="${classes.carouselItem}">
+          <inno-user-current-page class="${classes.image}"></inno-user-current-page>
+        </bs-carousel-item>
+        <bs-carousel-item class="${classes.carouselItem}">
+          <inno-user-current-page class="${classes.image}"></inno-user-current-page>
+        </bs-carousel-item>
+        <bs-carousel-item class="${classes.carouselItem}">
+          <inno-user-current-page class="${classes.image}"></inno-user-current-page>
+        </bs-carousel-item>
+        <bs-carousel-item class="${classes.carouselItem}">
+          <inno-user-current-page class="${classes.image}"></inno-user-current-page>
+        </bs-carousel-item>
+        <bs-carousel-item class="${classes.carouselItem}">
+          <inno-user-current-page class="${classes.image}"></inno-user-current-page>
+        </bs-carousel-item>
+        <bs-carousel-item class="${classes.carouselItem}">
+          <inno-user-current-page class="${classes.image}"></inno-user-current-page>
         </bs-carousel-item>
       </bs-carousel>
     `;

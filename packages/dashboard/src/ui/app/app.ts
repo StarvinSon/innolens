@@ -1,7 +1,7 @@
 import {
   customElement, LitElement, TemplateResult,
   query, html,
-  property
+  property, PropertyValues
 } from 'lit-element';
 
 import { PathService } from '../../services/path';
@@ -62,6 +62,11 @@ export class App extends PropertyInjectorElement(LitElement) {
       this._drawerElement.updateComplete,
       this._loginDialogElement.updateComplete
     ]);
+  }
+
+  protected updated(changedProps: PropertyValues): void {
+    document.documentElement.setAttribute('theme', this._path === '/' ? 'white' : 'black');
+    super.updated(changedProps);
   }
 
   public constructor() {

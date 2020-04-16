@@ -32,7 +32,6 @@
     "file-loader": "^6.0.0",
     "lit-element": "^2.3.1",
     "lit-html": "^1.2.1",
-    "moment": "^2.24.0",
     "pwa-helpers": "^0.9.1",
     "redux": "^4.0.5",
     "redux-devtools-extension": "^2.13.8",
