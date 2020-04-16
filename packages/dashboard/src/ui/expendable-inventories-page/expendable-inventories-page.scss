@@ -1,0 +1,54 @@
+@use '../layout';
+@use '../theme';
+@use '../typography';
+
+
+:host {
+  display: block;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.content {
+  display: flex;
+}
+
+.options {
+  position: sticky;
+  top: layout.$top-bar-height;
+  height: calc(100vh - #{layout.$top-bar-height});
+  box-sizing: border-box;
+  flex-basis: 30%;
+  padding: 2rem 1rem;
+  overflow-y: auto;
+
+  & > :not(:first-child) {
+    margin-top: 2rem;
+  }
+}
+
+.option {
+  /* empty */
+
+  &__label {
+    @include typography.base();
+    color: var(theme.$on-background);
+  }
+
+  &__chips {
+    margin-top: 1rem;
+  }
+}
+
+.chart-cards {
+  box-sizing: border-box;
+  flex-basis: 70%;
+  padding: 2rem 1rem;
+  overflow-y: auto;
+
+  & > :not(:first-child) {
+    margin-top: 2rem;
+  }
+}

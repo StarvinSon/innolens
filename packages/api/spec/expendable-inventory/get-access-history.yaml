@@ -1,9 +1,17 @@
-name: GetAggregatedQuantityHistory
+name: GetAccessHistory
 
 method: get
-path: /api/expendable-inventories/aggregated-quantity-history
+path: /api/expendable-inventories/access-history
 query:
-  pastHours:
+  startTime:
+    required: true
+    schema:
+      type: date
+  endTime:
+    required: true
+    schema:
+      type: date
+  timeStepMs:
     required: true
     schema:
       type: integer
@@ -15,7 +23,16 @@ query:
   groupBy:
     schema:
       enum:
-        - typeId
+        - department
+        - typeOfStudy
+        - studyProgramme
+        - yearOfStudy
+        - affiliatedStudentInterestGroup
+  countType:
+    schema:
+      enum:
+        - total
+        - uniqueMember
 
 authentication:
   type: bearer
@@ -38,11 +55,14 @@ responseBody:
           items:
             type: object
             required:
-              - time
+              - startTime
+              - endTime
               - counts
             additionalProperties: false
             properties:
-              time:
+              startTime:
+                type: date
+              endTime:
                 type: date
               counts:
                 type: object

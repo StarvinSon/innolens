@@ -189,6 +189,18 @@ export const pageEntries: ReadonlyArray<PageEntry | PageGroupEntry> = [
   },
   {
     type: 'pageEntry',
+    name: 'Expendable Inventory',
+    href: '/expendable-inventories',
+    load: async () => {
+      await import(
+        /* webpackChunkName: 'expendable-inventories-page' */
+        './expendable-inventories-page'
+      );
+    },
+    tagName: 'inno-expendable-inventories-page'
+  },
+  {
+    type: 'pageEntry',
     name: 'Import Center',
     href: '/import',
     pathRegExp: /^\/import$/,

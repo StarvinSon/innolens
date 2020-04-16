@@ -1,6 +1,5 @@
 import { singleton, injectableConstructor } from '@innolens/resolver/node';
 import csvParse from 'csv-parse';
-import { startOfHour, subHours } from 'date-fns';
 import createHttpError, { BadRequest } from 'http-errors';
 import { CREATED, BAD_REQUEST, NOT_FOUND } from 'http-status-codes';
 
@@ -164,19 +163,13 @@ export class ExpendableInventoryController extends FileController(ExpendableInve
 
 
   // eslint-disable-next-line max-len
-  protected async handleGetAggregatedQuantityHistory(ctx: ExpendableInventoryControllerGlue.GetAggregatedQuantityHistoryContext): Promise<void> {
-    const endTime = startOfHour(new Date());
-    const startTime = subHours(endTime, ctx.query.pastHours);
-    const timeStep: Duration = {
-      minutes: 30
-    };
-
+  protected async handleGetQuantityHistory(ctx: ExpendableInventoryControllerGlue.GetQuantityHistoryContext): Promise<void> {
     let history: ExpendableInventoryAggregatedQuantityHistory;
     try {
-      history = await this._expendableInventoryService.getAggregatedQuantityHistory(
-        startTime,
-        endTime,
-        timeStep,
+      history = await this._expendableInventoryService.getQuantityHistory(
+        ctx.query.startTime,
+        ctx.query.endTime,
+        ctx.query.timeStepMs,
         ctx.query.typeIds ?? null,
         ctx.query.groupBy ?? null
       );
@@ -191,19 +184,14 @@ export class ExpendableInventoryController extends FileController(ExpendableInve
   }
 
   // eslint-disable-next-line max-len
-  protected async handleGetAggregatedAccessHistory(ctx: ExpendableInventoryControllerGlue.GetAggregatedAccessHistoryContext): Promise<void> {
-    const endTime = startOfHour(new Date());
-    const startTime = subHours(endTime, ctx.query.pastHours);
-    const timeStep: Duration = {
-      minutes: 30
-    };
+  protected async handleGetAccessHistory(ctx: ExpendableInventoryControllerGlue.GetAccessHistoryContext): Promise<void> {
 
     let history: ExpendableInventoryAggregatedAccessHistory;
     try {
-      history = await this._expendableInventoryService.getAggregatedAccessHistory(
-        startTime,
-        endTime,
-        timeStep,
+      history = await this._expendableInventoryService.getAccessHistory(
+        ctx.query.startTime,
+        ctx.query.endTime,
+        ctx.query.timeStepMs,
         ctx.query.typeIds ?? null,
         ctx.query.groupBy ?? null,
         ctx.query.countType ?? 'total'

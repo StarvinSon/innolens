@@ -1,5 +1,5 @@
 import { singleton, injectableConstructor } from '@innolens/resolver/node';
-import { add as addDate } from 'date-fns';
+import { addMilliseconds } from 'date-fns';
 import { FilterQuery, QuerySelector } from 'mongodb';
 
 // eslint-disable-next-line import/order
@@ -259,10 +259,10 @@ export class ExpendableInventoryService {
   }
 
 
-  public async getAggregatedQuantityHistory(
+  public async getQuantityHistory(
     startTime: Date,
     endTime: Date,
-    timeStep: Duration,
+    timeStepMs: number,
     typeIds: ReadonlyArray<string> | null,
     groupBy: ExpendableInventoryAggregatedQuantityHistoryGroupBy | null
   ): Promise<ExpendableInventoryAggregatedQuantityHistory> {
@@ -364,9 +364,9 @@ export class ExpendableInventoryService {
       latestQuantityRecords.set(lastQuantityRecord.typeId, lastQuantityRecord);
     }
     for (
-      let time = addDate(startTime, timeStep);
+      let time = addMilliseconds(startTime, timeStepMs);
       time <= endTime;
-      time = addDate(time, timeStep)
+      time = addMilliseconds(time, timeStepMs)
     ) {
       while (i < quantityRecords.length && quantityRecords[i].time <= time) {
         latestQuantityRecords.set(quantityRecords[i].typeId, quantityRecords[i]);
@@ -397,10 +397,10 @@ export class ExpendableInventoryService {
     };
   }
 
-  public async getAggregatedAccessHistory(
+  public async getAccessHistory(
     startTime: Date,
     endTime: Date,
-    timeStep: Duration,
+    timeStepMs: number,
     typeIds: ReadonlyArray<string> | null,
     groupBy: ExpendableInventoryAggregatedAccessHistoryGroupBy | null,
     countType: ExpendableInventoryAggregatedAccessHistoryCountType | null
@@ -508,9 +508,9 @@ export class ExpendableInventoryService {
     let i = 0;
     const historyRecords: Array<ExpendableInventoryAggregatedAccessRecord> = [];
     for (
-      let periodStartTime = startTime, periodEndTime = addDate(periodStartTime, timeStep);
+      let periodStartTime = startTime, periodEndTime = addMilliseconds(periodStartTime, timeStepMs);
       periodEndTime <= endTime;
-      periodStartTime = periodEndTime, periodEndTime = addDate(periodEndTime, timeStep)
+      periodStartTime = periodEndTime, periodEndTime = addMilliseconds(periodEndTime, timeStepMs)
     ) {
       const recordsWithinPeriod: Array<Record> = [];
       while (
