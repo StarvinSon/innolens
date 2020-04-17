@@ -101,6 +101,30 @@
   }
 }
 
+.area {
+  // fill-opacity: 0.5;
+
+  &--0 {
+    fill: var(theme.$chart-0);
+  }
+
+  &--1 {
+    fill: var(theme.$chart-1);
+  }
+
+  &--2 {
+    fill: var(theme.$chart-2);
+  }
+
+  &--3 {
+    fill: var(theme.$chart-3);
+  }
+
+  &--4 {
+    fill: var(theme.$chart-4);
+  }
+}
+
 .axes {
   fill: none;
   stroke: var(theme.$on-background);

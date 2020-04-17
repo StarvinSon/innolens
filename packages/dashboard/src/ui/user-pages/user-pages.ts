@@ -5,7 +5,7 @@ import {
 import '@lit-element-bootstrap/carousel';
 
 import '../theme';
-import '../user-current-page';
+import '../user-example-page';
 import '../user-registered-page';
 import { MemberService } from '../../services/member';
 import { injectableProperty } from '../../utils/property-injector';
@@ -65,28 +65,28 @@ export class UserPages extends LitElement {
           ></inno-user-registered-page>
         </bs-carousel-item>
         <bs-carousel-item class="${classes.carouselItem}">
-          <inno-user-current-page class="${classes.image}"></inno-user-current-page>
+          <inno-user-example-page class="${classes.image}"></inno-user-example-page>
         </bs-carousel-item>
         <bs-carousel-item class="${classes.carouselItem}">
-          <inno-user-current-page class="${classes.image}"></inno-user-current-page>
+          <inno-user-example-page class="${classes.image}"></inno-user-example-page>
         </bs-carousel-item>
         <bs-carousel-item class="${classes.carouselItem}">
-          <inno-user-current-page class="${classes.image}"></inno-user-current-page>
+          <inno-user-example-page class="${classes.image}"></inno-user-example-page>
         </bs-carousel-item>
         <bs-carousel-item class="${classes.carouselItem}">
-          <inno-user-current-page class="${classes.image}"></inno-user-current-page>
+          <inno-user-example-page class="${classes.image}"></inno-user-example-page>
         </bs-carousel-item>
         <bs-carousel-item class="${classes.carouselItem}">
-          <inno-user-current-page class="${classes.image}"></inno-user-current-page>
+          <inno-user-example-page class="${classes.image}"></inno-user-example-page>
         </bs-carousel-item>
         <bs-carousel-item class="${classes.carouselItem}">
-          <inno-user-current-page class="${classes.image}"></inno-user-current-page>
+          <inno-user-example-page class="${classes.image}"></inno-user-example-page>
         </bs-carousel-item>
         <bs-carousel-item class="${classes.carouselItem}">
-          <inno-user-current-page class="${classes.image}"></inno-user-current-page>
+          <inno-user-example-page class="${classes.image}"></inno-user-example-page>
         </bs-carousel-item>
         <bs-carousel-item class="${classes.carouselItem}">
-          <inno-user-current-page class="${classes.image}"></inno-user-current-page>
+          <inno-user-example-page class="${classes.image}"></inno-user-example-page>
         </bs-carousel-item>
       </bs-carousel>
     `;

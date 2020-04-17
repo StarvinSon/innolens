@@ -5,6 +5,7 @@ import {
 } from 'lit-element';
 
 import { PathService } from '../../services/path';
+import { classes as rootClasses } from '../../style.scss';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
 import '../drawer';
@@ -65,8 +66,13 @@ export class App extends PropertyInjectorElement(LitElement) {
   }
 
   protected updated(changedProps: PropertyValues): void {
-    document.documentElement.setAttribute('theme', this._path === '/' ? 'white' : 'black');
     super.updated(changedProps);
+    document.documentElement.setAttribute('theme', this._path === '/' ? 'white' : 'black');
+    if (this._path === '/') {
+      document.documentElement.classList.remove(rootClasses.html_$scroll);
+    } else {
+      document.documentElement.classList.add(rootClasses.html_$scroll);
+    }
   }
 
   public constructor() {

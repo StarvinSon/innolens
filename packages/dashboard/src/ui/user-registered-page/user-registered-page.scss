@@ -28,8 +28,6 @@
 }
 
 .option {
-  /* empty */
-
   &__label {
     @include typography.base();
     color: var(theme.$on-background);
@@ -54,10 +52,12 @@
 
 .pie-chart>span[slot="title"] {
   font-size: 2.5rem;
+  color: var(theme.$secondary-text);
 }
 
 .line-chart>span[slot="title"] {
   font-size: 2.5rem;
+  color: var(theme.$secondary-text);
 }
 
 .total-card {
@@ -72,7 +72,7 @@
 }
 
 .total-text {
-  color: var(theme.$carousel-indicator-active);
+  color: var(theme.$secondary-text);
 }
 
 .total-num {

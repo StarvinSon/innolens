@@ -4,12 +4,14 @@ import {
   html, PropertyValues, property
 } from 'lit-element';
 
+// eslint-disable-next-line import/no-duplicates
 import '../line-chart';
 import '../pie-chart';
-import '../chart-card';
 import {
   MemberService, MemberCountHistory, MemberCountHistoryCategory, MemberCountHistoryRange
 } from '../../services/member';
+// eslint-disable-next-line import/no-duplicates
+import { LineChartLineData } from '../line-chart';
 
 import { css, classes } from './user-registered-page.scss';
 
@@ -61,42 +63,54 @@ export class UserRegisteredPage extends LitElement {
       this._historyCategory,
       this._historyRange
     );
-    const countHistory = this._countHistory;
     if (this._countHistory === null) {
       this.memberService.updateCountHistory(this._historyCategory, this._historyRange)
         .then(() => this.requestUpdate());
+      return;
     }
 
     if (this._lineChartDataDeps[0] !== this._countHistory) {
-      if (countHistory === null) {
+      if (this._countHistory === null) {
         this._lineChartData = null;
       } else {
         this._lineChartData = {
-          lines: countHistory.categories.map((category) => ({
-            name: category,
-            values: countHistory.records.map((record) => record.counts[category])
-          })),
-          labels: countHistory.records.map((record) => record.time),
+          /* eslint-disable @typescript-eslint/indent */
+          lines: this._countHistory.categories.slice().reverse()
+            .reduce<Array<LineChartLineData>>((lines, category) => {
+              const line = {
+                name: category,
+                values: this._countHistory!.records.map(
+                  (record, index) =>
+                    record.counts[category]
+                    + (lines.length ? lines[lines.length - 1].values[index] : 0)
+                )
+              };
+              lines.push(line);
+              return lines;
+            }, []).reverse(),
+          /* eslint-enable @typescript-eslint/indent */
+          labels: this._countHistory.records.map((record) => record.time),
           formatLabel: (time) => formatDate(time, 'd/L')
         };
       }
-      this._lineChartDataDeps = [countHistory];
+      this._lineChartDataDeps = [this._countHistory];
     }
 
     if (this._pieChartDataDeps[0] !== this._countHistory) {
-      if (countHistory === null) {
+      if (this._countHistory === null) {
         this._pieChartData = null;
       } else {
         this._pieChartData = {
-          pies: countHistory.categories
+          pies: this._countHistory.categories
             .map((category) => ({
               name: category,
-              value: countHistory.records[countHistory.records.length - 1].counts[category]
+              value: this._countHistory!.records[this._countHistory!.records.length - 1]
+                .counts[category]
             }))
             .filter((pie) => pie.value > 0)
         };
       }
-      this._pieChartDataDeps = [countHistory];
+      this._pieChartDataDeps = [this._countHistory];
     }
   }
 
@@ -111,15 +125,17 @@ export class UserRegisteredPage extends LitElement {
   }
 
   private _renderTotal(): TemplateResult {
-    const countHistory = this._countHistory;
-    const { counts } = this._countHistory!.records[this._countHistory!.records.length - 1];
     let total = 0;
-    for (const category of countHistory!.categories) {
-      total += counts[category];
+    if (this._countHistory !== null) {
+      const { counts } = this._countHistory.records[this._countHistory.records.length - 1];
+      for (const category of this._countHistory.categories) {
+        total += counts[category];
+      }
     }
+
     return html`
       <div class="${classes.totalCard}">
-        <div class="${classes.totalText}">Total Number of Users:</div>
+        <div class="${classes.totalText}">Total Number of Users</div>
         <div class="${classes.totalNum}">${total}</div>
       </div>
     `;

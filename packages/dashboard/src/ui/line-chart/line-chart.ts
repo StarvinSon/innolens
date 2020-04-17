@@ -1,6 +1,8 @@
 import { max } from 'd3-array';
 import { scaleLinear, ScaleLinear } from 'd3-scale';
-import { line, Line } from 'd3-shape';
+import {
+  line, area, Line, Area
+} from 'd3-shape';
 import {
   customElement, LitElement, TemplateResult,
   html, property, svg
@@ -40,6 +42,9 @@ export class LineChart extends LitElement {
   @property({ attribute: false })
   public data: LineChartData<unknown> | null = null;
 
+  @property({ attribute: false })
+  public area: boolean = false;
+
 
   private _renderDataCache: {
     readonly data: LineChartData<unknown> | null;
@@ -47,6 +52,7 @@ export class LineChart extends LitElement {
     readonly vMax: number | null;
     readonly vToY: ScaleLinear<number, number> | null;
     readonly computePath: Line<number> | null;
+    readonly computeArea: Area<number> | null;
   } | null = null;
 
   private _getRenderData(): Exclude<LineChart['_renderDataCache'], null> {
@@ -60,6 +66,7 @@ export class LineChart extends LitElement {
     let vMax: number | null = null;
     let vToY: ScaleLinear<number, number> | null = null;
     let computePath: Line<number> | null = null;
+    let computeArea: Area<number> | null = null;
     if (data !== null && data.labels.length > 0) {
       iToX = scaleLinear()
         .domain([0, data.labels.length - 1])
@@ -74,6 +81,10 @@ export class LineChart extends LitElement {
       computePath = line<number>()
         .x((_, i) => iToX!(i))
         .y((v) => vToY!(v));
+      computeArea = area<number>()
+        .x((_, i) => iToX!(i))
+        .y0(() => 1)
+        .y1((v) => vToY!(v));
     }
 
     this._renderDataCache = {
@@ -81,7 +92,8 @@ export class LineChart extends LitElement {
       iToX,
       vMax,
       vToY,
-      computePath
+      computePath,
+      computeArea
     };
     return this._renderDataCache;
   }
@@ -100,7 +112,8 @@ export class LineChart extends LitElement {
       iToX,
       vMax,
       vToY,
-      computePath
+      computePath,
+      computeArea
     } = this._getRenderData();
 
     /* eslint-disable @typescript-eslint/indent */
@@ -123,6 +136,13 @@ export class LineChart extends LitElement {
                       class="${classes.refLine}"
                       x1="0" y1="${y}"
                       x2="1" y2="${y}"></line>
+                  `)}
+                ${data === null || computeArea === null
+                  ? []
+                  : data.lines.map((lineData, lineIdx) => svg`
+                    <path
+                      class="${classes.area} ${classes[`area_$${lineIdx}`]}"
+                      d="${computeArea(lineData.values.slice())}"></path>
                   `)}
                 ${data === null || computePath === null
                   ? []
