@@ -45,7 +45,7 @@ export class UserPages extends LitElement {
 
   protected render(): TemplateResult {
     return html`
-      <bs-carousel interval="10000">
+      <bs-carousel interval="10000" pause="false">
         <bs-carousel-indicators class="${classes.indicators}" slot="indicators">
           <bs-carousel-indicator class="${classes.indicator}" index="0" active></bs-carousel-indicator>
           <bs-carousel-indicator class="${classes.indicator}" index="1"></bs-carousel-indicator>

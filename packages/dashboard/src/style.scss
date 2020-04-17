@@ -18,6 +18,22 @@ body {
   // it is easier to find out what has not been styled yet.
   font-family: serif;
   color: orange;
+  -ms-overflow-style: none;
+}
+
+body::-webkit-scrollbar {
+  display: none;
+}
+
+html {
+  overflow: -moz-hidden-unscrollable;
+  height: 100%;
+}
+
+body {
+height: 100%;
+width: calc(100vw + 18px);
+overflow: auto;
 }
 
 .app {

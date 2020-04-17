@@ -103,37 +103,48 @@ export class UserRegisteredPage extends LitElement {
   protected render(): TemplateResult {
     return html`
       <div class="${classes.content}">
+        ${this._renderTotal()}
         ${this._renderPieChart()}
         ${this._renderLineChart()}
-        ${JSON.stringify(this._countHistory, null, 2)}
+      </div>
+    `;
+  }
+
+  private _renderTotal(): TemplateResult {
+    const countHistory = this._countHistory;
+    const { counts } = this._countHistory!.records[this._countHistory!.records.length - 1];
+    let total = 0;
+    for (const category of countHistory!.categories) {
+      total += counts[category];
+    }
+    return html`
+      <div class="${classes.totalCard}">
+        <div class="${classes.totalText}">Total Number of Users:</div>
+        <div class="${classes.totalNum}">${total}</div>
       </div>
     `;
   }
 
   private _renderPieChart(): TemplateResult {
     return html`
-      <div class="${classes.chartCards}">
-        <inno-chart-card>
-          <inno-pie-chart
-            class="${classes.pieChart}"
-            .data="${this._pieChartData}">
-            <span slot="title">Composition of our users</span>
-          </inno-pie-chart>
-        </inno-chart-card>
+      <div class="${classes.chartCards} ${classes.pieCard}">
+        <inno-pie-chart
+          class="${classes.pieChart}"
+          .data="${this._pieChartData}">
+          <span slot="title">Composition of our users</span>
+        </inno-pie-chart>
       </div>
     `;
   }
 
   private _renderLineChart(): TemplateResult {
     return html`
-      <div class="${classes.chartCards}">
-        <inno-chart-card>
-          <inno-line-chart
-            class="${classes.lineChart}"
-            .data="${this._lineChartData}">
-            <span slot="title">Growth of our users</span>
-          </inno-line-chart>
-        </inno-chart-card>
+      <div class="${classes.chartCards} ${classes.lineCard}">
+        <inno-line-chart
+          class="${classes.lineChart}"
+          .data="${this._lineChartData}">
+          <span slot="title">Growth of our users</span>
+        </inno-line-chart>
       </div>
     `;
   }
