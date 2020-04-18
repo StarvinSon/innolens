@@ -1,0 +1,73 @@
+name: GetCountHistory
+
+method: get
+path: /api/spaces/count-history
+query:
+  fromTime:
+    required: true
+    schema:
+      type: date
+  toTime:
+    required: true
+    schema:
+      type: date
+  timeStepMs:
+    schema:
+      type: integer
+  spaceIds:
+    schema:
+      type: array
+      items:
+        type: string
+  countType:
+    schema:
+      enum:
+        - enter
+        - uniqueEnter
+        - exit
+        - uniqueExit
+        - stay
+        - uniqueStay
+  groupBy:
+    schema:
+      enum:
+        - department
+        - typeOfStudy
+        - studyProgramme
+        - yearOfStudy
+        - affiliatedStudentInterestGroup
+
+authentication:
+  type: bearer
+
+responseBody:
+  data:
+    schema:
+      type: object
+      required:
+        - groups
+        - records
+      additionalProperties: false
+      properties:
+        groups:
+          type: array
+          items:
+            type: string
+        records:
+          type: array
+          items:
+            type: object
+            required:
+              - startTime
+              - endTime
+              - counts
+            additionalProperties: false
+            properties:
+              startTime:
+                type: date
+              endTime:
+                type: date
+              counts:
+                type: object
+                additionalProperties:
+                  type: number

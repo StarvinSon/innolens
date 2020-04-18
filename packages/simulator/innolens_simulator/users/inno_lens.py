@@ -68,7 +68,7 @@ class InnoLensMember(Component):
         or time_equals(shifted_time, weekday=4, hour=14, minute=0) # Fri 14:00
       )
     ):
-      span = randint_nd(lower=5 * 60, upper=7 * 60, step=30, mean=6 * 60, stddev=60)
+      span = randint_nd(lower=5 * 60, upper=7 * 60 + 30, step=30, mean=6 * 60, stddev=60)
       return current_time + timedelta(minutes=span)
     return None
 
@@ -87,5 +87,4 @@ class InnoLensMember(Component):
     self.__vr_gadget.release(self.__member)
     self.__ar_vr_room.exit(self.__member)
     self.__inno_wing.exit(self.__member)
-    self.__random_schedule_start_offset = timedelta(hours=randint_nd(lower=-1 * 60, upper=1 * 60, step=30, mean=6 * 60, stddev=60))
-
+    self.__random_schedule_start_offset = timedelta(minutes=randint_nd(lower=-1 * 60, upper=1 * 60 + 30, step=30, mean=0, stddev=60))

@@ -112,7 +112,7 @@ const writeGlueFile = (
                 writer.write(`if (${encodedQueryVar} === undefined)`).block(() => {
                   writer.writeLine(`throw new Error('Failed to encode query ${JSON.stringify(queryName)}')`);
                 });
-                writer.write(`${urlVar}.searchParams.set(`).quote(queryName).write(`, ${encodedQueryVar})`).newLine();
+                writer.write(`${urlVar}.searchParams.set(`).quote(queryName).write(`, String(${encodedQueryVar}))`).newLine();
 
                 if (!querySpec.required) {
                   writer.newLine()
@@ -133,6 +133,9 @@ const writeGlueFile = (
               }
               writer.writeLine(`${reqInitVar}.headers[${keyExpr}] = ${valExpr}`);
             };
+
+            // Method
+            writer.write(`${reqInitVar}.method = `).quote(endptSpec.method);
 
             // Authentication
             if (endptSpec.authentication !== undefined) {

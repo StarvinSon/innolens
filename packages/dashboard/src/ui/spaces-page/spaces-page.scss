@@ -13,14 +13,18 @@
 }
 
 .content {
-  box-sizing: border-box;
-  margin-left: auto;
-  margin-right: auto;
-  max-width: layout.$max-width;
-  padding: 2rem 1rem;
+  display: grid;
+  grid-template-columns: 1fr 2fr;
 }
 
 .options {
+  position: sticky;
+  box-sizing: border-box;
+  top: layout.$top-bar-height;
+  height: calc(100vh - #{layout.$top-bar-height});
+  padding: 2rem 1rem;
+  overflow-y: auto;
+
   & > :not(:first-child) {
     margin-top: 2rem;
   }
@@ -41,10 +45,10 @@
 
 .chart-cards {
   display: flex;
-  margin-top: 4rem;
+  padding: 2rem 1rem;
   flex-direction: column;
 
-  & > * {
+  & > :not(:first-child) {
     margin-top: 2rem;
   }
 }

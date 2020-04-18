@@ -1,12 +1,12 @@
 import { singleton, injectableConstructor } from '@innolens/resolver/node';
-import { subDays, subHours, addHours } from 'date-fns';
-import { QuerySelector, FilterQuery } from 'mongodb';
+import { addMilliseconds } from 'date-fns';
+import { ObjectId } from 'mongodb';
 
-import { TypedAggregationCursor } from '../db/cursor';
-import { MemberCollection, Member } from '../db/member';
+import { MemberCollection } from '../db/member';
 import { Space, SpaceCollection } from '../db/space';
 import { SpaceAccessRecordCollection, SpaceAccessRecord } from '../db/space-access-record';
-import { Writable } from '../utils/object';
+import { SpaceMemberRecordCollection, SpaceMemberRecord } from '../db/space-member-record';
+import { raceSettled } from '../utils/promise';
 
 
 export class SpaceNotFoundError extends Error {
@@ -18,66 +18,96 @@ export class SpaceNotFoundError extends Error {
 
 export { Space, SpaceAccessRecord };
 
-export const spaceMemberCountHistoryGroupBys = [
-  'department',
-  'typeOfStudy',
-  'studyProgramme',
-  'yearOfStudy',
-  'affiliatedStudentInterestGroup'
-] as const;
 
-export type SpaceMemberCountHistoryGroupBy = (typeof spaceMemberCountHistoryGroupBys)[number];
+export type SpaceCountGroupBy =
+  'department'
+  | 'typeOfStudy'
+  | 'studyProgramme'
+  | 'yearOfStudy'
+  | 'affiliatedStudentInterestGroup';
 
-export interface SpaceMemberCountHistory {
+export type SpaceCountCountType =
+  'total'
+  | 'uniqueMember';
+
+export interface SpaceCount {
   readonly groups: ReadonlyArray<string>;
-  readonly records: ReadonlyArray<SpaceMemberCountRecord>;
+  readonly counts: SpaceCountValues;
 }
 
-export interface SpaceMemberCountRecord {
-  readonly periodStartTime: Date;
-  readonly periodEndTime: Date;
-  readonly enterCounts: SpaceMemberCountRecordValues;
-  readonly uniqueEnterCounts: SpaceMemberCountRecordValues;
-  readonly exitCounts: SpaceMemberCountRecordValues;
-  readonly uniqueExitCounts: SpaceMemberCountRecordValues;
-  readonly stayCounts: SpaceMemberCountRecordValues;
-  readonly uniqueStayCounts: SpaceMemberCountRecordValues;
-}
-
-export interface SpaceMemberCountRecordValues {
+export interface SpaceCountValues {
   readonly [group: string]: number;
 }
 
+
+export type SpaceCountHistoryGroupBy = SpaceCountGroupBy;
+
+export type SpaceCountHistoryCountType =
+  'enter'
+  | 'uniqueEnter'
+  | 'exit'
+  | 'uniqueExit'
+  | 'stay'
+  | 'uniqueStay';
+
+export interface SpaceCountHistory {
+  readonly groups: ReadonlyArray<string>;
+  readonly records: ReadonlyArray<SpaceCountRecord>;
+}
+
+export interface SpaceCountRecord {
+  readonly startTime: Date;
+  readonly endTime: Date;
+  readonly counts: SpaceCountRecordValues;
+}
+
+export interface SpaceCountRecordValues {
+  readonly [group: string]: number;
+}
+
+
 @injectableConstructor({
   spaceCollection: SpaceCollection,
+  spaceMemberRecordCollection: SpaceMemberRecordCollection,
   spaceAccessRecordCollection: SpaceAccessRecordCollection,
   memberCollection: MemberCollection
 })
 @singleton()
 export class SpaceService {
   private readonly _spaceCollection: SpaceCollection;
-  private readonly _spaceAccessRecordCollection: SpaceAccessRecordCollection;
+  private readonly _memberRecordCollection: SpaceMemberRecordCollection;
+  private readonly _accessRecordCollection: SpaceAccessRecordCollection;
   private readonly _memberCollection: MemberCollection;
 
   public constructor(deps: {
     spaceCollection: SpaceCollection;
+    spaceMemberRecordCollection: SpaceMemberRecordCollection,
     spaceAccessRecordCollection: SpaceAccessRecordCollection,
     memberCollection: MemberCollection
   }) {
     ({
       spaceCollection: this._spaceCollection,
-      spaceAccessRecordCollection: this._spaceAccessRecordCollection,
+      spaceMemberRecordCollection: this._memberRecordCollection,
+      spaceAccessRecordCollection: this._accessRecordCollection,
       memberCollection: this._memberCollection
     } = deps);
   }
 
-  public async importSpaces(spaces: ReadonlyArray<Omit<Space, '_id'>>): Promise<void> {
+  public async importSpaces(spaces: ReadonlyArray<Omit<Space, '_id' | 'currentMemberIds' | 'versionId'>>): Promise<void> {
     await this._spaceCollection
       .bulkWrite(
         spaces.map((space) => ({
-          replaceOne: {
+          updateOne: {
             filter: { spaceId: space.spaceId },
-            replacement: space,
+            update: {
+              $set: {
+                spaceName: space.spaceName,
+                versionId: new ObjectId()
+              },
+              $setOnInsert: {
+                currentMemberIds: []
+              }
+            },
             upsert: true
           }
         })),
@@ -89,141 +119,82 @@ export class SpaceService {
     return this._spaceCollection.find({}).toArray();
   }
 
-  private async _findOneBySpaceId(spaceId: string): Promise<Space | null> {
-    return this._spaceCollection.findOne({ spaceId });
+  private async _hasSpace(spaceId: string): Promise<boolean> {
+    const count = await this._spaceCollection
+      .countDocuments({ spaceId }, { limit: 1 });
+    return count >= 1;
   }
+
+  private async _hasAllSpaces(spaceIds: ReadonlyArray<string>): Promise<string | null> {
+    const promises = new Set(spaceIds.map(async (id): Promise<[string, boolean]> =>
+      [id, await this._hasSpace(id)]));
+    while (promises.size > 0) {
+      // eslint-disable-next-line no-await-in-loop
+      const result = await raceSettled(promises);
+      promises.delete(result.promise);
+      if (result.status === 'rejected') {
+        throw result.reason;
+      }
+      if (!result.value[1]) {
+        return result.value[0];
+      }
+    }
+    return null;
+  }
+
 
   public async importAccessRecords(
     spaceId: string,
     deleteFromTime: Date | null,
-    deleteToTime: Date | null,
     records: ReadonlyArray<Omit<SpaceAccessRecord, '_id' | 'spaceId'>>
   ): Promise<void> {
-    const space = await this._findOneBySpaceId(spaceId);
-    if (space === null) {
+    if (!await this._hasSpace(spaceId)) {
       throw new SpaceNotFoundError(spaceId);
     }
 
-    const deleteFilterQuery: FilterQuery<Writable<SpaceAccessRecord>> = {
-      spaceId
-    };
-    if (deleteFromTime !== null || deleteToTime !== null) {
-      const timeQuerySelector: QuerySelector<Date> = {};
-      if (deleteFromTime !== null) timeQuerySelector.$gte = deleteFromTime;
-      if (deleteToTime !== null) timeQuerySelector.$lt = deleteToTime;
-      deleteFilterQuery.time = timeQuerySelector;
-    }
-    await this._spaceAccessRecordCollection.deleteMany(deleteFilterQuery);
-
-    await this._spaceAccessRecordCollection.insertMany(records.map((record) => ({
-      ...record,
-      spaceId
-    })));
-  }
-
-  /**
-   * Be default, the algorithm starts iterating each access records for the specific space from
-   * the given `fromtime`, adds 1 to the count when a member entered the space and subtract 1
-   * from the count when a member exited the space.
-   *
-   * Note that the precision of this algorithm depends on `fromtime`. The earlier the `fromtime`
-   * is, the higher the accuracy is, in the expense of requiring more time to compute.
-   *
-   * Case when the algorithm is inaccurate:
-   * X entered Inno Wing 7 days ago and has not exited yet. `fromtime` is set to 2 days ago.
-   * Since the algorithm does not see the enter record of X, it does not know X is inside Inno
-   * Wing.
-   */
-  public async getMemberCountHistory(
-    spaceId: string,
-    groupBy: SpaceMemberCountHistoryGroupBy,
-    pastHours: number
-  ): Promise<SpaceMemberCountHistory> {
-    const endTime = new Date();
-    const startTime = subHours(endTime, pastHours);
-
-    const space = await this._findOneBySpaceId(spaceId);
-    if (space === null) {
-      throw new SpaceNotFoundError(spaceId);
-    }
-
-    type Record = SpaceAccessRecord & { readonly member?: Member };
-    type RecordCursor = TypedAggregationCursor<Record>;
-    const cursor: RecordCursor = this._spaceAccessRecordCollection.aggregate([
-      {
-        $match: {
-          spaceId,
+    await Promise.all([
+      this._memberRecordCollection.deleteMany({
+        spaceId,
+        ...deleteFromTime === null ? {} : {
           time: {
-            $gte: subDays(startTime, 1),
-            $lt: endTime
+            $gte: deleteFromTime
           }
         }
-      },
-      {
-        $sort: {
-          time: 1
+      }),
+      this._accessRecordCollection.deleteMany({
+        spaceId,
+        ...deleteFromTime === null ? {} : {
+          time: {
+            $gte: deleteFromTime
+          }
         }
-      },
-      {
-        $lookup: {
-          from: this._memberCollection.collectionName,
-          localField: 'memberId',
-          foreignField: 'memberId',
-          as: 'member'
-        }
-      },
-      {
-        $unwind: {
-          path: '$member',
-          preserveNullAndEmptyArrays: true
-        }
-      }
+      })
     ]);
 
-    // Get spans
-    interface Span {
-      readonly enterTime: Date | null;
-      readonly exitTime: Date | null;
-      readonly member: Member;
-    }
-    const enteredMemberInfos = new Map<string, {
-      readonly enterTime: Date;
-      readonly member: Member | null;
-    }>();
-    const exitedMemberIds = new Set<string>();
-    let spans: Array<Span> = [];
-    for await (const record of cursor) {
+    const latestMemberRecord = await this._memberRecordCollection.findOne({
+      spaceId
+    }, {
+      sort: {
+        time: -1,
+        _id: -1
+      }
+    });
+
+    let latestMemberIds = latestMemberRecord === null ? [] : latestMemberRecord.memberIds;
+    const memberRecords: Array<Omit<SpaceMemberRecord, '_id'>> = [];
+    const accessRecords: Array<Omit<SpaceAccessRecord, '_id'>> = [];
+
+    for (const record of records) {
       switch (record.action) {
         case 'enter': {
-          if (!enteredMemberInfos.has(record.memberId)) {
-            enteredMemberInfos.set(record.memberId, {
-              enterTime: record.time,
-              member: record.member ?? null
-            });
+          if (!latestMemberIds.includes(record.memberId)) {
+            latestMemberIds = [...latestMemberIds, record.memberId];
           }
           break;
         }
         case 'exit': {
-          const info = enteredMemberInfos.get(record.memberId);
-          if (info !== undefined) {
-            enteredMemberInfos.delete(record.memberId);
-            exitedMemberIds.add(record.memberId);
-            if (info.member !== null) {
-              spans.push({
-                enterTime: info.enterTime,
-                exitTime: record.time,
-                member: info.member
-              });
-            }
-          } else if (!exitedMemberIds.has(record.memberId)) {
-            exitedMemberIds.add(record.memberId);
-            if (record.member !== undefined) {
-              spans.push({
-                enterTime: null,
-                exitTime: record.time,
-                member: record.member
-              });
-            }
+          if (latestMemberIds.includes(record.memberId)) {
+            latestMemberIds = latestMemberIds.filter((id) => id !== record.memberId);
           }
           break;
         }
@@ -231,105 +202,466 @@ export class SpaceService {
           throw new Error(`Unknown action: ${record.action}`);
         }
       }
+
+      memberRecords.push({
+        time: record.time,
+        spaceId,
+        memberIds: latestMemberIds,
+        mode: 'access'
+      });
+      accessRecords.push({
+        time: record.time,
+        spaceId,
+        memberId: record.memberId,
+        action: record.action
+      });
     }
-    for (const info of enteredMemberInfos.values()) {
-      if (info.member !== null) {
-        spans.push({
-          enterTime: info.enterTime,
-          exitTime: null,
-          member: info.member
+
+    await Promise.all([
+      this._spaceCollection.updateOne({
+        spaceId
+      }, {
+        $set: {
+          currentMemberIds: latestMemberIds,
+          versionId: new ObjectId()
+        }
+      }),
+      this._memberRecordCollection.bulkWrite(
+        memberRecords.map((memberRecord) => ({
+          insertOne: {
+            document: memberRecord
+          }
+        })),
+        { ordered: true }
+      ),
+      this._accessRecordCollection.bulkWrite(
+        accessRecords.map((accessRecord) => ({
+          insertOne: {
+            document: accessRecord
+          }
+        })),
+        { ordered: true }
+      )
+    ]);
+  }
+
+  public async addRecord(
+    time: Date,
+    spaceId: string,
+    memberId: string,
+    action: 'enter' | 'exit'
+  ): Promise<void> {
+    /* eslint-disable no-await-in-loop */
+    for (let retryCount = 0; retryCount < 2; retryCount += 1) {
+      const space = await this._spaceCollection.findOne({
+        spaceId
+      });
+      if (space === null) {
+        throw new SpaceNotFoundError(spaceId);
+      }
+
+      let newcurrentMemberIds: ReadonlyArray<string> | undefined;
+      switch (action) {
+        case 'enter': {
+          if (space.currentMemberIds.includes(memberId)) {
+            newcurrentMemberIds = space.currentMemberIds;
+          } else {
+            newcurrentMemberIds = [...space.currentMemberIds, memberId];
+          }
+          break;
+        }
+        case 'exit': {
+          if (space.currentMemberIds.includes(memberId)) {
+            newcurrentMemberIds = space.currentMemberIds.filter((id) => id !== memberId);
+          } else {
+            newcurrentMemberIds = space.currentMemberIds;
+          }
+          break;
+        }
+        default: {
+          throw new Error(`Unknown action: ${action}`);
+        }
+      }
+
+      const updateResult = await this._spaceCollection.findOneAndUpdate(
+        {
+          _id: space._id,
+          versionId: space.versionId
+        },
+        {
+          $set: {
+            currentMemberIds: newcurrentMemberIds,
+            versionId: new ObjectId()
+          }
+        },
+        {
+          returnOriginal: true
+        }
+      );
+      // Race condition observed, so retry.
+      // eslint-disable-next-line no-continue
+      if (updateResult.value === null) continue;
+
+      await Promise.all([
+        this._memberRecordCollection.insertOne({
+          time,
+          spaceId,
+          memberIds: newcurrentMemberIds,
+          mode: 'access'
+        }),
+        this._accessRecordCollection.insertOne({
+          time,
+          spaceId,
+          memberId,
+          action
+        })
+      ]);
+    }
+    /* eslint-enable no-await-in-loop */
+  }
+
+
+  public async getCount(
+    time: Date,
+    spaceIds: ReadonlyArray<string> | null,
+    countType: SpaceCountCountType,
+    groupBy: SpaceCountHistoryGroupBy | null
+  ): Promise<SpaceCount> {
+    let selectedSpaceIds: ReadonlyArray<string>;
+    if (spaceIds !== null) {
+      const notFoundSpaceId = await this._hasAllSpaces(spaceIds);
+      if (notFoundSpaceId !== null) {
+        throw new SpaceNotFoundError(notFoundSpaceId);
+      }
+      selectedSpaceIds = spaceIds;
+    } else {
+      const spaces = await this.getSpaces();
+      selectedSpaceIds = spaces.map((space) => space.spaceId);
+    }
+
+    const spaceMemberIdsPromises = selectedSpaceIds
+      .map(async (spaceId): Promise<[string, ReadonlyArray<string>]> => {
+        const memberRecord = await this._memberRecordCollection.findOne({
+          spaceId,
+          time: {
+            $lte: time
+          }
+        }, {
+          sort: {
+            time: -1,
+            _id: -1
+          }
         });
+        const memberIds = memberRecord === null ? [] : memberRecord.memberIds;
+        return [spaceId, memberIds];
+      });
+    const memberIds = new Map(await Promise.all(spaceMemberIdsPromises));
+
+    const memberList = await this._memberCollection
+      .find({
+        memberId: {
+          $in: Array.from(new Set(Array.from(memberIds.values()).flat()))
+        }
+      })
+      .toArray();
+    const memberMap = new Map(memberList.map((member) => [member.memberId, member]));
+
+    // Create group filters
+    let groupFilters: ReadonlyArray<{
+      readonly name: string;
+      readonly filter: (memberId: string) => boolean;
+    }>;
+    switch (groupBy) {
+      case null: {
+        groupFilters = [{
+          name: 'total',
+          filter: () => true
+        }];
+        break;
+      }
+      case 'department':
+      case 'typeOfStudy':
+      case 'studyProgramme':
+      case 'yearOfStudy':
+      case 'affiliatedStudentInterestGroup': {
+        const groupNames = Array.from(new Set(memberList.map((m) => m[groupBy])));
+        groupFilters = groupNames.map((groupName) => ({
+          name: groupName,
+          filter: (memberId) => memberMap.get(memberId)?.[groupBy] === groupName
+        }));
+        break;
+      }
+      default: {
+        throw new Error(`Unsupported groupBy: ${groupBy}`);
       }
     }
-    enteredMemberInfos.clear();
 
-    // Filter spans
-    spans = spans.filter((s) => (
-      (s.enterTime === null || s.enterTime.getTime() < endTime.getTime())
-      && (s.exitTime === null || s.exitTime.getTime() > startTime.getTime())
-    ));
-
-    // Sort spans
-    spans.sort((a, b) => (
-      a.enterTime === null ? -1
-        : b.enterTime === null ? 1
-          : a.enterTime.getTime() - b.enterTime.getTime()
-    ));
-
-    // Get groups
-    const groupSet = new Set<string>();
-    for (const span of spans) {
-      groupSet.add(span.member[groupBy]);
+    let reduceMemberIds: (mIds: ReadonlyArray<string>) => ReadonlyArray<string>;
+    switch (countType) {
+      case 'total': {
+        reduceMemberIds = (mIds) => mIds;
+        break;
+      }
+      case 'uniqueMember': {
+        reduceMemberIds = (mIds) => Array.from(new Set(mIds));
+        break;
+      }
+      default: {
+        throw new Error(`Unsupported count type: ${countType}`);
+      }
     }
-    const groups: ReadonlyArray<string> = Array.from(groupSet);
 
-    // Get history
-    let i = 0;
-    const activeSpans: Array<Span> = [];
-    const records: Array<SpaceMemberCountRecord> = [];
-    for (
-      let periodStartTime = startTime;
-      periodStartTime < endTime;
-      periodStartTime = addHours(periodStartTime, 1)
-    ) {
-      const periodEndTime = addHours(periodStartTime, 1);
-
-      while (
-        i < spans.length
-        && (spans[i].enterTime === null || spans[i].enterTime! < periodEndTime)
-      ) {
-        if (spans[i].exitTime === null || spans[i].exitTime! > periodStartTime) {
-          activeSpans.push(spans[i]);
-        }
-        i += 1;
-      }
-
-      interface WritableRecord extends Writable<SpaceMemberCountRecord> {
-        readonly enterCounts: Writable<SpaceMemberCountRecordValues>;
-        readonly uniqueEnterCounts: Writable<SpaceMemberCountRecordValues>;
-        readonly exitCounts: Writable<SpaceMemberCountRecordValues>;
-        readonly uniqueExitCounts: Writable<SpaceMemberCountRecordValues>;
-        readonly stayCounts: Writable<SpaceMemberCountRecordValues>;
-        readonly uniqueStayCounts: Writable<SpaceMemberCountRecordValues>;
-      }
-      const record: WritableRecord = {
-        periodStartTime,
-        periodEndTime,
-        enterCounts: {},
-        uniqueEnterCounts: {},
-        exitCounts: {},
-        uniqueExitCounts: {},
-        stayCounts: {},
-        uniqueStayCounts: {}
-      };
-      for (const group of groups) {
-        const activeGroupSpans = activeSpans.filter((s) => s.member[groupBy] === group);
-
-        const enterSpans = activeGroupSpans
-          .filter((s) => s.enterTime !== null && s.enterTime >= periodStartTime);
-        record.enterCounts[group] = enterSpans.length;
-        record.uniqueEnterCounts[group] = new Set(enterSpans.map((s) => s.member.memberId)).size;
-
-        const exitSpans = activeGroupSpans
-          .filter((s) => s.exitTime !== null && s.exitTime <= periodEndTime);
-        record.exitCounts[group] = exitSpans.length;
-        record.uniqueExitCounts[group] = new Set(exitSpans.map((s) => s.member.memberId)).size;
-
-        record.stayCounts[group] = activeGroupSpans.length;
-        record.uniqueStayCounts[group] =
-          new Set(activeGroupSpans.map((s) => s.member.memberId)).size;
-      }
-      records.push(record);
-
-      for (let j = activeSpans.length - 1; j >= 0; j -= 1) {
-        if (activeSpans[j].exitTime !== null && activeSpans[j].exitTime! <= periodEndTime) {
-          activeSpans.splice(j, 1);
-        }
-      }
+    const counts: Record<string, number> = {};
+    for (const groupFilter of groupFilters) {
+      const count = Array.from(memberIds.values())
+        .flatMap((ids) => ids.slice())
+        .filter((id) => groupFilter.filter(id));
+      counts[groupFilter.name] = reduceMemberIds(count).length;
     }
 
     return {
-      groups,
+      groups: groupFilters.map((f) => f.name),
+      counts
+    };
+  }
+
+  public async getCountHistory(
+    startTime: Date,
+    endTime: Date,
+    timeStepMs: number,
+    spaceIds: ReadonlyArray<string> | null,
+    countType: SpaceCountHistoryCountType,
+    groupBy: SpaceCountHistoryGroupBy | null
+  ): Promise<SpaceCountHistory> {
+    let selectedSpaceIds: ReadonlyArray<string>;
+    if (spaceIds !== null) {
+      const notFoundSpaceId = await this._hasAllSpaces(spaceIds);
+      if (notFoundSpaceId !== null) {
+        throw new SpaceNotFoundError(notFoundSpaceId);
+      }
+      selectedSpaceIds = spaceIds;
+    } else {
+      const spaces = await this.getSpaces();
+      selectedSpaceIds = spaces.map((s) => s.spaceId);
+    }
+
+    const [
+      memberRecords,
+      previousMemberRecords
+    ] = await Promise.all([
+      this._memberRecordCollection
+        .find(
+          {
+            ...spaceIds === null ? {} : {
+              spaceId: {
+                $in: spaceIds.slice()
+              }
+            },
+            time: {
+              $gte: startTime,
+              $lt: endTime
+            }
+          }, {
+            sort: {
+              time: 1,
+              _id: 1
+            }
+          }
+        )
+        .toArray(),
+      (async (): Promise<ReadonlyMap<string, ReadonlyArray<string>>> => {
+        const promises = selectedSpaceIds
+          .map(async (spaceId): Promise<[string, SpaceMemberRecord | null]> => {
+            const record = await this._memberRecordCollection.findOne({
+              spaceId,
+              time: {
+                $lt: startTime
+              }
+            }, {
+              sort: {
+                time: -1,
+                _id: -1
+              }
+            });
+            return [spaceId, record];
+          });
+        const records = await Promise.all(promises);
+        return new Map(records.map(([spaceId, record]) => {
+          if (record === null) return [spaceId, []];
+          return [spaceId, record.memberIds];
+        }));
+      })()
+    ]);
+
+    const memberIds: ReadonlyArray<string> = Array.from(new Set<string>([
+      ...memberRecords.flatMap((r) => r.memberIds),
+      ...Array.from(previousMemberRecords.values()).flat()
+    ]));
+    const memberList = await this._memberCollection
+      .find({
+        memberId: {
+          $in: memberIds.slice()
+        }
+      })
+      .toArray();
+    const memberMap = new Map(memberList.map((m) => [m.memberId, m]));
+
+    let createMemberAccumulator: (periodStartMemberIds: ReadonlyArray<string>) => {
+      add(recordMemberIds: ReadonlyArray<string>): void;
+      get(): ReadonlyArray<string>;
+    };
+    switch (countType) {
+      case 'enter':
+      case 'uniqueEnter': {
+        createMemberAccumulator = (periodStartMemberIds) => {
+          let activeMemberIds = periodStartMemberIds;
+          const enteredMemberIds: Array<string> = [];
+          return {
+            add: (recordMemberIds) => {
+              for (const memberId of recordMemberIds) {
+                if (!activeMemberIds.includes(memberId)) {
+                  enteredMemberIds.push(memberId);
+                }
+              }
+              activeMemberIds = recordMemberIds;
+            },
+            get: () => enteredMemberIds
+          };
+        };
+        break;
+      }
+      case 'exit':
+      case 'uniqueExit': {
+        createMemberAccumulator = (periodStartMemberIds) => {
+          let activeMemberIds = periodStartMemberIds;
+          const exitedMemberIds: Array<string> = [];
+          return {
+            add: (recordMemberIds) => {
+              for (const memberId of activeMemberIds) {
+                if (!recordMemberIds.includes(memberId)) {
+                  exitedMemberIds.push(memberId);
+                }
+              }
+              activeMemberIds = recordMemberIds;
+            },
+            get: () => exitedMemberIds
+          };
+        };
+        break;
+      }
+      case 'stay':
+      case 'uniqueStay': {
+        createMemberAccumulator = (periodStartMemberIds) => {
+          let activeMemberIds = periodStartMemberIds;
+          const stayedMemberIds = periodStartMemberIds.slice();
+          return {
+            add: (recordMemberIds) => {
+              for (const memberId of recordMemberIds) {
+                if (!activeMemberIds.includes(memberId)) {
+                  stayedMemberIds.push(memberId);
+                }
+              }
+              activeMemberIds = recordMemberIds;
+            },
+            get: () => stayedMemberIds
+          };
+        };
+        break;
+      }
+      default: {
+        throw new Error(`Unsupported count type: ${countType}`);
+      }
+    }
+
+    // Create group filters
+    let groupFilters: ReadonlyArray<{
+      readonly name: string;
+      readonly filter: (memberId: string) => boolean;
+    }>;
+    switch (groupBy) {
+      case null: {
+        groupFilters = [{
+          name: 'total',
+          filter: () => true
+        }];
+        break;
+      }
+      case 'department':
+      case 'typeOfStudy':
+      case 'studyProgramme':
+      case 'yearOfStudy':
+      case 'affiliatedStudentInterestGroup': {
+        const groupNames = Array.from(new Set(memberList.map((m) => m[groupBy])));
+        groupFilters = groupNames.map((groupName) => ({
+          name: groupName,
+          filter: (memberId) => memberMap.get(memberId)?.[groupBy] === groupName
+        }));
+        break;
+      }
+      default: {
+        throw new Error(`Unsupported groupBy: ${groupBy}`);
+      }
+    }
+
+    let reduceAccumulatedCount: (mIds: ReadonlyArray<string>) => ReadonlyArray<string>;
+    switch (countType) {
+      case 'enter':
+      case 'exit':
+      case 'stay': {
+        reduceAccumulatedCount = (mIds) => mIds;
+        break;
+      }
+      case 'uniqueEnter':
+      case 'uniqueExit':
+      case 'uniqueStay': {
+        reduceAccumulatedCount = (mIds) => Array.from(new Set(mIds));
+        break;
+      }
+      default: {
+        throw new Error(`Unsupported count type: ${countType}`);
+      }
+    }
+
+    let i = 0;
+    const records: Array<SpaceCountRecord> = [];
+    const currentMemberIds = new Map(previousMemberRecords);
+    for (
+      let periodStartTime = startTime, periodEndTime = addMilliseconds(periodStartTime, timeStepMs);
+      periodStartTime < endTime;
+      periodStartTime = periodEndTime, periodEndTime = addMilliseconds(periodEndTime, timeStepMs)
+    ) {
+      const memberAccumulators = new Map(Array.from(currentMemberIds)
+        .map(([spaceId, ids]) => [
+          spaceId,
+          createMemberAccumulator(ids)
+        ]));
+
+      while (
+        i < memberRecords.length
+        && memberRecords[i].time < periodEndTime
+      ) {
+        memberAccumulators.get(memberRecords[i].spaceId)!.add(memberRecords[i].memberIds);
+        currentMemberIds.set(memberRecords[i].spaceId, memberRecords[i].memberIds);
+        i += 1;
+      }
+
+      const counts: Record<string, number> = {};
+      for (const groupFilter of groupFilters) {
+        const groupMemberIds = Array.from(memberAccumulators.values())
+          .flatMap((a) => a.get())
+          .filter((id) => groupFilter.filter(id));
+        counts[groupFilter.name] = reduceAccumulatedCount(groupMemberIds).length;
+      }
+
+      records.push({
+        startTime: periodStartTime,
+        endTime: periodEndTime,
+        counts
+      });
+    }
+
+    return {
+      groups: groupFilters.map((g) => g.name),
       records
     };
   }

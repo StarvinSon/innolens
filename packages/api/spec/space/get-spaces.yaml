@@ -1,0 +1,23 @@
+name: GetSpaces
+
+method: get
+path: /api/spaces/spaces
+
+authentication:
+  type: bearer
+
+responseBody:
+  data:
+    schema:
+      type: array
+      items:
+        type: object
+        additionalProperties: false
+        required:
+          - spaceId
+          - spaceName
+        properties:
+          spaceId:
+            type: string
+          spaceName:
+            type: string

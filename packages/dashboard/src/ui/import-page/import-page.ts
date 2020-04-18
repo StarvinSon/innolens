@@ -236,15 +236,6 @@ export class ImportPage extends LitElement {
 
           <label
             class="${classes.form_label}"
-            for="delete-to-time-input">
-            Delete To Time (UTC) (Optional)
-          </label>
-          <inno-datetime-input
-            id="delete-to-time-input">
-            </inno-datetime-input>
-
-          <label
-            class="${classes.form_label}"
             for="file-input">
             Space Access Record CSV
           </label>
@@ -346,15 +337,13 @@ export class ImportPage extends LitElement {
     const formElem = event.target as HTMLFormElement;
     const spaceIdInputElem = formElem.querySelector<HTMLInputElement>('#space-id-input')!;
     const deleteFromTimeInputElem = formElem.querySelector<DatetimeInput>('#delete-from-time-input')!;
-    const deleteToTimeInputElem = formElem.querySelector<DatetimeInput>('#delete-to-time-input')!;
     const fileInputElem = formElem.querySelector<HTMLInputElement>('#file-input')!;
 
     const spaceId = spaceIdInputElem.value;
     const deleteFromTime = deleteFromTimeInputElem.selectedTime;
-    const deleteToTime = deleteToTimeInputElem.selectedTime;
     const file = fileInputElem.files![0];
 
     this._performFormTask('spaceAccessRecords', async () =>
-      spaceService.importSpaceAccessRecords(spaceId, deleteFromTime, deleteToTime, file));
+      spaceService.importAccessRecords(spaceId, deleteFromTime, file));
   }
 }

@@ -1,8 +1,8 @@
 import { injectableConstructor, singleton } from '@innolens/resolver/web';
 
 import { stringTag } from '../utils/class';
+import { Debouncer } from '../utils/debouncer';
 
-import { Debouncer } from './debouncer';
 import { EffectQueue } from './effect-queue';
 import { FileService } from './file';
 import * as MachineGlue from './glues/machine';
@@ -103,7 +103,7 @@ export class MachineService extends EventTarget {
   }
 
   public async updateTypes(): Promise<ReadonlyArray<MachineType>> {
-    return this._debouncer.performTask('types', async () => {
+    return this._debouncer.debounce('types', async () => {
       const resData = await this._oauth2Service
         .withAccessToken((token) => fetch(MachineGlue.GetTypes.createRequest({
           authentication: { token }
@@ -138,7 +138,7 @@ export class MachineService extends EventTarget {
     const key = computeKey('instances', {
       typeId
     });
-    return this._debouncer.performTask(key, async () =>
+    return this._debouncer.debounce(key, async () =>
       this._effectQueue.queue('instances', async (applyEffect) => {
         const resData = await this._oauth2Service
           .withAccessToken((token) => fetch(MachineGlue.GetInstances.createRequest({
@@ -223,7 +223,7 @@ export class MachineService extends EventTarget {
     pastHours: number
   ): Promise<MachineMemberCountHistory> {
     const key = this._getMemberCountHistoryKey(typeIds, instanceIds, groupBy, pastHours);
-    return this._debouncer.performTask(`history?${key}`, async () =>
+    return this._debouncer.debounce(`history?${key}`, async () =>
       this._effectQueue.queue('history', async (applyEffect) => {
         const resData = await this._oauth2Service
           .withAccessToken((token) => fetch(MachineGlue.GetMemberCountHistory.createRequest({

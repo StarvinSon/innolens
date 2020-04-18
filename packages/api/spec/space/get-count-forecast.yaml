@@ -1,0 +1,69 @@
+name: GetCountForecast
+
+method: get
+path: /api/spaces/count-forecast
+query:
+  fromTime:
+    schema:
+      type: date
+  timeStepMs:
+    schema:
+      enum:
+        - 180000
+  spaceIds:
+    schema:
+      type: array
+      items:
+        type: string
+  countType:
+    schema:
+      enum:
+        - enterCounts
+        - uniqueEnterCounts
+        - exitCounts
+        - uniqueExitCounts
+        - stayCounts
+        - uniqueStayCounts
+  groupBy:
+    schema:
+      enum:
+        - department
+        - typeOfStudy
+        - studyProgramme
+        - yearOfStudy
+        - affiliatedStudentInterestGroup
+
+authentication:
+  type: bearer
+
+responseBody:
+  data:
+    schema:
+      type: object
+      required:
+        - groups
+        - predictions
+      additionalProperties: false
+      properties:
+        groups:
+          type: array
+          items:
+            type: string
+        predictions:
+          type: array
+          items:
+            type: object
+            required:
+              - startTime
+              - endTime
+              - counts
+            additionalProperties: false
+            properties:
+              startTime:
+                type: date
+              endTime:
+                type: date
+              counts:
+                type: object
+                additionalProperties:
+                  type: number

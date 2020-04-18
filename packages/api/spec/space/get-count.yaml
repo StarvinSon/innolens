@@ -1,0 +1,47 @@
+name: GetCount
+
+method: get
+path: /api/spaces/count
+query:
+  time:
+    schema:
+      type: date
+  spaceIds:
+    schema:
+      type: array
+      items:
+        type: string
+  countType:
+    schema:
+      enum:
+        - total
+        - uniqueMember
+  groupBy:
+    schema:
+      enum:
+        - department
+        - typeOfStudy
+        - studyProgramme
+        - yearOfStudy
+        - affiliatedStudentInterestGroup
+
+authentication:
+  type: bearer
+
+responseBody:
+  data:
+    schema:
+      type: object
+      required:
+        - groups
+        - counts
+      additionalProperties: false
+      properties:
+        groups:
+          type: array
+          items:
+            type: string
+        counts:
+          type: object
+          additionalProperties:
+            type: number

@@ -1,42 +1,42 @@
 import {
-  decorate, singleton,
-  name, injectableFactory
+  decorate, singleton, name,
+  injectableFactory
 } from '@innolens/resolver/node';
 import { ObjectId, Collection } from 'mongodb';
 
 import { Db } from './db';
 
 
-export interface Space {
+export interface SpaceMemberRecord {
   readonly _id: ObjectId;
   readonly spaceId: string;
-  readonly spaceName: string;
-  readonly currentMemberIds: ReadonlyArray<string>;
-  readonly versionId: ObjectId;
+  readonly time: Date;
+  readonly memberIds: ReadonlyArray<string>;
+  readonly mode: 'access' | 'set';
 }
 
 
-export interface SpaceCollection extends Collection<Space> {}
+export interface SpaceMemberRecordCollection extends Collection<SpaceMemberRecord> {}
 
-export const SpaceCollection = decorate(
-  name('SpaceCollection'),
+export const SpaceMemberRecordCollection = decorate(
+  name('SpaceMemberRecordCollection'),
   injectableFactory(Db),
   singleton(),
-  async (db: Db): Promise<SpaceCollection> =>
-    db.defineCollection('spaces', {
+  async (db: Db): Promise<SpaceMemberRecordCollection> =>
+    db.defineCollection('spaceMemberRecords', {
       validationLevel: 'strict',
       validationAction: 'error',
       validator: {
         $jsonSchema: {
           bsonType: 'object',
-          additionalProperties: false,
           required: [
             '_id',
             'spaceId',
-            'spaceName',
-            'currentMemberIds',
-            'versionId'
+            'time',
+            'memberIds',
+            'mode'
           ],
+          additionalProperties: false,
           properties: {
             _id: {
               bsonType: 'objectId'
@@ -44,25 +44,24 @@ export const SpaceCollection = decorate(
             spaceId: {
               bsonType: 'string'
             },
-            spaceName: {
-              bsonType: 'string'
+            time: {
+              bsonType: 'date'
             },
-            currentMemberIds: {
+            memberIds: {
               bsonType: 'array',
               items: {
-                bsonType: 'string'
+                type: 'string'
               }
             },
-            versionId: {
-              bsonType: 'objectId'
+            mode: {
+              enum: ['access', 'set']
             }
           }
         }
       },
       indexes: [
         {
-          key: { spaceId: 1 },
-          unique: true
+          key: { spaceId: 1, time: 1, _id: 1 }
         }
       ]
     })

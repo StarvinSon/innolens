@@ -1,8 +1,8 @@
 import { injectableConstructor, singleton } from '@innolens/resolver/web';
 
 import { stringTag } from '../utils/class';
+import { Debouncer } from '../utils/debouncer';
 
-import { Debouncer } from './debouncer';
 import { EffectQueue } from './effect-queue';
 import { FileService } from './file';
 import * as ExpendableInventoryGlue from './glues/expendable-inventory';
@@ -125,7 +125,7 @@ export class ExpendableInventoryService extends EventTarget {
   }
 
   public async updateTypes(): Promise<ReadonlyArray<ExpendableInventoryType>> {
-    return this._debouncer.performTask('types', async () => {
+    return this._debouncer.debounce('types', async () => {
       const resData = await this._oauth2Service
         .withAccessToken((token) => fetch(ExpendableInventoryGlue.GetTypes.createRequest({
           authentication: { token }
@@ -217,7 +217,7 @@ export class ExpendableInventoryService extends EventTarget {
     groupBy: ExpendableInventoryQuantityHistoryGroupBy | undefined
   ): Promise<ExpendableInventoryQuantityHistory> {
     const key = this._getQuantityHistoryKey(startTime, endTime, timeStepMs, typeIds, groupBy);
-    return this._debouncer.performTask(`quantity?${key}`, async () =>
+    return this._debouncer.debounce(`quantity?${key}`, async () =>
       this._effectQueue.queue('quantity', async (applyEffect) => {
         let result: ExpendableInventoryDataCacheResult<ExpendableInventoryQuantityHistory>;
         try {
@@ -310,7 +310,7 @@ export class ExpendableInventoryService extends EventTarget {
       startTime, endTime, timeStepMs,
       typeIds, groupBy, countType
     );
-    return this._debouncer.performTask(`access?${key}`, async () =>
+    return this._debouncer.debounce(`access?${key}`, async () =>
       this._effectQueue.queue('access', async (applyEffect) => {
         let result: ExpendableInventoryDataCacheResult<ExpendableInventoryAccessHistory>;
         try {

@@ -1,10 +1,11 @@
-import * as Api from '@innolens/api/legacy/web';
 import { injectableConstructor, singleton } from '@innolens/resolver/web';
 
-import { Debouncer } from './debouncer';
-import { EffectQueue } from './effect-queue';
+import { stringTag } from '../utils/class';
+import { Debouncer } from '../utils/debouncer';
+
 import { FileService } from './file';
-import { ServerService, JsonBody } from './server';
+import * as SpaceGlue from './glues/space';
+import { OAuth2Service } from './oauth2';
 
 
 export interface Space {
@@ -12,61 +13,64 @@ export interface Space {
   readonly spaceName: string;
 }
 
-export const spaceMemberCountHistoryGroupByValues =
-  Api.Spaces.GetSpaceMemberCountHistory.groupByQueryValues;
 
-export type SpaceMemberCountHistoryGroupByValues =
-  Api.Spaces.GetSpaceMemberCountHistory.GroupByQueryValue;
+export type SpaceCountCountType =
+  Exclude<Parameters<typeof SpaceGlue.GetCount.createRequest>[0]['query']['countType'], undefined>;
 
-export interface SpaceMemberCountHistory {
+export type SpaceCountGroupBy =
+  Exclude<Parameters<typeof SpaceGlue.GetCount.createRequest>[0]['query']['groupBy'], undefined>;
+
+export interface SpaceCount {
   readonly groups: ReadonlyArray<string>;
-  readonly records: ReadonlyArray<SpaceMemberCountRecord>;
+  readonly counts: SpaceCountRecordValues;
 }
 
-export interface SpaceMemberCountRecord {
-  readonly periodStartTime: Date;
-  readonly periodEndTime: Date;
-  readonly enterCounts: SpaceMemberCountRecordValues;
-  readonly uniqueEnterCounts: SpaceMemberCountRecordValues;
-  readonly exitCounts: SpaceMemberCountRecordValues;
-  readonly uniqueExitCounts: SpaceMemberCountRecordValues;
-  readonly stayCounts: SpaceMemberCountRecordValues;
-  readonly uniqueStayCounts: SpaceMemberCountRecordValues;
-}
-
-export interface SpaceMemberCountRecordValues {
+export interface SpaceCountRecordValues {
   readonly [group: string]: number;
 }
 
+
+export type SpaceCountHistoryCountType =
+  Exclude<Parameters<typeof SpaceGlue.GetCountHistory.createRequest>[0]['query']['countType'], undefined>;
+
+export type SpaceCountHistoryGroupBy =
+  Exclude<Parameters<typeof SpaceGlue.GetCountHistory.createRequest>[0]['query']['groupBy'], undefined>;
+
+export interface SpaceCountHistory {
+  readonly groups: ReadonlyArray<string>;
+  readonly records: ReadonlyArray<SpaceCountHistoryRecord>;
+}
+
+export interface SpaceCountHistoryRecord {
+  readonly startTime: Date;
+  readonly endTime: Date;
+  readonly counts: SpaceCountHistoryRecordValues;
+}
+
+export interface SpaceCountHistoryRecordValues {
+  readonly [group: string]: number;
+}
+
+
 @injectableConstructor({
-  serverClient: ServerService,
+  oauth2Service: OAuth2Service,
   fileService: FileService
 })
 @singleton()
-export class SpaceService extends EventTarget {
-  private readonly _serverClient: ServerService;
+@stringTag()
+export class SpaceService {
+  private readonly _oauth2Service: OAuth2Service;
   private readonly _fileService: FileService;
 
-  private _spaces: ReadonlyArray<Space> | null = null;
-
-  private _spaceMemberCountHistoryCache: {
-    readonly spaceId: string;
-    readonly groupBy: SpaceMemberCountHistoryGroupByValues;
-    readonly pastHours: number;
-    readonly data: SpaceMemberCountHistory | null
-  } | null = null;
-
   private readonly _debouncer = new Debouncer();
-  private readonly _effectQueue = new EffectQueue();
 
 
   public constructor(deps: {
-    readonly serverClient: ServerService;
+    readonly oauth2Service: OAuth2Service;
     readonly fileService: FileService;
   }) {
-    super();
     ({
-      serverClient: this._serverClient,
+      oauth2Service: this._oauth2Service,
       fileService: this._fileService
     } = deps);
     if (process.env.NODE_ENV === 'development') {
@@ -75,123 +79,105 @@ export class SpaceService extends EventTarget {
   }
 
 
-  public get spaces(): ReadonlyArray<Space> | null {
-    return this._spaces;
-  }
-
   public async importSpaces(file: File): Promise<void> {
     const fileId = await this._fileService.upload(file);
-    await this._serverClient.fetchOk(
-      Api.Spaces.PostSpaces.path,
-      {
-        method: 'POST',
-        body: new JsonBody(Api.Spaces.PostSpaces.toRequestBodyJson({
-          fileId
-        }))
-      }
-    );
+    await this._oauth2Service
+      .withAccessToken((token) => fetch(SpaceGlue.PostSpaces.createRequest({
+        authentication: { token },
+        body: { fileId }
+      })))
+      .then(SpaceGlue.PostSpaces.handleResponse);
   }
 
-  public async updateSpaces(): Promise<ReadonlyArray<Space>> {
-    return this._debouncer.performTask('spaces', async () => {
-      const json = await this._serverClient.fetchJsonOk(
-        Api.Spaces.GetSpaces.path,
-        {
-          cache: 'no-store'
-        }
-      );
-      const { data } = Api.Spaces.GetSpaces.fromResponseBodyJson(json);
-      this._spaces = data;
-      Promise.resolve().then(() => this._notifyUpdated('spaces'));
+  public async fetchSpaces(): Promise<ReadonlyArray<Space>> {
+    return this._debouncer.debounce('spaces', async () => {
+      const data = await this._oauth2Service
+        .withAccessToken((token) => fetch(SpaceGlue.GetSpaces.createRequest({
+          authentication: { token }
+        })))
+        .then(SpaceGlue.GetSpaces.handleResponse);
       return data;
     });
   }
 
 
-  public async importSpaceAccessRecords(
+  public async importAccessRecords(
     spaceId: string,
     deleteFromTime: Date | null,
-    deleteToTime: Date | null,
     file: File
   ): Promise<void> {
     const fileId = await this._fileService.upload(file);
-    await this._serverClient.fetchOk(
-      Api.Spaces.PostSpaceAccessRecords.path(spaceId),
-      {
-        method: 'POST',
-        body: new JsonBody(Api.Spaces.PostSpaceAccessRecords.toRequestBodyJson({
-          deleteFromTime,
-          deleteToTime,
-          fileId
-        }))
-      }
-    );
+    await this._oauth2Service
+      .withAccessToken((token) => fetch(SpaceGlue.PostAccessRecords.createRequest({
+        authentication: { token },
+        params: { spaceId },
+        body: { deleteFromTime, fileId }
+      })))
+      .then(SpaceGlue.PostAccessRecords.handleResponse);
   }
 
 
-  private _getSpaceMemberCountHistoryQuery(
-    spaceId: string,
-    groupBy: SpaceMemberCountHistoryGroupByValues,
-    pastHours: number
-  ): string {
+  public async fetchCount(
+    time: Date,
+    spaceIds: ReadonlyArray<string> | null,
+    countType: SpaceCountCountType,
+    groupBy: SpaceCountGroupBy
+  ): Promise<SpaceCount> {
     const params = new URLSearchParams();
-    params.set('spaceId', spaceId);
+    params.set('time', time.toISOString());
+    if (spaceIds !== null) params.set('spaceIds', spaceIds.map(encodeURIComponent).join(','));
+    params.set('countType', countType);
     params.set('groupBy', groupBy);
-    params.set('pastHours', String(pastHours));
-    return params.toString();
-  }
+    const key = params.toString();
 
-  public getSpaceMemberCountHistory(
-    spaceId: string,
-    groupBy: SpaceMemberCountHistoryGroupByValues,
-    pastHours: number
-  ): SpaceMemberCountHistory | null {
-    if (
-      this._spaceMemberCountHistoryCache !== null
-      && this._spaceMemberCountHistoryCache.spaceId === spaceId
-      && this._spaceMemberCountHistoryCache.groupBy === groupBy
-      && this._spaceMemberCountHistoryCache.pastHours === pastHours
-    ) {
-      return this._spaceMemberCountHistoryCache.data;
-    }
-    return null;
-  }
-
-  public async updateSpaceMemberCountHistory(
-    spaceId: string,
-    groupBy: SpaceMemberCountHistoryGroupByValues,
-    pastHours: number
-  ): Promise<SpaceMemberCountHistory> {
-    const query = this._getSpaceMemberCountHistoryQuery(spaceId, groupBy, pastHours);
-    return this._debouncer.performTask(`history?${query}`, async () =>
-      this._effectQueue.queue('history', async (applyEffect) => {
-        const url = new URL(
-          Api.Spaces.GetSpaceMemberCountHistory.path(spaceId),
-          globalThis.location.href
-        );
-        url.search = query;
-        const json = await this._serverClient.fetchJsonOk(
-          url.href,
-          {
-            cache: 'no-store'
+    return this._debouncer.debounce(`count?${key}`, async () => {
+      const data = await this._oauth2Service
+        .withAccessToken((token) => fetch(SpaceGlue.GetCount.createRequest({
+          authentication: { token },
+          query: {
+            time,
+            spaceIds: spaceIds ?? undefined,
+            countType,
+            groupBy
           }
-        );
-        const { data } = Api.Spaces.GetSpaceMemberCountHistory.fromResponseBodyJson(json);
-        applyEffect(() => {
-          this._spaceMemberCountHistoryCache = {
-            spaceId,
-            groupBy,
-            pastHours,
-            data
-          };
-          Promise.resolve().then(() => this._notifyUpdated('space-member-count-history'));
-        });
-        return data;
-      }));
+        })))
+        .then(SpaceGlue.GetCount.handleResponse);
+      return data;
+    });
   }
 
+  public async fetchCountHistory(
+    fromTime: Date,
+    toTime: Date,
+    timeStepMs: number,
+    spaceIds: ReadonlyArray<string> | null,
+    countType: SpaceCountHistoryCountType,
+    groupBy: SpaceCountHistoryGroupBy | null
+  ): Promise<SpaceCountHistory> {
+    const params = new URLSearchParams();
+    params.set('fromTime', fromTime.toISOString());
+    params.set('toTime', toTime.toISOString());
+    params.set('timeStepMs', String(timeStepMs));
+    if (spaceIds !== null) params.set('spaceIds', spaceIds.map(encodeURIComponent).join(','));
+    params.set('countType', countType);
+    if (groupBy !== null) params.set('groupBy', groupBy);
+    const key = params.toString();
 
-  private _notifyUpdated(type: string): void {
-    this.dispatchEvent(new Event(`${type}-updated`));
+    return this._debouncer.debounce(`count-history?${key}`, async () => {
+      const data = await this._oauth2Service
+        .withAccessToken((token) => fetch(SpaceGlue.GetCountHistory.createRequest({
+          authentication: { token },
+          query: {
+            fromTime,
+            toTime,
+            timeStepMs,
+            spaceIds: spaceIds ?? undefined,
+            countType,
+            groupBy: groupBy ?? undefined
+          }
+        })))
+        .then(SpaceGlue.GetCountHistory.handleResponse);
+      return data;
+    });
   }
 }

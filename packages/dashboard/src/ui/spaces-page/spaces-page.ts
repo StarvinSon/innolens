@@ -1,4 +1,5 @@
-import { format as formatDate } from 'date-fns';
+import { subDays, startOfDay } from 'date-fns';
+import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
 import {
   customElement, LitElement, TemplateResult,
   html,
@@ -9,28 +10,90 @@ import {
 import '../chart-card';
 import '../choice-chips';
 import '../choice-chip';
-import '../line-chart'; // eslint-disable-line import/no-duplicates
+import '../space-count-history-chart';
 import {
-  SpaceService, Space, spaceMemberCountHistoryGroupByValues,
-  SpaceMemberCountHistoryGroupByValues, SpaceMemberCountHistory
+  SpaceService, Space,
+  SpaceCountHistoryGroupBy, SpaceCountHistoryCountType
 } from '../../services/space';
+import { toggleNullableArray } from '../../utils/array';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
-import { LineChartData } from '../line-chart'; // eslint-disable-line import/no-duplicates
 
 import { css, classes } from './spaces-page.scss';
 
 
-const spaceMemberCountTypes = [
-  'enterCounts',
-  'uniqueEnterCounts',
-  'exitCounts',
-  'uniqueExitCounts',
-  'stayCounts',
-  'uniqueStayCounts'
-] as const;
+const spaceCountHistoryPastDaysChoices: ReadonlyArray<number> = [
+  1,
+  2,
+  3,
+  7,
+  14,
+  30,
+  60,
+  90,
+  180,
+  360
+];
 
-type SpaceMemberCountType = (typeof spaceMemberCountTypes)[number];
+const spaceCountHistoryCountTypeChoices: ReadonlyArray<{
+  readonly type: SpaceCountHistoryCountType;
+  readonly name: string;
+}> = [
+  {
+    type: 'enter',
+    name: 'Enter'
+  },
+  {
+    type: 'exit',
+    name: 'Exit'
+  },
+  {
+    type: 'stay',
+    name: 'Stay'
+  },
+  {
+    type: 'uniqueEnter',
+    name: 'Unique Enter'
+  },
+  {
+    type: 'uniqueExit',
+    name: 'Unique Exit'
+  },
+  {
+    type: 'uniqueStay',
+    name: 'Unique Stay'
+  }
+];
+
+const spaceCountHistoryGroupByChoices: ReadonlyArray<{
+  readonly type: SpaceCountHistoryGroupBy | null;
+  readonly name: string;
+}> = [
+  {
+    type: null,
+    name: 'None'
+  },
+  {
+    type: 'department',
+    name: 'Department'
+  },
+  {
+    type: 'typeOfStudy',
+    name: 'Type of Study'
+  },
+  {
+    type: 'studyProgramme',
+    name: 'Study Programme'
+  },
+  {
+    type: 'yearOfStudy',
+    name: 'Year of Study'
+  },
+  {
+    type: 'affiliatedStudentInterestGroup',
+    name: 'Affiliated Student Interest Group'
+  }
+];
 
 
 const TAG_NAME = 'inno-spaces-page';
@@ -47,49 +110,72 @@ export class SpacesPage extends LitElement {
 
 
   @injectableProperty(SpaceService)
-  @observeProperty('_onDependencyInjected')
+  @observeProperty('_onServiceInjected')
   public spaceService: SpaceService | null = null;
 
-
-  @property({ attribute: false })
-  private _selectedSpace: Space | null = null;
-
-  @property({ attribute: false })
-  // eslint-disable-next-line max-len
-  private _selectedGroupBy: SpaceMemberCountHistoryGroupByValues = spaceMemberCountHistoryGroupByValues[0];
 
   @property({ attribute: false })
   private _selectedPastDays = 7;
 
   @property({ attribute: false })
-  private _selectedCountType: SpaceMemberCountType = spaceMemberCountTypes[0];
+  private _selectedSpaceIds: ReadonlyArray<string> | null = null;
+
+  @property({ attribute: false })
+  private _selectedCountType: SpaceCountHistoryCountType = 'stay';
+
+  @property({ attribute: false })
+  private _selectedGroupBy: SpaceCountHistoryGroupBy | null = null;
 
 
-  private _lineChartDataDeps: readonly [
-    SpaceMemberCountHistory | null,
-    SpaceMemberCountType | null
-  ] = [null, null];
+  @property({ attribute: false })
+  private _selectedFromTime: Date | null = null;
 
-  private _lineChartDataCache: LineChartData<Date> | null = null;
+  @property({ attribute: false })
+  private _selectedToTime: Date | null = new Date();
+
+  @property({ attribute: false })
+  private _selectedTimeStepMs = 30 * 60 * 1000;
 
 
-  public constructor() {
-    super();
-    this._onSpaceServiceUpdated = this._onSpaceServiceUpdated.bind(this);
+  private _spaceFetched = false;
+
+  @property({ attribute: false })
+  private _spaces: ReadonlyArray<Space> | null = null;
+
+
+  private _onServiceInjected(): void {
+    this.requestUpdate();
   }
 
-  private _onDependencyInjected(): void {
-    this.requestUpdate();
+
+  protected update(changedProps: PropertyValues): void {
     if (this.spaceService !== null) {
-      this.spaceService.addEventListener('spaces-updated', this._onSpaceServiceUpdated);
-      this.spaceService.addEventListener('space-member-count-history-updated', this._onSpaceServiceUpdated);
+      if (this._selectedToTime !== null) {
+        let fromTime = subDays(this._selectedToTime, this._selectedPastDays);
+        fromTime = utcToZonedTime(fromTime, 'Asia/Hong_Kong');
+        fromTime = startOfDay(fromTime);
+        fromTime = zonedTimeToUtc(fromTime, 'Asia/Hong_Kong');
+        if (
+          this._selectedFromTime === null
+          || this._selectedFromTime.getTime() !== fromTime.getTime()
+        ) {
+          this._selectedFromTime = fromTime;
+        }
+      }
+
+      if (!this._spaceFetched) {
+        this.spaceService
+          .fetchSpaces()
+          .then((spaces) => {
+            this._spaces = spaces;
+          });
+      }
+      this._spaceFetched = true;
+
     }
-  }
 
-  private _onSpaceServiceUpdated(): void {
-    this.requestUpdate();
+    super.update(changedProps);
   }
-
 
   protected render(): TemplateResult {
     return html`
@@ -104,32 +190,47 @@ export class SpacesPage extends LitElement {
     /* eslint-disable @typescript-eslint/indent */
     return html`
       <div class="${classes.options}">
-        ${this._renderChipOptions({
-          title: 'Space',
-          items: this.spaceService?.spaces ?? [],
-          selectItem: this._selectedSpace,
-          formatItem: (item) => item.spaceName,
-          onClick: (space) => this._onSpaceChipClick(space)
-        })}
-        ${this._renderChipOptions({
-          title: 'Group By',
-          items: spaceMemberCountHistoryGroupByValues,
-          selectItem: this._selectedGroupBy,
-          onClick: (groupBy) => this._onGroupByChipClick(groupBy)
-        })}
+
         ${this._renderChipOptions({
           title: 'Past Days',
-          items: [1, 2, 7, 30, 60, 120, 360],
-          selectItem: this._selectedPastDays,
-          formatItem: (day) => html`${day} Days`,
-          onClick: (day) => this._onPastDaysChipClick(day)
+          items: spaceCountHistoryPastDaysChoices,
+          selectItem: (item) => item === this._selectedPastDays,
+          formatItem: (item) => html`${item} Days`,
+          onClick: (item) => this._onPastDaysChipClick(item)
         })}
+
+        ${this._renderChipOptions({
+          title: 'Space',
+          items: [
+            {
+              spaceId: null,
+              spaceName: 'All'
+            },
+            ...this._spaces ?? []
+          ],
+          selectItem: (space) => space.spaceId === null
+            ? this._selectedSpaceIds === null
+            : this._selectedSpaceIds !== null && this._selectedSpaceIds.includes(space.spaceId),
+          formatItem: (item) => item.spaceName,
+          onClick: (space) => this._onSpaceChipClick(space.spaceId)
+        })}
+
         ${this._renderChipOptions({
           title: 'Count Type',
-          items: spaceMemberCountTypes,
-          selectItem: this._selectedCountType,
-          onClick: (type) => this._onCountTypeChipClick(type)
+          items: spaceCountHistoryCountTypeChoices,
+          selectItem: (item) => item.type === this._selectedCountType,
+          formatItem: (item) => item.name,
+          onClick: (item) => this._onCountTypeChipClick(item.type)
         })}
+
+        ${this._renderChipOptions({
+          title: 'Group By',
+          items: spaceCountHistoryGroupByChoices,
+          selectItem: (item) => item.type === this._selectedGroupBy,
+          formatItem: (item) => item.name,
+          onClick: (item) => this._onGroupByChipClick(item.type)
+        })}
+
       </div>
     `;
     /* eslint-enable @typescript-eslint/indent */
@@ -138,29 +239,19 @@ export class SpacesPage extends LitElement {
   private _renderChipOptions<T>(options: {
     readonly title: unknown,
     readonly items: ReadonlyArray<T>,
-    readonly selectItem: T | ReadonlyArray<T> | null,
+    readonly selectItem: (item: T) => boolean,
     readonly formatItem?: (item: T) => unknown,
     readonly onClick: (item: T) => void
   }): TemplateResult {
-    let selectId: Array<string> | string | null;
-    if (options.selectItem === null) {
-      selectId = null;
-    } else if (Array.isArray(options.selectItem)) {
-      selectId = options.selectItem.map((item) => String(options.items.indexOf(item)));
-    } else {
-      selectId = String(options.items.indexOf(options.selectItem as T));
-    }
-
     return html`
       <div class="${classes.option}">
         <div class="${classes.option_label}">${options.title}</div>
         <inno-choice-chips
           class="${classes.option_chips}"
-          selectAttribute="data-id"
-          .selectId="${selectId}">
-          ${options.items.map((item, i) => html`
+        >
+          ${options.items.map((item) => html`
             <inno-choice-chip
-              data-id="${i}"
+              .selected="${options.selectItem(item)}"
               @click="${() => options.onClick(item)}">
               ${options.formatItem === undefined ? item : options.formatItem(item)}
             </inno-choice-chip>
@@ -174,80 +265,40 @@ export class SpacesPage extends LitElement {
     return html`
       <div class="${classes.chartCards}">
         <inno-chart-card>
-          <inno-line-chart
+          <inno-space-count-history-chart
             class="${classes.lineChart}"
-            .data="${this._getLineChartData()}">
+            .spaceService="${this.spaceService}"
+            .fromTime="${this._selectedFromTime}"
+            .toTime="${this._selectedToTime}"
+            .timeStepMs="${this._selectedTimeStepMs}"
+            .spaceIds="${this._selectedSpaceIds}"
+            .countType="${this._selectedCountType}"
+            .groupBy="${this._selectedGroupBy}"
+          >
             <span slot="title">Space Member Count History</span>
-          </inno-line-chart>
+          </inno-space-count-history-chart>
         </inno-chart-card>
       </div>
     `;
-  }
-
-  private _getLineChartData(): LineChartData<Date> | null {
-    const history = this._getSpaceMemberCountHistory();
-
-    if (
-      this._lineChartDataDeps[0] !== history
-      || this._lineChartDataDeps[1] !== this._selectedCountType
-    ) {
-      if (history === null) {
-        this._lineChartDataCache = null;
-      } else {
-        this._lineChartDataCache = {
-          lines: history.groups.map((group) => ({
-            name: group,
-            values: history.records.map((record) => record[this._selectedCountType][group])
-          })),
-          labels: history.records.map((record) => record.periodEndTime),
-          formatLabel: (time) => formatDate(time, 'd/L')
-        };
-      }
-      this._lineChartDataDeps = [history, this._selectedCountType];
-    }
-    return this._lineChartDataCache;
-  }
-
-  private _getSpaceMemberCountHistory(): SpaceMemberCountHistory | null {
-    if (this.spaceService === null) return null;
-    if (this._selectedSpace === null) return null;
-    return this.spaceService.getSpaceMemberCountHistory(
-      this._selectedSpace.spaceId,
-      this._selectedGroupBy,
-      this._selectedPastDays * 24
-    );
-  }
-
-  protected updated(changedProps: PropertyValues): void {
-    super.updated(changedProps);
-
-    if (this.spaceService !== null) {
-      if (this.spaceService.spaces === null) {
-        this.spaceService.updateSpaces();
-      }
-      if (this._getSpaceMemberCountHistory() === null && this._selectedSpace !== null) {
-        this.spaceService.updateSpaceMemberCountHistory(
-          this._selectedSpace.spaceId,
-          this._selectedGroupBy,
-          this._selectedPastDays * 24
-        );
-      }
-    }
-  }
-
-  private _onSpaceChipClick(space: Space): void {
-    this._selectedSpace = space;
-  }
-
-  private _onGroupByChipClick(groupBy: SpaceMemberCountHistoryGroupByValues): void {
-    this._selectedGroupBy = groupBy;
   }
 
   private _onPastDaysChipClick(day: number): void {
     this._selectedPastDays = day;
   }
 
-  private _onCountTypeChipClick(type: SpaceMemberCountType): void {
+  private _onSpaceChipClick(spaceId: string | null): void {
+    if (spaceId === null) {
+      this._selectedSpaceIds = null;
+    } else {
+      this._selectedSpaceIds = toggleNullableArray(this._selectedSpaceIds, spaceId);
+    }
+  }
+
+  private _onCountTypeChipClick(type: SpaceCountHistoryCountType): void {
     this._selectedCountType = type;
+  }
+
+  private _onGroupByChipClick(groupBy: SpaceCountHistoryGroupBy | null): void {
+    this._selectedGroupBy = groupBy;
   }
 }

@@ -70,13 +70,6 @@ export const Router = decorate(
     // oauth2
     router.post(Api.OAuth2.PostToken.path, controllers.oauth2.postToken);
 
-    // space
-    router.get(Api.Spaces.GetSpaces.path, controllers.space.getSpaces);
-    router.post(Api.Spaces.PostSpaces.path, controllers.space.postSpaces);
-    router.post(Api.Spaces.PostSpaceAccessRecords.path(':spaceId'), controllers.space.postSpaceAccessRecords);
-
-    router.get(Api.Spaces.GetSpaceMemberCountHistory.path(':spaceId'), controllers.space.getSpaceMemberCountHistory);
-
     // Register auto generated routes
     glueRoutes(router, controllers);
 

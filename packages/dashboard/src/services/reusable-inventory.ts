@@ -1,8 +1,8 @@
 import { injectableConstructor, singleton } from '@innolens/resolver/web';
 
 import { stringTag } from '../utils/class';
+import { Debouncer } from '../utils/debouncer';
 
-import { Debouncer } from './debouncer';
 import { EffectQueue } from './effect-queue';
 import { FileService } from './file';
 import * as ReusableInventoryGlue from './glues/reusable-inventory';
@@ -101,7 +101,7 @@ export class ReusableInventoryService extends EventTarget {
   }
 
   public async updateTypes(): Promise<ReadonlyArray<ReusableInventoryType>> {
-    return this._debouncer.performTask('types', async () => {
+    return this._debouncer.debounce('types', async () => {
       const resData = await this._oauth2Service
         .withAccessToken((token) => fetch(ReusableInventoryGlue.GetTypes.createRequest({
           authentication: { token }
@@ -136,7 +136,7 @@ export class ReusableInventoryService extends EventTarget {
     const key = computeKey('instances', {
       typeId
     });
-    return this._debouncer.performTask(key, async () =>
+    return this._debouncer.debounce(key, async () =>
       this._effectQueue.queue('instances', async (applyEffect) => {
         const resData = await this._oauth2Service
           .withAccessToken((token) => fetch(ReusableInventoryGlue.GetInstances.createRequest({
@@ -226,7 +226,7 @@ export class ReusableInventoryService extends EventTarget {
     countType: ReusableInventoryMemberCountType | undefined
   ): Promise<ReusableInventoryMemberCountHistory> {
     const key = this._getMemberCountHistoryKey(pastHours, typeIds, instanceIds, groupBy, countType);
-    return this._debouncer.performTask(`history?${key}`, async () =>
+    return this._debouncer.debounce(`history?${key}`, async () =>
       this._effectQueue.queue('history', async (applyEffect) => {
         const resData = await this._oauth2Service
           .withAccessToken((token) => fetch(ReusableInventoryGlue.GetMemberCountHistory

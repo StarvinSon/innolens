@@ -23,7 +23,7 @@ export const SpaceAccessRecordCollection = decorate(
   injectableFactory(Db),
   singleton(),
   async (db: Db): Promise<SpaceAccessRecordCollection> =>
-    db.defineCollection('spaceAccessesRecords', {
+    db.defineCollection('spaceAccessRecords', {
       validationLevel: 'strict',
       validationAction: 'error',
       validator: {
@@ -58,7 +58,7 @@ export const SpaceAccessRecordCollection = decorate(
       },
       indexes: [
         {
-          key: { spaceId: 1, time: 1 }
+          key: { spaceId: 1, time: 1, _id: 1 }
         }
       ]
     })
