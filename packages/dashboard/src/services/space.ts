@@ -121,13 +121,13 @@ export class SpaceService {
     time: Date,
     spaceIds: ReadonlyArray<string> | null,
     countType: SpaceCountCountType,
-    groupBy: SpaceCountGroupBy
+    groupBy: SpaceCountGroupBy | null
   ): Promise<SpaceCount> {
     const params = new URLSearchParams();
     params.set('time', time.toISOString());
     if (spaceIds !== null) params.set('spaceIds', spaceIds.map(encodeURIComponent).join(','));
     params.set('countType', countType);
-    params.set('groupBy', groupBy);
+    if (groupBy !== null) params.set('groupBy', groupBy);
     const key = params.toString();
 
     return this._debouncer.debounce(`count?${key}`, async () => {
@@ -138,7 +138,7 @@ export class SpaceService {
             time,
             spaceIds: spaceIds ?? undefined,
             countType,
-            groupBy
+            groupBy: groupBy ?? undefined
           }
         })))
         .then(SpaceGlue.GetCount.handleResponse);
