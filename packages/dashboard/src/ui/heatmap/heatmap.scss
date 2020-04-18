@@ -1,0 +1,25 @@
+@use '../theme';
+@use '../typography';
+
+
+@mixin _title() {
+  @include typography.base();
+  font-size: 1.25rem;
+  font-weight: 400;
+}
+
+.content {
+  /*! empty */
+}
+
+.lgf {
+  width: 100%;
+}
+
+.gf {
+  width: 100%;
+}
+
+.areas {
+  fill-opacity: 0.25;
+}

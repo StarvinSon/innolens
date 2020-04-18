@@ -6,8 +6,10 @@ import '@lit-element-bootstrap/carousel';
 
 import '../theme';
 import '../user-example-page';
+import '../user-heatmap-page';
 import '../user-registered-page';
 import { MemberService } from '../../services/member';
+import { SpaceService } from '../../services/space';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
 
@@ -30,6 +32,10 @@ export class UserPages extends LitElement {
   @injectableProperty(MemberService)
   @observeProperty('_onDependencyInjected')
   public memberService: MemberService | null = null;
+
+  @injectableProperty(SpaceService)
+  @observeProperty('_onDependencyInjected')
+  public spaceService: SpaceService | null = null;
 
   @property({ attribute: false })
   public interactable = false;
@@ -59,7 +65,7 @@ export class UserPages extends LitElement {
         </bs-carousel-indicators>
 
         <bs-carousel-item class="${classes.carouselItem}" active>
-          <inno-user-registered-page 
+          <inno-user-registered-page
             class="${classes.image}"
             .memberService="${this.memberService}"
           ></inno-user-registered-page>
@@ -71,10 +77,18 @@ export class UserPages extends LitElement {
           <inno-user-example-page class="${classes.image}"></inno-user-example-page>
         </bs-carousel-item>
         <bs-carousel-item class="${classes.carouselItem}">
-          <inno-user-example-page class="${classes.image}"></inno-user-example-page>
+          <inno-user-heatmap-page
+            class="${classes.image}"
+            floor="gf"
+            .spaceService="${this.spaceService}"
+          ></inno-user-heatmap-page>
         </bs-carousel-item>
         <bs-carousel-item class="${classes.carouselItem}">
-          <inno-user-example-page class="${classes.image}"></inno-user-example-page>
+          <inno-user-heatmap-page
+            class="${classes.image}"
+            floor="lgf"
+            .spaceService="${this.spaceService}"
+          ></inno-user-heatmap-page>
         </bs-carousel-item>
         <bs-carousel-item class="${classes.carouselItem}">
           <inno-user-example-page class="${classes.image}"></inno-user-example-page>
