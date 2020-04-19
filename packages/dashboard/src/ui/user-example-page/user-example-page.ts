@@ -7,11 +7,6 @@ import { css, classes } from './user-example-page.scss';
 
 import '../button';
 
-// import {
-//   MemberService, MemberCountFilter, MemberCountHistory,
-//   MemberCountHistoryCategory, MemberCountHistoryRange
-// } from '../../services/member';
-
 
 const TAG_NAME = 'inno-user-example-page';
 

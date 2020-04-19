@@ -158,7 +158,8 @@ export class UserRegisteredPage extends LitElement {
       <div class="${classes.chartCards} ${classes.lineCard}">
         <inno-line-chart
           class="${classes.lineChart}"
-          .data="${this._lineChartData}">
+          .data="${this._lineChartData}"
+          showArea>
           <span slot="title">Growth of our users</span>
         </inno-line-chart>
       </div>

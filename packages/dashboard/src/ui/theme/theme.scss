@@ -49,6 +49,12 @@
   #{vars.$chart-2}: green;
   #{vars.$chart-3}: blue;
   #{vars.$chart-4}: purple;
+
+  #{vars.$chart-prediction-0}: hsl(0, 100%, 75%);
+  #{vars.$chart-prediction-1}: hsl(39, 100%, 75%);
+  #{vars.$chart-prediction-2}: hsl(120, 100%, 75%);
+  #{vars.$chart-prediction-3}: hsl(240, 100%, 75%);
+  #{vars.$chart-prediction-4}: hsl(300, 100%, 75%);
 }
 
 :root[theme="white"] {
@@ -93,4 +99,10 @@
   #{vars.$chart-2}: green;
   #{vars.$chart-3}: blue;
   #{vars.$chart-4}: purple;
+
+  #{vars.$chart-prediction-0}: hsl(0, 100%, 75%);
+  #{vars.$chart-prediction-1}: hsl(39, 100%, 75%);
+  #{vars.$chart-prediction-2}: hsl(120, 100%, 75%);
+  #{vars.$chart-prediction-3}: hsl(240, 100%, 75%);
+  #{vars.$chart-prediction-4}: hsl(300, 100%, 75%);
 }

@@ -66,41 +66,41 @@ export class UserPages extends LitElement {
 
         <bs-carousel-item class="${classes.carouselItem}" active>
           <inno-user-registered-page
-            class="${classes.image}"
+            class="${classes.page}"
             .memberService="${this.memberService}"
           ></inno-user-registered-page>
         </bs-carousel-item>
         <bs-carousel-item class="${classes.carouselItem}">
-          <inno-user-example-page class="${classes.image}"></inno-user-example-page>
+          <inno-user-example-page class="${classes.page}"></inno-user-example-page>
         </bs-carousel-item>
         <bs-carousel-item class="${classes.carouselItem}">
-          <inno-user-example-page class="${classes.image}"></inno-user-example-page>
+          <inno-user-example-page class="${classes.page}"></inno-user-example-page>
         </bs-carousel-item>
         <bs-carousel-item class="${classes.carouselItem}">
           <inno-user-heatmap-page
-            class="${classes.image}"
+            class="${classes.page}"
             floor="gf"
             .spaceService="${this.spaceService}"
           ></inno-user-heatmap-page>
         </bs-carousel-item>
         <bs-carousel-item class="${classes.carouselItem}">
           <inno-user-heatmap-page
-            class="${classes.image}"
+            class="${classes.page}"
             floor="lgf"
             .spaceService="${this.spaceService}"
           ></inno-user-heatmap-page>
         </bs-carousel-item>
         <bs-carousel-item class="${classes.carouselItem}">
-          <inno-user-example-page class="${classes.image}"></inno-user-example-page>
+          <inno-user-example-page class="${classes.page}"></inno-user-example-page>
         </bs-carousel-item>
         <bs-carousel-item class="${classes.carouselItem}">
-          <inno-user-example-page class="${classes.image}"></inno-user-example-page>
+          <inno-user-example-page class="${classes.page}"></inno-user-example-page>
         </bs-carousel-item>
         <bs-carousel-item class="${classes.carouselItem}">
-          <inno-user-example-page class="${classes.image}"></inno-user-example-page>
+          <inno-user-example-page class="${classes.page}"></inno-user-example-page>
         </bs-carousel-item>
         <bs-carousel-item class="${classes.carouselItem}">
-          <inno-user-example-page class="${classes.image}"></inno-user-example-page>
+          <inno-user-example-page class="${classes.page}"></inno-user-example-page>
         </bs-carousel-item>
       </bs-carousel>
     `;
