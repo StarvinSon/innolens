@@ -60,38 +60,6 @@ export const pageEntries: ReadonlyArray<PageEntry | PageGroupEntry> = [
     ]
   },
   {
-    type: 'pageGroupEntry',
-    name: 'Users',
-    pages: [
-      {
-        type: 'pageEntry',
-        name: 'Registered users',
-        href: '/users/registered',
-        pathRegExp: /^\/users\/registered$/,
-        load: async () => {
-          await import(
-            /* webpackChunkName: 'users-registered-page' */
-            './users-registered-page'
-          );
-        },
-        tagName: 'inno-users-registered-page'
-      },
-      {
-        type: 'pageEntry',
-        name: 'Current users',
-        href: '/users/current',
-        pathRegExp: /^\/users\/current$/,
-        load: async () => {
-          await import(
-            /* webpackChunkName: 'users-current-page' */
-            './users-current-page'
-          );
-        },
-        tagName: 'inno-users-current-page'
-      }
-    ]
-  },
-  {
     type: 'pageEntry',
     name: 'Spaces',
     href: '/spaces',
@@ -105,75 +73,17 @@ export const pageEntries: ReadonlyArray<PageEntry | PageGroupEntry> = [
     tagName: 'inno-spaces-page'
   },
   {
-    type: 'pageGroupEntry',
+    type: 'pageEntry',
     name: 'Machines',
-    pages: [
-      {
-        type: 'pageEntry',
-        name: 'All machines',
-        href: '/machines',
-        pathRegExp: /^\/machines$/,
-        load: async () => {
-          await import(
-            /* webpackChunkName: 'machines-page' */
-            './machines-page'
-          );
-        },
-        tagName: 'inno-machines-page'
-      },
-      {
-        type: 'pageEntry',
-        name: 'Waterjet cutting machine',
-        href: '/machines/waterjet-cutting-machine',
-        pathRegExp: /^\/machines\/waterjet-cutting-machine$/,
-        load: async () => {
-          await import(
-            /* webpackChunkName: 'machines-single-page' */
-            './machines-single-page'
-          );
-        },
-        tagName: 'inno-machines-single-page'
-      },
-      {
-        type: 'pageEntry',
-        name: 'CNC milling machine',
-        href: '/machines/cnc-milling-machine',
-        pathRegExp: /^\/machines\/cnc-milling-machine$/,
-        load: async () => {
-          await import(
-            /* webpackChunkName: 'machines-single-page' */
-            './machines-single-page'
-          );
-        },
-        tagName: 'inno-machines-single-page'
-      },
-      {
-        type: 'pageEntry',
-        name: 'Acrylic laser cut machine',
-        href: '/machines/acrylic-laser-cut-machine',
-        pathRegExp: /^\/machines\/acrylic-laser-cut-machine$/,
-        load: async () => {
-          await import(
-            /* webpackChunkName: 'machines-single-page' */
-            './machines-single-page'
-          );
-        },
-        tagName: 'inno-machines-single-page'
-      },
-      {
-        type: 'pageEntry',
-        name: 'Metal laser cut machine',
-        href: '/machines/metal-laser-cut-machine',
-        pathRegExp: /^\/machines\/metal-laser-cut-machine$/,
-        load: async () => {
-          await import(
-            /* webpackChunkName: 'machines-single-page' */
-            './machines-single-page'
-          );
-        },
-        tagName: 'inno-machines-single-page'
-      }
-    ]
+    href: '/machines',
+    pathRegExp: /^\/machines$/,
+    load: async () => {
+      await import(
+        /* webpackChunkName: 'machines-page' */
+        './machines-page'
+      );
+    },
+    tagName: 'inno-machines-page'
   },
   {
     type: 'pageEntry',
