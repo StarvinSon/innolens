@@ -21,23 +21,6 @@
   grid-gap: calc(1 / 16rem);
 }
 
-.options {
-  & > :not(:first-child) {
-    margin-top: 2rem;
-  }
-}
-
-.option {
-  &__label {
-    @include typography.base();
-    color: var(theme.$on-background);
-  }
-
-  &__chips {
-    margin-top: 1rem;
-  }
-}
-
 .chart-cards {
   @include typography.base();
 
@@ -50,12 +33,17 @@
   }
 }
 
-.pie-chart>span[slot="title"] {
+.line-card {
+  border-left: 2px solid var(theme.$carousel-indicator-inactive);
+  grid-area: 1 / 2 / 3 / 3;
+}
+
+.line-chart>span[slot="title"] {
   font-size: 2.5rem;
   color: var(theme.$secondary-text);
 }
 
-.line-chart>span[slot="title"] {
+.pie-chart>span[slot="title"] {
   font-size: 2.5rem;
   color: var(theme.$secondary-text);
 }
@@ -77,9 +65,4 @@
 
 .total-num {
   color: var(theme.$on-background);
-}
-
-.line-card {
-  border-left: 2px solid var(theme.$carousel-indicator-inactive);
-  grid-area: 1 / 2 / 3 / 3;
 }

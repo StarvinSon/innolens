@@ -6,6 +6,7 @@ import '@lit-element-bootstrap/carousel';
 
 import '../theme';
 import '../user-current-page';
+import '../user-current-week-page';
 import '../user-example-page';
 import '../user-heatmap-page';
 import '../user-registered-page';
@@ -78,7 +79,10 @@ export class UserPages extends LitElement {
           ></inno-user-current-page>
         </bs-carousel-item>
         <bs-carousel-item class="${classes.carouselItem}">
-          <inno-user-example-page class="${classes.page}"></inno-user-example-page>
+          <inno-user-current-week-page
+            class="${classes.page}"
+            .spaceService="${this.spaceService}"
+          ></inno-user-current-week-page>
         </bs-carousel-item>
         <bs-carousel-item class="${classes.carouselItem}">
           <inno-user-heatmap-page

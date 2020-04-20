@@ -1,5 +1,5 @@
 import {
-  format as formatDate, addHours, endOfHour, getHours, startOfDay, startOfHour
+  format as formatDate, addHours, endOfHour, getHours, startOfDay, getDay, subDays, startOfHour
 } from 'date-fns';
 import {
   customElement, LitElement, TemplateResult,
@@ -8,12 +8,12 @@ import {
 
 // eslint-disable-next-line import/no-duplicates
 import '../line-chart';
-import '../pie-chart';
 import { SpaceService, SpaceCountHistory } from '../../services/space';
 // eslint-disable-next-line import/no-duplicates
 import { LineChartLineData } from '../line-chart';
 
-import { css, classes } from './user-current-page.scss';
+import { css, classes } from './user-current-week-page.scss';
+
 
 interface SpaceCountPrediction {
   readonly groups: ReadonlyArray<string>;
@@ -30,16 +30,16 @@ interface SpaceCountPredictionRecordValues {
   readonly [group: string]: number;
 }
 
-const TAG_NAME = 'inno-user-current-page';
+const TAG_NAME = 'inno-user-current-week-page';
 
 declare global {
   interface HTMLElementTagNameMap {
-    [TAG_NAME]: UserCurrentPage;
+    [TAG_NAME]: UserCurrentWeekPage;
   }
 }
 
 @customElement(TAG_NAME)
-export class UserCurrentPage extends LitElement {
+export class UserCurrentWeekPage extends LitElement {
   public static readonly styles = css;
 
 
@@ -58,14 +58,9 @@ export class UserCurrentPage extends LitElement {
   @property({ attribute: false })
   private _lineChartPredictionData: import('../line-chart').LineChartData<Date> | null = null;
 
-  @property({ attribute: false })
-  private _pieChartData: import('../pie-chart').PieChartData | null = null;
-
   private _lineChartDataDeps: readonly [SpaceCountHistory | null] = [null];
 
   private _lineChartPredictionDataDeps: readonly [SpaceCountPrediction | null] = [null];
-
-  private _pieChartDataDeps: readonly [SpaceCountHistory | null] = [null];
 
   private _dataFetched = false;
 
@@ -81,7 +76,7 @@ export class UserCurrentPage extends LitElement {
     if (!this._dataFetched) {
       const current = new Date();
       this._countHistory = await this.spaceService!.fetchCountHistory(
-        startOfDay(current),
+        subDays(startOfDay(current), getDay(current)),
         endOfHour(current),
         3600000,
         ['inno_wing'],
@@ -92,7 +87,7 @@ export class UserCurrentPage extends LitElement {
       const time = addHours(startOfHour(new Date()), 1);
       this._countPrediction = {
         groups: ['Electrical and Electronic Engineering', 'Mechanical Engineering', 'Computer Science'],
-        records: [...Array(25 - getHours(time))].map((_, i) => ({
+        records: [...Array(24 * (7 - getDay(time)) - getHours(time) + 1)].map((_, i) => ({
           startTime: addHours(time, i),
           endTime: addHours(time, i + 1),
           counts: {
@@ -127,7 +122,7 @@ export class UserCurrentPage extends LitElement {
             }, []).reverse(),
           /* eslint-enable @typescript-eslint/indent */
           labels: this._countHistory.records.map((record) => record.startTime),
-          formatLabel: (time) => formatDate(time, 'HH:mm')
+          formatLabel: (time) => formatDate(time, 'L/d')
         };
       }
       this._lineChartDataDeps = [this._countHistory];
@@ -154,28 +149,10 @@ export class UserCurrentPage extends LitElement {
             }, []).reverse(),
           /* eslint-enable @typescript-eslint/indent */
           labels: this._countPrediction.records.map((record) => record.startTime),
-          formatLabel: (time) => formatDate(time, 'HH:mm')
+          formatLabel: (time) => formatDate(time, 'L/d')
         };
       }
       this._lineChartPredictionDataDeps = [this._countPrediction];
-    }
-
-    if (this._pieChartDataDeps[0] !== this._countHistory) {
-      if (this._countHistory === null) {
-        this._pieChartData = null;
-      } else {
-        const latestRecord = this._countHistory!.records[this._countHistory!.records.length - 1];
-
-        this._pieChartData = {
-          pies: this._countHistory.groups
-            .map((group) => ({
-              name: group,
-              value: latestRecord.counts[group]
-            }))
-            .filter((pie) => pie.value > 0)
-        };
-      }
-      this._pieChartDataDeps = [this._countHistory];
     }
   }
 
@@ -183,52 +160,21 @@ export class UserCurrentPage extends LitElement {
     return html`
       <div class="${classes.content}">
         ${this._renderLineChart()}
-        ${this._renderTotal()}
-        ${this._renderPieChart()}
       </div>
     `;
   }
 
   private _renderLineChart(): TemplateResult {
     return html`
-      <div class="${classes.chartCards} ${classes.lineCard}">
+      <div class="${classes.chartCards}">
         <inno-line-chart
           class="${classes.lineChart}"
           .data="${this._lineChartData}"
           .predictionData="${this._lineChartPredictionData}"
-          .labels="${8}"
+          .labels="${7}"
           showArea>
-          <span slot="title">No. of users today</span>
+          <span slot="title">No. of users this week</span>
         </inno-line-chart>
-      </div>
-    `;
-  }
-
-  private _renderTotal(): TemplateResult {
-    let total = 0;
-    if (this._countHistory !== null) {
-      const { counts } = this._countHistory.records[this._countHistory.records.length - 1];
-      for (const group of this._countHistory.groups) {
-        total += counts[group];
-      }
-    }
-
-    return html`
-      <div class="${classes.totalCard}">
-        <div class="${classes.totalText}">No. of users inside</div>
-        <div class="${classes.totalNum}">${total}</div>
-      </div>
-    `;
-  }
-
-  private _renderPieChart(): TemplateResult {
-    return html`
-      <div class="${classes.chartCards} ${classes.pieCard}">
-        <inno-pie-chart
-          class="${classes.pieChart}"
-          .data="${this._pieChartData}">
-          <span slot="title">Composition of users inside</span>
-        </inno-pie-chart>
       </div>
     `;
   }

@@ -10,6 +10,22 @@
   @return color.mix(white, #121212, $weight: 100% - $overlay-transparency);
 }
 
+:root {
+  #{vars.$primary}: #0080FF;
+
+  #{vars.$chart-0}: hsl(0, 80%, 60%);
+  #{vars.$chart-1}: hsl(40, 80%, 60%);
+  #{vars.$chart-2}: hsl(120, 80%, 60%);
+  #{vars.$chart-3}: hsl(240, 80%, 60%);
+  #{vars.$chart-4}: hsl(300, 80%, 60%);
+
+  #{vars.$chart-prediction-0}: hsl(0, 100%, 80%);
+  #{vars.$chart-prediction-1}: hsl(40, 100%, 80%);
+  #{vars.$chart-prediction-2}: hsl(120, 100%, 80%);
+  #{vars.$chart-prediction-3}: hsl(240, 100%, 80%);
+  #{vars.$chart-prediction-4}: hsl(300, 100%, 80%);
+}
+
 :root[theme="black"] {
   // See: https://material.io/design/color/dark-theme.html
   #{vars.$background-elevation-0dp}: _black-overlay(0%);
@@ -39,22 +55,9 @@
   #{vars.$background-elevation-24dp}: _black-overlay(16%);
   #{vars.$on-background}: white;
 
-  #{vars.$primary}: #0080FF;
   #{vars.$on-primary}: white;
 
   #{vars.$separator}: white;
-
-  #{vars.$chart-0}: red;
-  #{vars.$chart-1}: orange;
-  #{vars.$chart-2}: green;
-  #{vars.$chart-3}: blue;
-  #{vars.$chart-4}: purple;
-
-  #{vars.$chart-prediction-0}: hsl(0, 100%, 75%);
-  #{vars.$chart-prediction-1}: hsl(39, 100%, 75%);
-  #{vars.$chart-prediction-2}: hsl(120, 100%, 75%);
-  #{vars.$chart-prediction-3}: hsl(240, 100%, 75%);
-  #{vars.$chart-prediction-4}: hsl(300, 100%, 75%);
 }
 
 :root[theme="white"] {
@@ -89,20 +92,7 @@
   #{vars.$carousel-indicator-active}: #787878;
   #{vars.$carousel-indicator-inactive}: #bcbcbc;
 
-  #{vars.$primary}: #0080FF;
   #{vars.$on-primary}: #121212;
 
   #{vars.$separator}: #121212;
-
-  #{vars.$chart-0}: red;
-  #{vars.$chart-1}: orange;
-  #{vars.$chart-2}: green;
-  #{vars.$chart-3}: blue;
-  #{vars.$chart-4}: purple;
-
-  #{vars.$chart-prediction-0}: hsl(0, 100%, 75%);
-  #{vars.$chart-prediction-1}: hsl(39, 100%, 75%);
-  #{vars.$chart-prediction-2}: hsl(120, 100%, 75%);
-  #{vars.$chart-prediction-3}: hsl(240, 100%, 75%);
-  #{vars.$chart-prediction-4}: hsl(300, 100%, 75%);
 }

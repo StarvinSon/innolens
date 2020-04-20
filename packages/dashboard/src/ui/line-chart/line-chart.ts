@@ -45,18 +45,24 @@ export class LineChart extends LitElement {
   @property({ attribute: false })
   public predictionData: LineChartData<unknown> | null = null;
 
+  @property({ attribute: false })
+  public labels: number = 5;
+
   @property({ type: Boolean })
   public showArea: boolean = false;
 
 
   private _renderDataCache: {
     readonly data: LineChartData<unknown> | null;
+    readonly bridgeData: LineChartData<unknown> | null;
     readonly predictionData: LineChartData<unknown> | null;
     readonly iToX: ScaleLinear<number, number> | null;
     readonly vMax: number | null;
     readonly vToY: ScaleLinear<number, number> | null;
     readonly computePath: Line<number> | null;
     readonly computeArea: Area<number> | null;
+    readonly computeBridgePath: Line<number> | null;
+    readonly computeBridgeArea: Area<number> | null;
     readonly computePredictionPath: Line<number> | null;
     readonly computePredictionArea: Area<number> | null;
   } | null = null;
@@ -68,18 +74,23 @@ export class LineChart extends LitElement {
       return this._renderDataCache;
     }
 
+    let _data: LineChartData<unknown> | null = data;
+    let _bridgeData: LineChartData<unknown> | null = null;
+    let _predictionData: LineChartData<unknown> | null = predictionData;
     let iToX: ScaleLinear<number, number> | null = null;
     let vMax: number | null = null;
     let vToY: ScaleLinear<number, number> | null = null;
     let computePath: Line<number> | null = null;
     let computeArea: Area<number> | null = null;
+    let computeBridgePath: Line<number> | null = null;
+    let computeBridgeArea: Area<number> | null = null;
     let computePredictionPath: Line<number> | null = null;
     let computePredictionArea: Area<number> | null = null;
     if (data !== null && data.labels.length > 0) {
       iToX =
         predictionData !== null && predictionData.labels.length > 0
           ? scaleLinear()
-            .domain([0, data.labels.length + predictionData.labels.length - 2])
+            .domain([0, data.labels.length + predictionData.labels.length - 1])
             .range([0, 1])
           : scaleLinear()
             .domain([0, data.labels.length - 1])
@@ -106,13 +117,63 @@ export class LineChart extends LitElement {
       }
 
       if (predictionData !== null && predictionData.labels.length > 0) {
-        computePredictionPath = line<number>()
+        const names = Array.from(
+          new Set([...data.lines.map((l) => l.name), ...predictionData.lines.map((l) => l.name)])
+        );
+
+        _data = {
+          lines: names.map((name) => {
+            const dataLine = data.lines.find((l) => l.name === name);
+            return dataLine === undefined
+              ? {
+                name,
+                values: Array(data.labels.length).fill(0)
+              }
+              : dataLine;
+          }),
+          labels: data.labels,
+          formatLabel: data.formatLabel
+        };
+
+        _predictionData = {
+          lines: names.map((name) => {
+            const predictionDataLine = predictionData.lines.find((l) => l.name === name);
+            return predictionDataLine === undefined
+              ? {
+                name,
+                values: Array(predictionData.labels.length).fill(0)
+              }
+              : predictionDataLine;
+          }),
+          labels: predictionData.labels,
+          formatLabel: predictionData.formatLabel
+        };
+
+        _bridgeData = {
+          lines: _data.lines.map((l, i) => ({
+            name: l.name,
+            values: [l.values[l.values.length - 1], _predictionData!.lines[i].values[0]]
+          })),
+          labels: [_data.labels[_data.labels.length - 1], _predictionData.labels[0]],
+          formatLabel: data.formatLabel
+        };
+
+        computeBridgePath = line<number>()
           .x((_, i) => iToX!(i + data.labels.length - 1))
           .y((v) => vToY!(v));
 
+        computePredictionPath = line<number>()
+          .x((_, i) => iToX!(i + data.labels.length))
+          .y((v) => vToY!(v));
+
         if (showArea) {
-          computePredictionArea = area<number>()
+          computeBridgeArea = area<number>()
             .x((_, i) => iToX!(i + data.labels.length - 1))
+            .y0(() => 1)
+            .y1((v) => vToY!(v));
+
+          computePredictionArea = area<number>()
+            .x((_, i) => iToX!(i + data.labels.length))
             .y0(() => 1)
             .y1((v) => vToY!(v));
         }
@@ -120,13 +181,16 @@ export class LineChart extends LitElement {
     }
 
     this._renderDataCache = {
-      data,
-      predictionData,
+      data: _data,
+      bridgeData: _bridgeData,
+      predictionData: _predictionData,
       iToX,
       vMax,
       vToY,
       computePath,
       computeArea,
+      computeBridgePath,
+      computeBridgeArea,
       computePredictionPath,
       computePredictionArea
     };
@@ -141,15 +205,30 @@ export class LineChart extends LitElement {
     `;
   }
 
+  private labelIndex(ticks: number): ReadonlyArray<number> {
+    const array = [];
+    for (let i = 0; i < ticks; i += 1) {
+      const [_, scale] = this._renderDataCache?.iToX!.domain();
+      // eslint-disable-next-line no-mixed-operators
+      const num = Math.min(Math.floor(scale * i / (ticks)), scale);
+      array.push(num);
+    }
+
+    return array;
+  }
+
   private _renderMain(): TemplateResult {
     const {
       data,
+      bridgeData,
       predictionData,
       iToX,
       vMax,
       vToY,
       computePath,
       computeArea,
+      computeBridgePath,
+      computeBridgeArea,
       computePredictionPath,
       computePredictionArea
     } = this._getRenderData();
@@ -189,6 +268,20 @@ export class LineChart extends LitElement {
                       class="${classes.area} ${classes[`area_$${lineIdx}`]}"
                       d="${computeArea(lineData.values.slice())}"></path>
                   `)}
+                ${bridgeData === null || computeBridgePath === null
+                  ? []
+                  : bridgeData.lines.map((lineData, lineIdx) => svg`
+                    <path
+                      class="${classes.line} ${classes[`linePrediction_$${lineIdx}`]}"
+                      d="${computeBridgePath(lineData.values.slice())}"></path>
+                  `)}
+                ${bridgeData === null || computeBridgeArea === null
+                  ? []
+                  : bridgeData.lines.map((lineData, lineIdx) => svg`
+                    <path
+                      class="${classes.area} ${classes[`areaPrediction_$${lineIdx}`]}"
+                      d="${computeBridgeArea(lineData.values.slice())}"></path>
+                  `)}
                 ${predictionData === null || computePredictionPath === null
                   ? []
                   : predictionData.lines.map((lineData, lineIdx) => svg`
@@ -207,6 +300,14 @@ export class LineChart extends LitElement {
               <polyline
                 class="${classes.axes}"
                 points="0,0 0,1 1,1"></polyline>
+              ${data === null || predictionData === null
+                ? []
+                : svg`
+                  <line
+                    class="${classes.divider}"
+                    x1="${iToX!(data.labels.length - 1)}" y1="0"
+                    x2="${iToX!(data.labels.length - 1)}" y2="1"/>
+                `}
             </svg>
             <div class="${classes.chartOverlay}">
               <div class="${classes.ticks} ${classes.ticks_$y}">
@@ -225,13 +326,13 @@ export class LineChart extends LitElement {
               <div class="${classes.ticks} ${classes.ticks_$x}">
                 ${data === null || iToX === null
                   ? []
-                  : iToX.ticks(5).map((i) => html`
+                  : this.labelIndex(this.labels).map((i) => html`
                     <span
                       class="${classes.tick} ${classes.tick_$x}"
                       style="${styleMap({
                         left: `${iToX(i) * 100}%`
                       })}">
-                      ${(data.formatLabel ?? String)(predictionData === null ? data.labels[i] : data.labels.concat(predictionData.labels.slice(1))[i])}
+                      ${(data.formatLabel ?? String)(predictionData === null ? data.labels[i] : data.labels.concat(predictionData.labels)[i])}
                     </span>
                   `)}
               </div>

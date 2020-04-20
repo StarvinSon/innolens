@@ -165,6 +165,14 @@
   }
 }
 
+.divider {
+  fill: none;
+  stroke: var(theme.$on-background);
+  stroke-width: 2px;
+  stroke-dasharray: 10 10;
+  vector-effect: non-scaling-stroke;
+}
+
 .axes {
   fill: none;
   stroke: var(theme.$on-background);

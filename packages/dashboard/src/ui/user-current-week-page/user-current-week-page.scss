@@ -1,0 +1,43 @@
+@use '../layout';
+@use '../line-chart';
+@use '../theme';
+@use '../typography';
+
+
+:host {
+  display: block;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.content {
+  box-sizing: border-box;
+  margin-left: auto;
+  margin-right: auto;
+  width: 75%;
+  height: calc(100vh - 6rem);
+  padding: 2rem 1rem;
+}
+
+.chart-cards {
+  @include typography.base();
+
+  padding: 2rem 1rem;
+  font-size: 1.5rem;
+  flex-direction: column;
+
+  & > * {
+    margin-top: 2rem;
+  }
+}
+
+.line-chart {
+  #{line-chart.$content-aspect-ratio}: 50%;
+}
+
+.line-chart>span[slot="title"] {
+  font-size: 2.5rem;
+  color: var(theme.$secondary-text);
+}
