@@ -1,6 +1,6 @@
-@use '../layout';
-@use '../theme';
 @use '../typography';
+@use '../theme';
+@use '../layout';
 
 
 :host {
@@ -15,12 +15,76 @@
   box-sizing: border-box;
   margin-left: auto;
   margin-right: auto;
-  max-width: layout.$max-width;
-  padding: 1rem;
+  height: calc(100vh - 6rem);
+  display: grid;
+  grid-template-columns: 50% 50%;
+  grid-gap: calc(1 / 16rem);
 }
 
-.title {
-  @include typography.h4();
+.options {
+  & > :not(:first-child) {
+    margin-top: 2rem;
+  }
+}
 
+.option {
+  &__label {
+    @include typography.base();
+    color: var(theme.$on-background);
+  }
+
+  &__chips {
+    margin-top: 1rem;
+  }
+}
+
+.chart-cards {
+  @include typography.base();
+
+  padding: 2rem 1rem;
+  font-size: 1.5rem;
+  flex-direction: column;
+
+  & > * {
+    margin-top: 2rem;
+  }
+}
+
+.pie-chart>span[slot="title"] {
+  font-size: 2.5rem;
+  color: var(theme.$secondary-text);
+}
+
+.line-chart>span[slot="title"] {
+  font-size: 2.5rem;
+  color: var(theme.$secondary-text);
+}
+
+.total-card {
+  @include typography.base();
+
+  padding: 2rem 1rem;
+  font-size: 2.5rem;
+  align-items: center;
+  border-bottom: 2px solid var(theme.$carousel-indicator-inactive);
+  display: flex;
+  justify-content: space-between;
+  grid-column: 2 / 3;
+}
+
+.total-text {
+  color: var(theme.$secondary-text);
+}
+
+.total-num {
   color: var(theme.$on-background);
+}
+
+.line-card {
+  border-right: 2px solid var(theme.$carousel-indicator-inactive);
+  grid-area: 1 / 1 / 3 / 2;
+}
+
+.pie-card {
+  grid-column: 2 / 3;
 }

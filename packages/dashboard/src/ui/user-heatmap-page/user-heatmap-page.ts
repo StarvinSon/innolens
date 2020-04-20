@@ -69,18 +69,22 @@ export class UserHeatMapPage extends LitElement {
 
     if (!this._heatmapDataFetched && this._spaces !== null) {
       const time = new Date();
-      const spaceCountPromises = this._spaces.map(async (space): Promise<HeatmapSpaceData> => {
-        const countData = await this.spaceService!.fetchCount(
-          time,
-          [space.spaceId],
-          'uniqueMember',
-          null
+      const spaceCountPromises = this._spaces
+        .filter((space) => space.spaceId !== 'inno_wing')
+        .map(
+          async (space): Promise<HeatmapSpaceData> => {
+            const countData = await this.spaceService!.fetchCount(
+              time,
+              [space.spaceId],
+              'uniqueMember',
+              null
+            );
+            return {
+              spaceId: space.spaceId,
+              value: countData.counts[countData.groups[0]]
+            };
+          }
         );
-        return {
-          spaceId: space.spaceId,
-          value: countData.counts[countData.groups[0]]
-        };
-      });
       Promise.all(spaceCountPromises).then((spaceData) => {
         this._heatmapData = {
           spaces: spaceData
