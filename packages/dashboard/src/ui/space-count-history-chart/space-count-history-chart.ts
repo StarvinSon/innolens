@@ -89,7 +89,7 @@ export class SpaceCountHistoryChart extends LitElement {
 
         if (this._historyKey !== key) {
           this.spaceService
-            .fetchCountHistory(
+            .fetchMemberCountHistory(
               this.fromTime,
               this.toTime,
               this.timeStepMs,

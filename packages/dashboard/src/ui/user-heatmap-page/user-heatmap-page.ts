@@ -73,7 +73,7 @@ export class UserHeatMapPage extends LitElement {
         .filter((space) => space.spaceId !== 'inno_wing')
         .map(
           async (space): Promise<HeatmapSpaceData> => {
-            const countData = await this.spaceService!.fetchCount(
+            const countData = await this.spaceService!.fetchMemberCount(
               time,
               [space.spaceId],
               'uniqueMember',

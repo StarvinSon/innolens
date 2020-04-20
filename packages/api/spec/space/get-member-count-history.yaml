@@ -1,7 +1,7 @@
-name: GetCountHistory
+name: GetMemberCountHistory
 
 method: get
-path: /api/spaces/count-history
+path: /api/spaces/member-count-history
 query:
   fromTime:
     required: true
@@ -14,7 +14,12 @@ query:
   timeStepMs:
     schema:
       type: integer
-  spaceIds:
+  filterSpaceIds:
+    schema:
+      type: array
+      items:
+        type: string
+  filterMemberIds:
     schema:
       type: array
       items:

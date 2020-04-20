@@ -15,10 +15,10 @@ export interface Space {
 
 
 export type SpaceCountCountType =
-  Exclude<Parameters<typeof SpaceGlue.GetCount.createRequest>[0]['query']['countType'], undefined>;
+  Exclude<Parameters<typeof SpaceGlue.GetMemberCount.createRequest>[0]['query']['countType'], undefined>;
 
 export type SpaceCountGroupBy =
-  Exclude<Parameters<typeof SpaceGlue.GetCount.createRequest>[0]['query']['groupBy'], undefined>;
+  Exclude<Parameters<typeof SpaceGlue.GetMemberCount.createRequest>[0]['query']['groupBy'], undefined>;
 
 export interface SpaceCount {
   readonly groups: ReadonlyArray<string>;
@@ -31,10 +31,10 @@ export interface SpaceCountRecordValues {
 
 
 export type SpaceCountHistoryCountType =
-  Exclude<Parameters<typeof SpaceGlue.GetCountHistory.createRequest>[0]['query']['countType'], undefined>;
+  Exclude<Parameters<typeof SpaceGlue.GetMemberCountHistory.createRequest>[0]['query']['countType'], undefined>;
 
 export type SpaceCountHistoryGroupBy =
-  Exclude<Parameters<typeof SpaceGlue.GetCountHistory.createRequest>[0]['query']['groupBy'], undefined>;
+  Exclude<Parameters<typeof SpaceGlue.GetMemberCountHistory.createRequest>[0]['query']['groupBy'], undefined>;
 
 export interface SpaceCountHistory {
   readonly groups: ReadonlyArray<string>;
@@ -117,7 +117,7 @@ export class SpaceService {
   }
 
 
-  public async fetchCount(
+  public async fetchMemberCount(
     time: Date,
     spaceIds: ReadonlyArray<string> | null,
     countType: SpaceCountCountType,
@@ -132,7 +132,7 @@ export class SpaceService {
 
     return this._debouncer.debounce(`count?${key}`, async () => {
       const data = await this._oauth2Service
-        .withAccessToken((token) => fetch(SpaceGlue.GetCount.createRequest({
+        .withAccessToken((token) => fetch(SpaceGlue.GetMemberCount.createRequest({
           authentication: { token },
           query: {
             time,
@@ -141,12 +141,12 @@ export class SpaceService {
             groupBy: groupBy ?? undefined
           }
         })))
-        .then(SpaceGlue.GetCount.handleResponse);
+        .then(SpaceGlue.GetMemberCount.handleResponse);
       return data;
     });
   }
 
-  public async fetchCountHistory(
+  public async fetchMemberCountHistory(
     fromTime: Date,
     toTime: Date,
     timeStepMs: number,
@@ -165,18 +165,19 @@ export class SpaceService {
 
     return this._debouncer.debounce(`count-history?${key}`, async () => {
       const data = await this._oauth2Service
-        .withAccessToken((token) => fetch(SpaceGlue.GetCountHistory.createRequest({
+        .withAccessToken((token) => fetch(SpaceGlue.GetMemberCountHistory.createRequest({
           authentication: { token },
           query: {
             fromTime,
             toTime,
             timeStepMs,
-            spaceIds: spaceIds ?? undefined,
+            filterSpaceIds: spaceIds ?? undefined,
+            // filterMemberIds
             countType,
             groupBy: groupBy ?? undefined
           }
         })))
-        .then(SpaceGlue.GetCountHistory.handleResponse);
+        .then(SpaceGlue.GetMemberCountHistory.handleResponse);
       return data;
     });
   }

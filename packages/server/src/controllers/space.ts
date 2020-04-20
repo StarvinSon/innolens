@@ -126,8 +126,10 @@ export class SpaceController extends FileController(SpaceControllerGlue) {
   }
 
 
-  protected async handleGetCount(ctx: SpaceControllerGlue.GetCountContext): Promise<void> {
-    ctx.responseBodyData = await this._spaceService.getCount(
+  protected async handleGetMemberCount(
+    ctx: SpaceControllerGlue.GetMemberCountContext
+  ): Promise<void> {
+    ctx.responseBodyData = await this._spaceService.getMemberCount(
       ctx.query.time ?? new Date(),
       ctx.query.spaceIds ?? null,
       ctx.query.countType ?? 'total',
@@ -135,18 +137,21 @@ export class SpaceController extends FileController(SpaceControllerGlue) {
     );
   }
 
-  protected async handleGetCountHistory(
-    ctx: SpaceControllerGlue.GetCountHistoryContext
+  protected async handleGetMemberCountHistory(
+    ctx: SpaceControllerGlue.GetMemberCountHistoryContext
   ): Promise<void> {
     try {
-      ctx.responseBodyData = await this._spaceService.getCountHistory(
-        ctx.query.fromTime,
-        ctx.query.toTime,
-        ctx.query.timeStepMs ?? (30 * 60 * 1000),
-        ctx.query.spaceIds ?? null,
-        ctx.query.countType ?? 'stay',
-        ctx.query.groupBy ?? null
-      );
+      ctx.responseBodyData = await this._spaceService.getMemberCountHistory({
+        startTime: ctx.query.fromTime,
+        endTime: ctx.query.toTime,
+        timeStepMs: ctx.query.timeStepMs ?? (30 * 60 * 1000),
+        filter: {
+          spaceIds: ctx.query.filterSpaceIds ?? null,
+          memberIds: ctx.query.filterMemberIds ?? null
+        },
+        countType: ctx.query.countType ?? 'stay',
+        groupBy: ctx.query.groupBy ?? null
+      });
     } catch (err) {
       if (err instanceof SpaceNotFoundError) {
         throw createHttpError(BAD_REQUEST, err);
@@ -156,9 +161,9 @@ export class SpaceController extends FileController(SpaceControllerGlue) {
   }
 
 
-  protected async handleGetCountForecast(
+  protected async handleGetMemberCountForecast(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    ctx: SpaceControllerGlue.GetCountForecastContext
+    ctx: SpaceControllerGlue.GetMemberCountForecastContext
   ): Promise<void> {
     throw new NotImplemented('Forecast is not implemented');
   }

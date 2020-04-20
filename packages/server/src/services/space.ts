@@ -66,6 +66,22 @@ export interface SpaceCountRecordValues {
 }
 
 
+export interface SpaceMemberHistory {
+  readonly groups: ReadonlyArray<string>;
+  readonly records: ReadonlyArray<SpaceMemberHistoryRecord>;
+}
+
+export interface SpaceMemberHistoryRecord {
+  readonly startTime: Date;
+  readonly endTime: Date;
+  readonly groups: SpaceMemberHistoryRecordGroups;
+}
+
+export interface SpaceMemberHistoryRecordGroups {
+  readonly [group: string]: ReadonlyArray<string>;
+}
+
+
 @injectableConstructor({
   spaceCollection: SpaceCollection,
   spaceMemberRecordCollection: SpaceMemberRecordCollection,
@@ -321,7 +337,7 @@ export class SpaceService {
   }
 
 
-  public async getCount(
+  public async getMemberCount(
     time: Date,
     spaceIds: ReadonlyArray<string> | null,
     countType: SpaceCountCountType,
@@ -425,52 +441,99 @@ export class SpaceService {
     };
   }
 
-  public async getCountHistory(
-    startTime: Date,
-    endTime: Date,
-    timeStepMs: number,
-    spaceIds: ReadonlyArray<string> | null,
-    countType: SpaceCountHistoryCountType,
-    groupBy: SpaceCountHistoryGroupBy | null
-  ): Promise<SpaceCountHistory> {
-    let selectedSpaceIds: ReadonlyArray<string>;
-    if (spaceIds !== null) {
-      const notFoundSpaceId = await this._hasAllSpaces(spaceIds);
+
+  public async getMemberCountHistory(opts: {
+    readonly startTime: Date;
+    readonly endTime: Date;
+    readonly timeStepMs: number;
+    readonly filter?: {
+      readonly spaceIds?: ReadonlyArray<string> | null;
+      readonly memberIds?: ReadonlyArray<string> | null;
+    };
+    readonly countType: SpaceCountHistoryCountType;
+    readonly groupBy: SpaceCountHistoryGroupBy | null;
+  }): Promise<SpaceCountHistory> {
+    const memberHistory = await this.getMemberHistory(opts);
+    return {
+      groups: memberHistory.groups,
+      records: memberHistory.records.map((record) => ({
+        startTime: record.startTime,
+        endTime: record.endTime,
+        counts: Object.fromEntries(Object.entries(record.groups)
+          .map(([group, memberIds]) => [group, memberIds.length]))
+      }))
+    };
+  }
+
+  public async getMemberHistory(opts: {
+    readonly startTime: Date;
+    readonly endTime: Date;
+    readonly timeStepMs: number;
+    readonly filter?: {
+      readonly spaceIds?: ReadonlyArray<string> | null;
+      readonly memberIds?: ReadonlyArray<string> | null;
+    };
+    readonly countType: SpaceCountHistoryCountType;
+    readonly groupBy: SpaceCountHistoryGroupBy | null;
+  }): Promise<SpaceMemberHistory> {
+    const {
+      startTime,
+      endTime,
+      timeStepMs,
+      filter: {
+        spaceIds: filterSpaceIds = null,
+        memberIds: filterMemberIds = null
+      } = {},
+      countType,
+      groupBy
+    } = opts;
+
+    let spaceIds: ReadonlyArray<string>;
+    if (filterSpaceIds !== null) {
+      const notFoundSpaceId = await this._hasAllSpaces(filterSpaceIds);
       if (notFoundSpaceId !== null) {
         throw new SpaceNotFoundError(notFoundSpaceId);
       }
-      selectedSpaceIds = spaceIds;
+      spaceIds = filterSpaceIds;
     } else {
       const spaces = await this.getSpaces();
-      selectedSpaceIds = spaces.map((s) => s.spaceId);
+      spaceIds = spaces.map((s) => s.spaceId);
     }
 
     const [
       memberRecords,
       previousMemberRecords
     ] = await Promise.all([
-      this._memberRecordCollection
-        .find(
-          {
-            ...spaceIds === null ? {} : {
-              spaceId: {
-                $in: spaceIds.slice()
+      (async () => {
+        const records = await this._memberRecordCollection
+          .find(
+            {
+              ...filterSpaceIds === null ? {} : {
+                spaceId: {
+                  $in: filterSpaceIds.slice()
+                }
+              },
+              time: {
+                $gte: startTime,
+                $lt: endTime
               }
-            },
-            time: {
-              $gte: startTime,
-              $lt: endTime
+            }, {
+              sort: {
+                time: 1,
+                _id: 1
+              }
             }
-          }, {
-            sort: {
-              time: 1,
-              _id: 1
-            }
-          }
-        )
-        .toArray(),
+          )
+          .toArray();
+
+        return records.map((record) => ({
+          ...record,
+          memberIds: record.memberIds
+            .filter((memberId) => filterMemberIds === null || filterMemberIds.includes(memberId))
+        }));
+      })(),
       (async (): Promise<ReadonlyMap<string, ReadonlyArray<string>>> => {
-        const promises = selectedSpaceIds
+        const promises = spaceIds
           .map(async (spaceId): Promise<[string, SpaceMemberRecord | null]> => {
             const record = await this._memberRecordCollection.findOne({
               spaceId,
@@ -488,7 +551,11 @@ export class SpaceService {
         const records = await Promise.all(promises);
         return new Map(records.map(([spaceId, record]) => {
           if (record === null) return [spaceId, []];
-          return [spaceId, record.memberIds];
+          return [
+            spaceId,
+            record.memberIds
+              .filter((memberId) => filterMemberIds === null || filterMemberIds.includes(memberId))
+          ];
         }));
       })()
     ]);
@@ -623,7 +690,7 @@ export class SpaceService {
     }
 
     let i = 0;
-    const records: Array<SpaceCountRecord> = [];
+    const records: Array<SpaceMemberHistoryRecord> = [];
     const currentMemberIds = new Map(previousMemberRecords);
     for (
       let periodStartTime = startTime, periodEndTime = addMilliseconds(periodStartTime, timeStepMs);
@@ -645,18 +712,18 @@ export class SpaceService {
         i += 1;
       }
 
-      const counts: Record<string, number> = {};
+      const groups: Record<string, ReadonlyArray<string>> = {};
       for (const groupFilter of groupFilters) {
         const groupMemberIds = Array.from(memberAccumulators.values())
           .flatMap((a) => a.get())
           .filter((id) => groupFilter.filter(id));
-        counts[groupFilter.name] = reduceAccumulatedCount(groupMemberIds).length;
+        groups[groupFilter.name] = reduceAccumulatedCount(groupMemberIds);
       }
 
       records.push({
         startTime: periodStartTime,
         endTime: periodEndTime,
-        counts
+        groups
       });
     }
 

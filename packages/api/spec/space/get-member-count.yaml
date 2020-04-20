@@ -1,7 +1,7 @@
-name: GetCount
+name: GetMemberCount
 
 method: get
-path: /api/spaces/count
+path: /api/spaces/member-count
 query:
   time:
     schema:
