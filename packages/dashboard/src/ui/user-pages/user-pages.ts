@@ -10,6 +10,7 @@ import '../user-current-week-page';
 import '../user-example-page';
 import '../user-heatmap-page';
 import '../user-registered-page';
+import '../user-spaces-page';
 import { MemberService } from '../../services/member';
 import { SpaceService } from '../../services/space';
 import { injectableProperty } from '../../utils/property-injector';
@@ -99,7 +100,10 @@ export class UserPages extends LitElement {
           ></inno-user-heatmap-page>
         </bs-carousel-item>
         <bs-carousel-item class="${classes.carouselItem}">
-          <inno-user-example-page class="${classes.page}"></inno-user-example-page>
+          <inno-user-spaces-page
+            class="${classes.page}"
+            .spaceService="${this.spaceService}"
+          ></inno-user-spaces-page>
         </bs-carousel-item>
         <bs-carousel-item class="${classes.carouselItem}">
           <inno-user-example-page class="${classes.page}"></inno-user-example-page>

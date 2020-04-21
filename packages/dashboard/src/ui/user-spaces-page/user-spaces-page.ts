@@ -1,0 +1,229 @@
+import {
+  format as formatDate, startOfDay, endOfHour, addHours, startOfHour, getHours
+} from 'date-fns';
+import {
+  customElement, LitElement, TemplateResult,
+  html,
+  property,
+  PropertyValues
+} from 'lit-element';
+
+import '../gauge';
+import {
+  SpaceService, Space, SpaceCountHistory, spaceCapacity
+} from '../../services/space';
+
+import { css, classes } from './user-spaces-page.scss';
+
+interface SpaceCountPrediction {
+  readonly groups: ReadonlyArray<string>;
+  readonly records: ReadonlyArray<SpaceCountPredictionRecord>;
+}
+
+interface SpaceCountPredictionRecord {
+  readonly startTime: Date;
+  readonly endTime: Date;
+  readonly counts: SpaceCountPredictionRecordValues;
+}
+
+interface SpaceCountPredictionRecordValues {
+  readonly [group: string]: number;
+}
+
+const TAG_NAME = 'inno-user-spaces-page';
+
+declare global {
+  interface HTMLElementTagNameMap {
+    [TAG_NAME]: UserSpacesPage;
+  }
+}
+
+@customElement(TAG_NAME)
+export class UserSpacesPage extends LitElement {
+  public static readonly styles = css;
+
+  @property({ attribute: false })
+  public spaceService: SpaceService | null = null;
+
+  @property({ attribute: false })
+  private _spaces: ReadonlyArray<Space> | null = null;
+
+  @property({ attribute: false })
+  private _countHistory: ReadonlyArray<SpaceCountHistory> | null = null;
+
+  @property({ attribute: false })
+  private _countPrediction: ReadonlyArray<SpaceCountPrediction> | null = null;
+
+  @property({ attribute: false })
+  private _lineChartData: import('../line-chart').LineChartData<Date> | null = null;
+
+  @property({ attribute: false })
+  private _lineChartPredictionData: import('../line-chart').LineChartData<Date> | null = null;
+
+  @property({ attribute: false })
+  private _gaugeData: ReadonlyArray<{ name: string; value: number }> | null = null;
+
+  private _lineChartDataDeps: readonly [ReadonlyArray<SpaceCountHistory> | null] = [null];
+
+  private _lineChartPredictionDataDeps: readonly [ReadonlyArray<SpaceCountPrediction> | null] = [
+    null
+  ];
+
+  private _gaugeDataDeps: readonly [ReadonlyArray<SpaceCountHistory> | null] = [null];
+
+  private _spaceFetched = false;
+
+  private _dataFetched = false;
+
+  protected update(changedProps: PropertyValues): void {
+    this._updateProperties();
+    super.update(changedProps);
+  }
+
+  private _updateProperties(): void {
+    if (this.spaceService === null) return;
+
+    if (!this._spaceFetched) {
+      this.spaceService.fetchSpaces().then((data) => {
+        this._spaces = data;
+      });
+      this._spaceFetched = true;
+    }
+
+    if (!this._dataFetched && this._spaces !== null) {
+      const current = new Date();
+      const spaceCountPromises = this._spaces
+        .filter((space) => space.spaceId !== 'inno_wing')
+        .map(
+          async (space): Promise<SpaceCountHistory> => {
+            const countData = await this.spaceService!.fetchMemberCountHistory(
+              startOfDay(current),
+              endOfHour(current),
+              3600000,
+              [space.spaceId],
+              'uniqueStay',
+              null
+            );
+            return countData;
+          }
+        );
+      Promise.all(spaceCountPromises).then((spaceData) => {
+        this._countHistory = spaceData;
+      });
+
+      // Hard coded predictions
+      const time = addHours(startOfHour(new Date()), 1);
+      this._countPrediction = this._spaces
+        .filter((space) => space.spaceId !== 'inno_wing')
+        .map(() => ({
+          groups: ['total'],
+          records: [...Array(25 - getHours(time))].map((_, i) => ({
+            startTime: addHours(time, i),
+            endTime: addHours(time, i + 1),
+            counts: {
+              total: Math.cos(i / 4 + Math.random()) / 2 + 4
+            }
+          }))
+        }));
+
+      this._dataFetched = true;
+    }
+
+    if (this._lineChartDataDeps[0] !== this._countHistory) {
+      if (this._countHistory === null) {
+        this._lineChartData = null;
+      } else {
+        const spaces = this._spaces!.filter((space) => space.spaceId !== 'inno_wing');
+        this._lineChartData = {
+          lines: this._countHistory.map((history, i) => {
+            const { spaceId, spaceName } = spaces[i];
+            return {
+              name: spaceName,
+              values: history.records.map((record) => record.counts.total / spaceCapacity[spaceId])
+            };
+          }),
+          labels: this._countHistory[0].records.map((record) => record.startTime),
+          formatLabel: (time) => formatDate(time, 'HH:mm')
+        };
+      }
+      this._lineChartDataDeps = [this._countHistory];
+    }
+
+    if (this._lineChartPredictionDataDeps[0] !== this._countPrediction) {
+      if (this._countPrediction === null) {
+        this._lineChartPredictionData = null;
+      } else {
+        const spaces = this._spaces!.filter((space) => space.spaceId !== 'inno_wing');
+        this._lineChartPredictionData = {
+          lines: this._countPrediction.map((history, i) => {
+            const { spaceId, spaceName } = spaces[i];
+            return {
+              name: spaceName,
+              values: history.records.map((record) => record.counts.total / spaceCapacity[spaceId])
+            };
+          }),
+          labels: this._countPrediction[0].records.map((record) => record.startTime),
+          formatLabel: (time) => formatDate(time, 'HH:mm')
+        };
+      }
+      this._lineChartPredictionDataDeps = [this._countPrediction];
+    }
+
+    if (this._gaugeDataDeps[0] !== this._countHistory) {
+      if (this._countHistory === null) {
+        this._gaugeData = null;
+      } else {
+        const spaces = this._spaces!.filter((space) => space.spaceId !== 'inno_wing');
+        this._gaugeData = this._countHistory.map((history, i) => {
+          const { spaceId, spaceName } = spaces[i];
+          return {
+            name: spaceName,
+            value: history.records[history.records.length - 1].counts.total / spaceCapacity[spaceId]
+          };
+        });
+      }
+      this._gaugeDataDeps = [this._countHistory];
+    }
+  }
+
+  protected render(): TemplateResult {
+    return html`
+      <div class="${classes.content}">
+        ${this._renderLineChart()} ${this._renderGauges()}
+      </div>
+    `;
+  }
+
+  private _renderLineChart(): TemplateResult {
+    return html`
+      <div class="${classes.chartCards} ${classes.lineCard}">
+        <inno-line-chart
+          class="${classes.lineChart}"
+          .data="${this._lineChartData}"
+          .predictionData="${this._lineChartPredictionData}"
+          .labels="${8}"
+          showPercentage
+        >
+          <span slot="title">Utilization rate of spaces</span>
+        </inno-line-chart>
+      </div>
+    `;
+  }
+
+  private _renderGauges(): TemplateResult {
+    /* eslint-disable @typescript-eslint/indent */
+    return html`
+      <div class="${classes.gauges}">
+        ${this._gaugeData === null
+          ? html``
+          : this._gaugeData.map((data) => html`
+            <inno-gauge class="${classes.gauge}" .percentage="${data.value}">
+              <span slot="title">${data.name}</span>
+            </inno-gauge>
+          `)
+        }
+      </div>
+    `;
+    /* eslint-enable @typescript-eslint/indent */
+  }
+}

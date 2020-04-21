@@ -51,6 +51,9 @@ export class LineChart extends LitElement {
   @property({ type: Boolean })
   public showArea: boolean = false;
 
+  @property({ type: Boolean })
+  public showPercentage: boolean = false;
+
 
   private _renderDataCache: {
     readonly data: LineChartData<unknown> | null;
@@ -319,7 +322,7 @@ export class LineChart extends LitElement {
                       style="${styleMap({
                         top: `${vToY(v) * 100}%`
                       })}">
-                      ${v}
+                      ${this.showPercentage ? `${v * 100}%` : v}
                     </span>
                   `)}
               </div>

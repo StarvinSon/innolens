@@ -5,6 +5,7 @@ import {
 import { styleMap } from 'lit-html/directives/style-map';
 
 import '../theme';
+import { spaceCapacity } from '../../services/space';
 
 import { css, classes } from './heatmap.scss';
 
@@ -19,31 +20,6 @@ export interface HeatmapSpaceData {
 }
 
 export type HeatmapSpaceFloor = 'gf' | 'lgf';
-
-const spaceCapacity: Readonly<Record<string, number>> = {
-  common_workspace_area_1: 40,
-  common_workspace_area_2: 40,
-  machine_room: 40,
-  electronic_workbenches: 40,
-  laser_cutting_room: 40,
-  open_event_area: 40,
-  event_hall_a: 40,
-  event_hall_b: 40,
-  ar_vr_room: 40,
-  brainstorming_area: 40,
-  multi_purpose_room: 40,
-  Meeting_Room_1: 40,
-  meeting_room_2: 40,
-  workshop_1: 40,
-  workshop_2: 40,
-  workshop_3: 40,
-  workshop_4: 40,
-  workshop_5: 40,
-  workshop_6: 40,
-  workshop_7: 40,
-  workshop_8: 40,
-  workshop_9: 40
-};
 
 const TAG_NAME = 'inno-heatmap';
 

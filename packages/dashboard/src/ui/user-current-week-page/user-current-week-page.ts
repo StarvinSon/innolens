@@ -91,9 +91,9 @@ export class UserCurrentWeekPage extends LitElement {
           startTime: addHours(time, i),
           endTime: addHours(time, i + 1),
           counts: {
-            'Electrical and Electronic Engineering': Math.cos(i / 4) / 2 + 4,
-            'Mechanical Engineering': Math.sin(i / 4 + 0.25) / 2 + 4,
-            'Computer Science': Math.sin(i / 4 + 0.75) / 2 + 4
+            'Electrical and Electronic Engineering': Math.cos(i / 4 + Math.random()) / 2 + 4,
+            'Mechanical Engineering': Math.sin(i / 4 + Math.random()) / 2 + 4,
+            'Computer Science': Math.sin(i / 4 + Math.random()) / 2 + 4
           }
         }))
       };
@@ -107,7 +107,10 @@ export class UserCurrentWeekPage extends LitElement {
       } else {
         this._lineChartData = {
           /* eslint-disable @typescript-eslint/indent */
-          lines: this._countHistory.groups.slice().reverse()
+          lines: this._countHistory.groups
+            .slice()
+            .sort()
+            .reverse()
             .reduce<Array<LineChartLineData>>((lines, group) => {
               const line = {
                 name: group,
@@ -119,7 +122,8 @@ export class UserCurrentWeekPage extends LitElement {
               };
               lines.push(line);
               return lines;
-            }, []).reverse(),
+            }, [])
+            .reverse(),
           /* eslint-enable @typescript-eslint/indent */
           labels: this._countHistory.records.map((record) => record.startTime),
           formatLabel: (time) => formatDate(time, 'L/d')
@@ -134,7 +138,10 @@ export class UserCurrentWeekPage extends LitElement {
       } else {
         this._lineChartPredictionData = {
           /* eslint-disable @typescript-eslint/indent */
-          lines: this._countPrediction.groups.slice().reverse()
+          lines: this._countPrediction.groups
+            .slice()
+            .sort()
+            .reverse()
             .reduce<Array<LineChartLineData>>((lines, group) => {
               const line = {
                 name: group,
@@ -146,7 +153,8 @@ export class UserCurrentWeekPage extends LitElement {
               };
               lines.push(line);
               return lines;
-            }, []).reverse(),
+            }, [])
+            .reverse(),
           /* eslint-enable @typescript-eslint/indent */
           labels: this._countPrediction.records.map((record) => record.startTime),
           formatLabel: (time) => formatDate(time, 'L/d')
