@@ -75,7 +75,7 @@ export class UserCurrentWeekPage extends LitElement {
 
     if (!this._dataFetched) {
       const current = new Date();
-      this._countHistory = await this.spaceService!.fetchCountHistory(
+      this._countHistory = await this.spaceService!.fetchMemberCountHistory(
         subDays(startOfDay(current), getDay(current)),
         endOfHour(current),
         3600000,

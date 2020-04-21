@@ -208,7 +208,7 @@ export class LineChart extends LitElement {
   private labelIndex(ticks: number): ReadonlyArray<number> {
     const array = [];
     for (let i = 0; i < ticks; i += 1) {
-      const [_, scale] = this._renderDataCache?.iToX!.domain();
+      const [, scale] = this._renderDataCache?.iToX!.domain();
       // eslint-disable-next-line no-mixed-operators
       const num = Math.min(Math.floor(scale * i / (ticks)), scale);
       array.push(num);

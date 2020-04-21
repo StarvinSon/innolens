@@ -80,7 +80,7 @@ export class UserCurrentPage extends LitElement {
 
     if (!this._dataFetched) {
       const current = new Date();
-      this._countHistory = await this.spaceService!.fetchCountHistory(
+      this._countHistory = await this.spaceService!.fetchMemberCountHistory(
         startOfDay(current),
         endOfHour(current),
         3600000,
