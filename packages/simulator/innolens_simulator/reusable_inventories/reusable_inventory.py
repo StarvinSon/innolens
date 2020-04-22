@@ -15,6 +15,7 @@ class ReusableInventory(Component):
 
   instance_id: str = ''
   instance_name: str = ''
+  in_use: bool = False
 
   __log: Final[MutableSequence[Tuple[datetime, str, str]]]
 
@@ -34,7 +35,9 @@ class ReusableInventory(Component):
       self.instance_name = f'{self.type_name} {self.instance_id}'
 
   def acquire(self, member: Member) -> None:
+    self.in_use = True
     self.__log.append((self.engine.clock.current_time, member.member_id, 'acquire'))
 
   def release(self, member: Member) -> None:
+    self.in_use = False
     self.__log.append((self.engine.clock.current_time, member.member_id, 'release'))

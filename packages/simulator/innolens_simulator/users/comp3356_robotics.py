@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 from ..engine.component import Component
 from ..engine.object import Object
@@ -30,6 +30,8 @@ class COMP3356RoboticsMember(Component):
   __acrylic_laser_cut_machine: AcrylicLaserCutMachine
   __metal_laser_cut_machine: MetalLaserCutMachine
 
+  __acquire_successful: List[str]
+
   __wood_plank: WoodPlank
 
   __activity_period: Optional[Tuple[datetime, datetime]]
@@ -37,6 +39,7 @@ class COMP3356RoboticsMember(Component):
   def __init__(self, attached_object: Object):
     super().__init__(attached_object)
     self.__activity_period = None
+    self.__acquire_successful = []
 
   def _on_late_init(self) -> None:
     member = self.attached_object.find_component(Member)
@@ -126,7 +129,9 @@ class COMP3356RoboticsMember(Component):
       self.__acrylic_laser_cut_machine,
       self.__metal_laser_cut_machine
     ):
-      machine.acquire(self.__member)
+      if not machine.in_use:
+        self.__acquire_successful.append(machine.instance_id)
+        machine.acquire(self.__member)
     for expendable_inventory in (
       self.__wood_plank,
     ):
@@ -141,7 +146,9 @@ class COMP3356RoboticsMember(Component):
       self.__acrylic_laser_cut_machine,
       self.__metal_laser_cut_machine
     ):
-      machine.release(self.__member)
+      if machine.instance_id in self.__acquire_successful:
+        machine.release(self.__member)
+        self.__acquire_successful.remove(machine.instance_id)
     for space in (
       self.__machine_room,
       self.__laser_cutting_room,

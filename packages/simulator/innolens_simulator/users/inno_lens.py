@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import List, Optional
 
 from ..engine.component import Component
 from ..engine.object import Object
@@ -22,6 +22,8 @@ class InnoLensMember(Component):
   __ar_vr_room: ArVrRoom
   __vr_gadget: VrGadget
 
+  __acquire_successful: List[str]
+
   __random_schedule_start_offset: timedelta
   __schedule: SimpleSchedule
 
@@ -35,6 +37,7 @@ class InnoLensMember(Component):
       self.__on_schedule_start,
       self.__on_schedule_end
     )
+    self.__acquire_successful = []
 
   def _on_late_init(self) -> None:
     member = self.attached_object.find_component(Member)
@@ -81,10 +84,14 @@ class InnoLensMember(Component):
   def __on_schedule_start(self) -> None:
     self.__inno_wing.enter(self.__member)
     self.__ar_vr_room.enter(self.__member)
-    self.__vr_gadget.acquire(self.__member)
+    if not self.__vr_gadget.in_use:
+      self.__acquire_successful.append(self.__vr_gadget.instance_id)
+      self.__vr_gadget.acquire(self.__member)
 
   def __on_schedule_end(self) -> None:
-    self.__vr_gadget.release(self.__member)
+    if self.__vr_gadget.instance_id in self.__acquire_successful:
+      self.__vr_gadget.release(self.__member)
+      self.__acquire_successful.remove(self.__vr_gadget.instance_id)
     self.__ar_vr_room.exit(self.__member)
     self.__inno_wing.exit(self.__member)
     self.__random_schedule_start_offset = timedelta(minutes=randint_nd(lower=-1 * 60, upper=1 * 60 + 30, step=30, mean=0, stddev=60))
