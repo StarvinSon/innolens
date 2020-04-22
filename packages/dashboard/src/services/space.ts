@@ -9,8 +9,8 @@ import { OAuth2Service } from './oauth2';
 
 
 export const spaceCapacity: Readonly<Record<string, number>> = {
-  common_workspace_area_1: 40,
-  common_workspace_area_2: 40,
+  common_makerspace_area_1: 40,
+  common_makerspace_area_2: 40,
   machine_room: 40,
   electronic_workbenches: 40,
   laser_cutting_room: 40,
@@ -19,8 +19,8 @@ export const spaceCapacity: Readonly<Record<string, number>> = {
   event_hall_b: 40,
   ar_vr_room: 40,
   brainstorming_area: 40,
-  multi_purpose_room: 40,
-  Meeting_Room_1: 40,
+  digital_learning_lab: 40,
+  meeting_room_1: 40,
   meeting_room_2: 40,
   workshop_1: 40,
   workshop_2: 40,
@@ -30,7 +30,8 @@ export const spaceCapacity: Readonly<Record<string, number>> = {
   workshop_6: 40,
   workshop_7: 40,
   workshop_8: 40,
-  workshop_9: 40
+  workshop_9: 40,
+  sound_proof_room: 40
 };
 
 export interface Space {

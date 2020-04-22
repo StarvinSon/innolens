@@ -110,7 +110,7 @@ export class Heatmap extends LitElement {
             }
           </style>
         </defs>
-        <g id="common_workspace_area_2" class="${classes.areas} ${classes.common_workspace_area_2}" style="${styleMap({ fill: interpolateRdYlGn(this._getRatio('common_workspace_area_2')) })}">
+        <g id="common_makerspace_area_2" class="${classes.areas} ${classes.common_makerspace_area_2}" style="${styleMap({ fill: interpolateRdYlGn(this._getRatio('common_makerspace_area_2')) })}">
           <path id="形狀_1" data-name="形狀 1" d="M430,16l53,194H869L876,8Z"/>
         </g>
         <g id="machine_room" class="${classes.areas} ${classes.machine_room}" style="${styleMap({ fill: interpolateRdYlGn(this._getRatio('machine_room')) })}">
@@ -131,18 +131,18 @@ export class Heatmap extends LitElement {
         <g id="laser_cutting_room" class="${classes.areas} ${classes.laser_cutting_room}" style="${styleMap({ fill: interpolateRdYlGn(this._getRatio('laser_cutting_room')) })}">
           <rect id="矩形_44" data-name="矩形 44" x="616" y="237" width="172" height="77"/>
         </g>
-        <g id="common_workspace_area_1" class="${classes.areas} ${classes.common_workspace_area_1}" style="${styleMap({ fill: interpolateRdYlGn(this._getRatio('common_workspace_area_1')) })}">
+        <g id="common_makerspace_area_1" class="${classes.areas} ${classes.common_workspace_area_1}" style="${styleMap({ fill: interpolateRdYlGn(this._getRatio('common_makerspace_area_1')) })}">
           <rect id="矩形_45" data-name="矩形 45" x="718" y="463" width="445" height="164"/>
         </g>
-        <text id="Common_Workspace_Area" data-name="Common Workspace Area" class="cls-2" x="666.375" y="88.956"><tspan x="666.375">Common</tspan><tspan x="666.375" dy="51.2">Workspace Area</tspan></text>
+        <text id="Common_Makerspace_Area" data-name="Common Makerspace Area" class="cls-2" x="666.375" y="88.956"><tspan x="666.375">Common</tspan><tspan x="666.375" dy="51.2">Makerspace Area</tspan></text>
         <text id="Machine_Room-2" data-name="Machine Room" class="cls-2" x="1023.922" y="93.47"><tspan x="1023.922">Machine</tspan><tspan x="1023.922" dy="51.2">Room</tspan></text>
         <text id="Workshop_1-2" data-name="Workshop 1" class="cls-3" x="551.002" y="270.842"><tspan x="551.002">Workshop</tspan><tspan x="551.002" dy="25.6">1</tspan></text>
         <text id="Laser_Cutting_Room-2" data-name="Laser Cutting Room" class="cls-3" x="703.691" y="269.085"><tspan x="703.691">Laser</tspan><tspan x="703.691" dy="25.6">Cutting Room</tspan></text>
         <text id="Workshop_3-2" data-name="Workshop 3" class="cls-3" x="1010.556" y="399.523"><tspan x="1010.556">Workshop</tspan><tspan x="1010.556" dy="25.6">3</tspan></text>
         <text id="Workshop_2-2" data-name="Workshop 2" class="cls-3" x="630.576" y="491.647"><tspan x="630.576">Workshop 2</tspan></text>
-        <text id="Electonic_Workbenches" data-name="Electonic  Workbenches" class="cls-3" x="958.601" y="238.916"><tspan x="958.601">Electonic </tspan><tspan x="958.601" dy="25.6">Workbenches</tspan></text>
+        <text id="Electronic_Workbenches" data-name="Electonic  Workbenches" class="cls-3" x="958.601" y="238.916"><tspan x="958.601">Electronic </tspan><tspan x="958.601" dy="25.6">Workbenches</tspan></text>
         <text id="Conference_Room" data-name="Conference Room" class="cls-3" transform="translate(397.793 96.867) rotate(74.119)"><tspan x="0">Conference</tspan><tspan x="0" dy="25.6">Room</tspan></text>
-        <text id="Common_Workspace_Area-2" data-name="Common Workspace Area" class="cls-2" x="928.23" y="528.202"><tspan x="928.23">Common</tspan><tspan x="928.23" dy="51.2">Workspace Area</tspan></text>
+        <text id="Common_Makerspace_Area-2" data-name="Common Makerspace Area" class="cls-2" x="928.23" y="528.202"><tspan x="928.23">Common</tspan><tspan x="928.23" dy="51.2">Makerspace Area</tspan></text>
         <g id="grey">
           <rect id="grey10" class="cls-4" x="4" y="8" width="225" height="163"/>
           <path id="grey9" class="cls-5" d="M221.75,170.428L8.033,239.057l1.031-72.966Z"/>
@@ -283,7 +283,7 @@ export class Heatmap extends LitElement {
         <g id="workshop_7" class="${classes.areas} ${classes.workshop_7}" style="${styleMap({ fill: interpolateRdYlGn(this._getRatio('workshop_7')) })}">
           <rect id="shape1-7" data-name="shape1" x="1269" y="205" width="280" height="407"/>
         </g>
-        <g id="ar_vr_room" class="${classes.areas} ${classes.ar_vr_room}" style="${styleMap({ fill: interpolateRdYlGn(this._getRatio('ar_vr_room')) })}">
+        <g id="digital_learning_lab" class="${classes.areas} ${classes.digital_learning_lab}" style="${styleMap({ fill: interpolateRdYlGn(this._getRatio('digital_learning_lab')) })}">
           <rect id="shape1-8" data-name="shape1" x="1274" y="613" width="277" height="212"/>
         </g>
         <g id="workshop_8" class="${classes.areas} ${classes.workshop_8}" style="${styleMap({ fill: interpolateRdYlGn(this._getRatio('workshop_8')) })}">
@@ -292,7 +292,7 @@ export class Heatmap extends LitElement {
         <g id="workshop_9" class="${classes.areas} ${classes.workshop_9}" style="${styleMap({ fill: interpolateRdYlGn(this._getRatio('workshop_9')) })}">
           <rect id="shape1-10" data-name="shape1" x="783" y="678" width="338" height="148"/>
         </g>
-        <g id="multi_purpose_room" class="${classes.areas} ${classes.multi_purpose_room}" style="${styleMap({ fill: interpolateRdYlGn(this._getRatio('multi_purpose_room')) })}">
+        <g id="ar_vr_room" class="${classes.areas} ${classes.ar_vr_room}" style="${styleMap({ fill: interpolateRdYlGn(this._getRatio('ar_vr_room')) })}">
           <path id="形狀_1" data-name="形狀 1" d="M308,420l1,189H414l3-92H544l-1-99Z"/>
         </g>
         <g id="brainstorming_area" class="${classes.areas} ${classes.brainstorming_area}" style="${styleMap({ fill: interpolateRdYlGn(this._getRatio('brainstorming_area')) })}">
@@ -304,16 +304,17 @@ export class Heatmap extends LitElement {
         <g id="meeting_room_2" class="${classes.areas} ${classes.meeting_room_2}" style="${styleMap({ fill: interpolateRdYlGn(this._getRatio('meeting_room_2')) })}">
           <rect id="shape1-14" data-name="shape1" x="118" y="709" width="188" height="114"/>
         </g>
+        <g id="sound_proof_room" class="${classes.areas} ${classes.sound_proof_room}" style="${styleMap({ fill: interpolateRdYlGn(this._getRatio('sound_proof_room')) })}">
+          <path id="形狀_7" data-name="形狀 7" d="M674,519l124-37-2,132H705Z"/>
+        </g>
         <rect id="grey10" class="cls-1" x="304" y="610" width="112" height="210"/>
         <rect id="grey9" class="cls-1" x="416" y="516" width="129" height="308"/>
         <rect id="grey8" class="cls-1" x="548" y="680" width="234" height="144"/>
         <path id="grey7" class="cls-2" d="M521.937,310.506l-99.815-1.782,5.1-298.356Z"/>
         <rect id="grey6" class="cls-1" x="320" y="9" width="113" height="305"/>
         <rect id="grey5" class="cls-1" x="1163" y="407" width="106" height="205"/>
-        <rect id="grey4" class="cls-1" x="740" y="406" width="327" height="206"/>
-        <path id="grey3" class="cls-2" d="M710.924,614.656L650.1,452.95l49.632-42.42Z"/>
-        <rect id="grey2" class="cls-1" x="697" y="418" width="47" height="189"/>
-        <path id="grey1" class="cls-2" d="M745.893,425.143l-9.468-17.812-56.591,19.1Z"/>
+        <rect id="grey2" data-name="矩形 1" class="cls-2" x="798" y="408" width="270" height="206"/>
+        <path id="grey1" data-name="形狀 6" class="cls-1" d="M678,420l-23,45,16,53,125-37,1-73Z"/>
         <image id="lift" x="447" y="637" width="67" height="67" xlink:href="data:img/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEMAAABDCAYAAADHyrhzAAACVElEQVR4nO2cvYsTQRiHn8SD86O5QrG4awQbRbBTRNBGxWsEK0ERY2knilXQQrBURBD/APEa/wG5QsROq6goCNFKEUHEEwQvqJE9JvAjZGG/xjPM74Epdpj33Xef7O5kJ2xawBHgBjBLuqwC3UzGM2BfwiJGPG8nfkYos+3/p5b1xzIEyxBiy3gC7AAWge8lYzvAPPBQ+j4CB4BdwPuGa12jBwwjtMfAZtnPfmCl4H6+StwG4AHwAdgp/bcarrkXS8a4iCpCzo8JmZftBeDTNMh4OSbiKLBNtg8Cfwrk+Q2cmSA0E9GP8AFGkXFHCj8BDIBXIqQVLoMiucaFxBIRTcY34BxwKYgY9b8GTgJ3S+bLhFwFToWbZgwRazJaQcbeCadjarzw9wxhpkLMl/Bw9ytaVfWZCTPX1jKZysr4AewBPv/DA6vKduAdsKVofNnLpD8lIgh19ssEVLlMRuwGjtWIH3EvLK5kSwkXGsi3DLypGlxmau1JXKehKW0u5JtrKF+n6rF5NhEsQ7AMwTIEyxAsQ7AMwTIEyxAsQ0hJxiPgcFhpn0hKMq4BT4HLeQNSknEa2AiczRtQ5xF+2rgYWi6+gQqWIaQk4zawCbiSNyAlGUvAT+B+3oCUZFwHDgE38wakNJscDy0X30AFyxAsQ7AMwTIEyxAsQ7AMwTIEyxAsQ7AMwTIEyxAsQ7AMwTIEyxAsQ7AMwTIEyxAsQ7AMoc6PSIPwWmZdhiF+2FC+QdXAOjKWQmuKFXnDYF1oh3c9kifzkJ0Z3RL/rPJ2yqwVrXcV6P4Fuz6EXMbS9KQAAAAASUVORK5CYII="/>
         <image id="male" x="336" y="670" width="48" height="94" xlink:href="data:img/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAABeCAYAAABl/JetAAADZUlEQVR4nO2cPWgUQRTH/3OIWkSdxg+IhaCFokWanE0qtRYbSZE0AS2s/ChsdKptRQNCJIiFoKQQQUghBGMjCFpYiB8hIohEIgZkgqJGxZF3eZfP+9idmeTdwfzgYLM37837MXvZj9ldhYjozG0EcJI/hwHs4uyfATwDcI8+1qjfsXqNJqAzdwzATQB7mjT9AOC0NepRjH5LMZLozJ0FMJajeHCbMY4JJngEdOb6ANzxDO+3Rt0N6T9IQGeuE8AEgA7PFN8B7LdGffKtIXQTuhRQPNHBObzxHgGduU0AZgBsCSkAwDcA261Rcz7BISPQHaF4cI5u3+AQgX0BsdFyhQhsC4iNlitEYCYgNlquEIE3AbHRcoUIvAQwHRBfZZpzeeEtYI36B2A4gsAw51pfAeYqgKmA+CnO4U2QgDWKdkK9AH56hFNML+eQEcC8xFMAx2mxSBjFcGwQUQ6n+di+C8CDHM2pTVes84GoZ2SYP0Y6wGdkZQC7eTVt68/5bOxt7D4TkjTchPgkfQeADUI1/gXwpdFFgFUCOnO03Z4DcALA3jUvMR/v+cc/aI1att9ZJqAzd4Z3LJtbpPCV/AJwwRp1o7p+4d+oztxlAEMtXDy4tiGutUJlBHTmjgAYFy2tOEetUY+rI3ClnSpnKjUrnbmDAF61QkUeHKIR6Gm7shfpIYHOVqnGg50ksLXtyl6kFOVoVJIihwizS5ZjXlIJ6iOvwKw1Slf/0JlzhUvLwYo+bB6Jtt+EkoA0SUCaJCBNEpAmCUiTBKRJAtIkAWmSgDQlvumoGV63wgSSp09HAq9zNJwQEMjT5yQJjNIsSJOGMWbki9KsT6p5tGSNok2or8Fk9W0AIwICI9x3LajWPqq98iPmOdsy35j6lbe/F3R/J4ABa9SaXAdqBPc5AOAU1zLHtVGN5eo8s9c8cc4LW+etUYPcnubcruUounA9aT8gTRKQJglIkwSkSQLSJAFpkoA0SUCaJCBNEpAmCUiTBKRJAtIkAWmSgDS+An9ytHF1lkNyrsJXYDJHm3d1lkNyrsJX4FaT7z+ueCJknNeF5KyJr8B1AA/rfPeDX3ixME3Ky/38XS0oF+VcHwFrFD3fRQ+AXlwy9DRZeJ/eUGCNelIjhtbR2wuoTXVummIpBz0YSjmLAeA/FpPWFJyWylQAAAAASUVORK5CYII="/>
         <image id="female" x="695" y="705" width="60" height="94" xlink:href="data:img/png;base64,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"/>
@@ -334,6 +335,7 @@ export class Heatmap extends LitElement {
         <text id="Workshop_8-2" data-name="Workshop 8" class="cls-8" x="1195.879" y="750.43"><tspan x="1195.879">Workshop 8</tspan></text>
         <text id="Workshop_5-2" data-name="Workshop 5" class="cls-8" x="1193.506" y="79.425"><tspan x="1193.506">Workshop 5</tspan></text>
         <text id="Workshop_4-2" data-name="Workshop 4" class="cls-8" transform="matrix(0, -1, 1, 0, 1166.898, 239.159)"><tspan x="0">Workshop 4</tspan></text>
+        <text id="Sound_Proof_Room-2" data-name="Sound Proof Room" class="cls-8" x="744.434" y="539.073"><tspan x="744.434">Sound</tspan><tspan x="744.434" dy="25.6">Proof</tspan><tspan x="744.434" dy="25.6">Room</tspan></text>
         <path id="border46" class="cls-9" d="M19,5H34V323H19V5Z"/>
         <path id="border45" class="cls-9" d="M30,308v15H0V308H30Z"/>
         <path id="border44" class="cls-9" d="M421.805,7.116L436.2,2.884l90,306-14.39,4.232Z"/>
@@ -380,6 +382,7 @@ export class Heatmap extends LitElement {
         <path id="border3" class="cls-9" d="M570,301v15H309V301H570Z"/>
         <path id="border2" class="cls-9" d="M324,313H309V4h15V313Z"/>
         <path id="border1" class="cls-9" d="M798,400v15H737V400h61Z"/>
+        <path id="border47" data-name="形狀 5" class="cls-9" d="M673.06,524.211l-4.12-14.422,126-36,4.12,14.422Z"/>
       </svg>
     `;
   }
