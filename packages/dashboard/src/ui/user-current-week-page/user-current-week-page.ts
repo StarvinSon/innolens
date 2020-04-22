@@ -1,5 +1,5 @@
 import {
-  format as formatDate, addHours, endOfHour, getHours, startOfDay, getDay, subDays, startOfHour
+  format as formatDate, addHours, getHours, startOfDay, getDay, subDays, startOfHour
 } from 'date-fns';
 import {
   customElement, LitElement, TemplateResult,
@@ -77,14 +77,14 @@ export class UserCurrentWeekPage extends LitElement {
       const current = new Date();
       this._countHistory = await this.spaceService!.fetchMemberCountHistory(
         subDays(startOfDay(current), getDay(current)),
-        endOfHour(current),
+        startOfHour(current),
         3600000,
         ['inno_wing'],
         'uniqueStay',
         'department'
       );
       // Hard coded predictions
-      const time = addHours(startOfHour(new Date()), 1);
+      const time = startOfHour(new Date());
       this._countPrediction = {
         groups: ['Electrical and Electronic Engineering', 'Mechanical Engineering', 'Computer Science'],
         records: [...Array(24 * (7 - getDay(time)) - getHours(time) + 1)].map((_, i) => ({

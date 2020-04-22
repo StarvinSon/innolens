@@ -1,7 +1,9 @@
 import {
+  BsCarousel, BsCarouselIndicator, BsCarouselIndicators, BsCarouselItem
+} from '@lit-element-bootstrap/carousel';
+import {
   customElement, LitElement, TemplateResult, html, property, PropertyValues
 } from 'lit-element';
-import '@lit-element-bootstrap/carousel';
 
 import '../theme';
 import '../user-current-page';
@@ -60,6 +62,11 @@ export class UserPages extends LitElement {
   }
 
   protected update(changedProps: PropertyValues): void {
+    if (!window.customElements.get('bs-carousel')) window.customElements.define('bs-carousel', BsCarousel);
+    if (!window.customElements.get('bs-carousel-indicator')) window.customElements.define('bs-carousel-indicator', BsCarouselIndicator);
+    if (!window.customElements.get('bs-carousel-indicators')) window.customElements.define('bs-carousel-indicators', BsCarouselIndicators);
+    if (!window.customElements.get('bs-carousel-item')) window.customElements.define('bs-carousel-item', BsCarouselItem);
+
     if (this.spaceService !== null && !this._spaceFetched) {
       this.spaceService.fetchSpaces().then((data) => {
         this._spaces = data.filter((space) => space.spaceId !== 'inno_wing');

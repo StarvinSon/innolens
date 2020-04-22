@@ -212,8 +212,7 @@ export class LineChart extends LitElement {
     const array = [];
     for (let i = 0; i < ticks; i += 1) {
       const [, scale] = this._renderDataCache?.iToX!.domain();
-      // eslint-disable-next-line no-mixed-operators
-      const num = Math.min(Math.floor(scale * i / (ticks)), scale);
+      const num = Math.floor((scale * i) / ticks);
       array.push(num);
     }
 
@@ -308,8 +307,8 @@ export class LineChart extends LitElement {
                 : svg`
                   <line
                     class="${classes.divider}"
-                    x1="${iToX!(data.labels.length - 1)}" y1="0"
-                    x2="${iToX!(data.labels.length - 1)}" y2="1"/>
+                    x1="${iToX!(data.labels.length)}" y1="0"
+                    x2="${iToX!(data.labels.length)}" y2="1"/>
                 `}
             </svg>
             <div class="${classes.chartOverlay}">

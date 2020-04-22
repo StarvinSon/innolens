@@ -1,5 +1,5 @@
 import {
-  format as formatDate, addHours, endOfHour, getHours, startOfDay, startOfHour
+  format as formatDate, addHours, getHours, startOfDay, startOfHour
 } from 'date-fns';
 import {
   customElement, LitElement, TemplateResult,
@@ -82,14 +82,14 @@ export class UserCurrentPage extends LitElement {
       const current = new Date();
       this._countHistory = await this.spaceService!.fetchMemberCountHistory(
         startOfDay(current),
-        endOfHour(current),
+        startOfHour(current),
         3600000,
         ['inno_wing'],
         'uniqueStay',
         'department'
       );
       // Hard coded predictions
-      const time = addHours(startOfHour(new Date()), 1);
+      const time = startOfHour(new Date());
       this._countPrediction = {
         groups: ['Electrical and Electronic Engineering', 'Mechanical Engineering', 'Computer Science'],
         records: [...Array(25 - getHours(time))].map((_, i) => ({
