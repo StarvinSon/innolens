@@ -1,6 +1,6 @@
 import { interpolateRdYlGn } from 'd3-scale-chromatic';
 import {
-  customElement, LitElement, property, TemplateResult, html
+  customElement, LitElement, property, TemplateResult, html, PropertyValues
 } from 'lit-element';
 import { styleMap } from 'lit-html/directives/style-map';
 
@@ -41,12 +41,20 @@ export class Heatmap extends LitElement {
   public data: HeatmapData | null = null;
 
   @property({ attribute: false })
-  public ratio: Record<string, number> = {};
+  private ratio: Record<string, number> = {};
+
+
+  protected update(changedProps: PropertyValues): void {
+    if (changedProps.has('data')) {
+      this._calcRatio();
+    }
+    super.update(changedProps);
+  }
 
   private _calcRatio(): void {
     if (this.data === null) return;
 
-    for (const [spaceId, value] of Object.entries(this.data)) {
+    for (const { spaceId, value } of this.data.spaces) {
       this.ratio[spaceId] = value / spaceCapacity[spaceId];
     }
   }

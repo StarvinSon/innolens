@@ -37,16 +37,16 @@ export class Gauge extends LitElement {
           <img
             src="${needle}"
             style="${styleMap({
-              '-webkit-transform': `rotate(${(this.percentage / 100) * 270}deg)`,
-              '-moz-transform': `rotate(${(this.percentage / 100) * 270}deg)`,
-              '-ms-transform': `rotate(${(this.percentage / 100) * 270}deg)`,
-              '-o-transform': `rotate(${(this.percentage / 100) * 270}deg)`,
-              transform: `rotate(${(this.percentage / 100) * 270}deg)`
+              '-webkit-transform': `rotate(${this.percentage * 270}deg)`,
+              '-moz-transform': `rotate(${this.percentage * 270}deg)`,
+              '-ms-transform': `rotate(${this.percentage * 270}deg)`,
+              '-o-transform': `rotate(${this.percentage * 270}deg)`,
+              transform: `rotate(${this.percentage * 270}deg)`
             })}"
           />
         </div>
         <div class="${classes.percentage}">
-          <h4 class="${classes.percentageText}">${`${this.percentage}%`}</h4>
+          <h4 class="${classes.percentageText}">${`${Math.round(this.percentage * 1000) / 10}%`}</h4>
         </div>
         <div class="${classes.title}">
           <h4 class="${classes.titleText}"><slot name="title"></slot></h4>

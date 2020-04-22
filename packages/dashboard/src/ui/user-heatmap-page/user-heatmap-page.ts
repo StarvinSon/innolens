@@ -30,22 +30,10 @@ export class UserHeatMapPage extends LitElement {
   public spaceService: SpaceService | null = null;
 
   @property({ attribute: false })
-  private _spaces: ReadonlyArray<Space> | null = null;
-
-  // @property({ attribute: false })
-  // private _selectedGroupBy: SpaceCountHistoryGroupBy = 'department';
-
-  // @property({ attribute: false })
-  // private _selectedPastDays = 1;
-
-  // @property({ attribute: false })
-  // private _countHistory: { readonly [spaceId: string]: SpaceCount } = {};
+  public spaces: ReadonlyArray<Space> | null = null;
 
   @property({ attribute: false })
   private _heatmapData: HeatmapData | null = null;
-
-
-  private _spaceFetched = false;
 
   private _heatmapDataFetched = false;
 
@@ -58,33 +46,22 @@ export class UserHeatMapPage extends LitElement {
   private _updateProperties(): void {
     if (this.spaceService === null) return;
 
-    if (!this._spaceFetched) {
-      this.spaceService
-        .fetchSpaces()
-        .then((data) => {
-          this._spaces = data;
-        });
-      this._spaceFetched = true;
-    }
-
-    if (!this._heatmapDataFetched && this._spaces !== null) {
+    if (!this._heatmapDataFetched && this.spaces !== null) {
       const time = new Date();
-      const spaceCountPromises = this._spaces
-        .filter((space) => space.spaceId !== 'inno_wing')
-        .map(
-          async (space): Promise<HeatmapSpaceData> => {
-            const countData = await this.spaceService!.fetchMemberCount(
-              time,
-              [space.spaceId],
-              'uniqueMember',
-              null
-            );
-            return {
-              spaceId: space.spaceId,
-              value: countData.counts[countData.groups[0]]
-            };
-          }
-        );
+      const spaceCountPromises = this.spaces.map(
+        async (space): Promise<HeatmapSpaceData> => {
+          const countData = await this.spaceService!.fetchMemberCount(
+            time,
+            [space.spaceId],
+            'uniqueMember',
+            null
+          );
+          return {
+            spaceId: space.spaceId,
+            value: countData.counts[countData.groups[0]]
+          };
+        }
+      );
       Promise.all(spaceCountPromises).then((spaceData) => {
         this._heatmapData = {
           spaces: spaceData
@@ -93,25 +70,6 @@ export class UserHeatMapPage extends LitElement {
       this._heatmapDataFetched = true;
     }
   }
-
-  // private _convertData(): void {
-  //   const heatmapData: Array<{ spaceId: string; value: number }> = [];
-  //   for (const [space, records] of Object.entries(this._countHistory)) {
-  //     if (space !== 'inno_wing' && records !== null) {
-  //       const latest = records.counts;
-  //       let stayCounts = 0;
-  //       let exitCounts = 0;
-  //       for (const group of records.groups) {
-  //         stayCounts += latest[group];
-  //       }
-  //       for (const group of records.groups) {
-  //         exitCounts += latest.uniqueExitCounts[group];
-  //       }
-  //       heatmapData.push({ spaceId: space, value: stayCounts - exitCounts });
-  //     }
-  //   }
-  //   this._heatmapData = { spaces: heatmapData };
-  // }
 
   protected render(): TemplateResult {
     return html`

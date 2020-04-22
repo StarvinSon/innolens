@@ -2,10 +2,7 @@ import {
   format as formatDate, startOfDay, endOfHour, addHours, startOfHour, getHours
 } from 'date-fns';
 import {
-  customElement, LitElement, TemplateResult,
-  html,
-  property,
-  PropertyValues
+  customElement, LitElement, TemplateResult, html, property, PropertyValues
 } from 'lit-element';
 
 import '../gauge';
@@ -46,7 +43,7 @@ export class UserSpacesPage extends LitElement {
   public spaceService: SpaceService | null = null;
 
   @property({ attribute: false })
-  private _spaces: ReadonlyArray<Space> | null = null;
+  public spaces: ReadonlyArray<Space> | null = null;
 
   @property({ attribute: false })
   private _countHistory: ReadonlyArray<SpaceCountHistory> | null = null;
@@ -65,13 +62,11 @@ export class UserSpacesPage extends LitElement {
 
   private _lineChartDataDeps: readonly [ReadonlyArray<SpaceCountHistory> | null] = [null];
 
-  private _lineChartPredictionDataDeps: readonly [ReadonlyArray<SpaceCountPrediction> | null] = [
-    null
-  ];
+  private _lineChartPredictionDataDeps: readonly [
+    ReadonlyArray<SpaceCountPrediction> | null
+  ] = [null];
 
   private _gaugeDataDeps: readonly [ReadonlyArray<SpaceCountHistory> | null] = [null];
-
-  private _spaceFetched = false;
 
   private _dataFetched = false;
 
@@ -83,48 +78,33 @@ export class UserSpacesPage extends LitElement {
   private _updateProperties(): void {
     if (this.spaceService === null) return;
 
-    if (!this._spaceFetched) {
-      this.spaceService.fetchSpaces().then((data) => {
-        this._spaces = data;
-      });
-      this._spaceFetched = true;
-    }
-
-    if (!this._dataFetched && this._spaces !== null) {
+    if (!this._dataFetched && this.spaces !== null) {
       const current = new Date();
-      const spaceCountPromises = this._spaces
-        .filter((space) => space.spaceId !== 'inno_wing')
-        .map(
-          async (space): Promise<SpaceCountHistory> => {
-            const countData = await this.spaceService!.fetchMemberCountHistory(
-              startOfDay(current),
-              endOfHour(current),
-              3600000,
-              [space.spaceId],
-              'uniqueStay',
-              null
-            );
-            return countData;
-          }
-        );
+      const spaceCountPromises = this.spaces.map(
+        async (space): Promise<SpaceCountHistory> =>
+          this.spaceService!.fetchMemberCountHistory(
+            startOfDay(current),
+            endOfHour(current),
+            3600000,
+            [space.spaceId],
+            'uniqueStay',
+            null
+          )
+      );
       Promise.all(spaceCountPromises).then((spaceData) => {
         this._countHistory = spaceData;
       });
 
       // Hard coded predictions
       const time = addHours(startOfHour(new Date()), 1);
-      this._countPrediction = this._spaces
-        .filter((space) => space.spaceId !== 'inno_wing')
-        .map(() => ({
-          groups: ['total'],
-          records: [...Array(25 - getHours(time))].map((_, i) => ({
-            startTime: addHours(time, i),
-            endTime: addHours(time, i + 1),
-            counts: {
-              total: Math.cos(i / 4 + Math.random()) / 2 + 4
-            }
-          }))
-        }));
+      this._countPrediction = this.spaces.map(() => ({
+        groups: ['total'],
+        records: [...Array(25 - getHours(time))].map((_, i) => ({
+          startTime: addHours(time, i),
+          endTime: addHours(time, i + 1),
+          counts: { total: Math.cos(i / 4 + Math.random()) / 2 + 4 }
+        }))
+      }));
 
       this._dataFetched = true;
     }
@@ -133,10 +113,9 @@ export class UserSpacesPage extends LitElement {
       if (this._countHistory === null) {
         this._lineChartData = null;
       } else {
-        const spaces = this._spaces!.filter((space) => space.spaceId !== 'inno_wing');
         this._lineChartData = {
           lines: this._countHistory.map((history, i) => {
-            const { spaceId, spaceName } = spaces[i];
+            const { spaceId, spaceName } = this.spaces![i];
             return {
               name: spaceName,
               values: history.records.map((record) => record.counts.total / spaceCapacity[spaceId])
@@ -153,10 +132,9 @@ export class UserSpacesPage extends LitElement {
       if (this._countPrediction === null) {
         this._lineChartPredictionData = null;
       } else {
-        const spaces = this._spaces!.filter((space) => space.spaceId !== 'inno_wing');
         this._lineChartPredictionData = {
           lines: this._countPrediction.map((history, i) => {
-            const { spaceId, spaceName } = spaces[i];
+            const { spaceId, spaceName } = this.spaces![i];
             return {
               name: spaceName,
               values: history.records.map((record) => record.counts.total / spaceCapacity[spaceId])
@@ -173,9 +151,8 @@ export class UserSpacesPage extends LitElement {
       if (this._countHistory === null) {
         this._gaugeData = null;
       } else {
-        const spaces = this._spaces!.filter((space) => space.spaceId !== 'inno_wing');
         this._gaugeData = this._countHistory.map((history, i) => {
-          const { spaceId, spaceName } = spaces[i];
+          const { spaceId, spaceName } = this.spaces![i];
           return {
             name: spaceName,
             value: history.records[history.records.length - 1].counts.total / spaceCapacity[spaceId]
@@ -216,12 +193,13 @@ export class UserSpacesPage extends LitElement {
       <div class="${classes.gauges}">
         ${this._gaugeData === null
           ? html``
-          : this._gaugeData.map((data) => html`
-            <inno-gauge class="${classes.gauge}" .percentage="${data.value}">
-              <span slot="title">${data.name}</span>
-            </inno-gauge>
-          `)
-        }
+          : this._gaugeData.map(
+              (data) => html`
+                <inno-gauge class="${classes.gauge}" .percentage="${data.value}">
+                  <span slot="title">${data.name}</span>
+                </inno-gauge>
+              `
+            )}
       </div>
     `;
     /* eslint-enable @typescript-eslint/indent */
