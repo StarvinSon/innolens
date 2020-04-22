@@ -4,8 +4,8 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Code Generator",
-      "program": "${workspaceFolder}/tools/code-generator.js",
+      "name": "Glue Generator",
+      "program": "${workspaceFolder}/tools/glue-generator.js",
       "console": "integratedTerminal"
     },
     {

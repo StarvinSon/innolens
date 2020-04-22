@@ -81,16 +81,36 @@ export const writeJsonEncoder = (
       case 'array': {
         const encodeFunc = imports.addNamedImport(`@innolens/api/runtime/${runtimeType}/json-stringifier`, 'encodeJsonArray');
         const itemVar = createVarName('item');
-        writer.writeLine(`${resultVar} = ${encodeFunc}(${srcVar}, (${itemVar}${addLambdaParamUnknownType ? ': unknown' : ''}) => `).inlineBlock(() => {
-          const encodedItemVar = createVarName('encodedItem');
-          writer.writeLine(`let ${encodedItemVar}`);
-          writeJsonEncoder(
-            sourceFile, writer, createVarName, imports,
-            encodedItemVar, itemVar, schema.items,
-            runtimeType, addLambdaParamUnknownType
-          );
-          writer.writeLine(`return ${encodedItemVar}`);
-        }).write(')').newLine();
+        writer.write(`${resultVar} = ${encodeFunc}(${srcVar}, `);
+        if ((Array.isArray as (val: unknown) => val is ReadonlyArray<any>)(schema.items)) {
+          writer.write('[').newLine();
+          for (const subSchema of schema.items) {
+            writer.write(`(${itemVar}${addLambdaParamUnknownType ? ': unknown' : ''}) => `).inlineBlock(() => {
+              const encodedItemVar = createVarName('encodedItem');
+              writer.writeLine(`let ${encodedItemVar}`);
+              writeJsonEncoder(
+                sourceFile, writer, createVarName, imports,
+                encodedItemVar, itemVar, subSchema,
+                runtimeType, addLambdaParamUnknownType
+              );
+              writer.writeLine(`return ${encodedItemVar}`);
+            });
+            writer.write(',').newLine();
+          }
+          writer.write(']');
+        } else {
+          writer.write(`(${itemVar}${addLambdaParamUnknownType ? ': unknown' : ''}) => `).inlineBlock(() => {
+            const encodedItemVar = createVarName('encodedItem');
+            writer.writeLine(`let ${encodedItemVar}`);
+            writeJsonEncoder(
+              sourceFile, writer, createVarName, imports,
+              encodedItemVar, itemVar, schema.items as Schema,
+              runtimeType, addLambdaParamUnknownType
+            );
+            writer.writeLine(`return ${encodedItemVar}`);
+          });
+        }
+        writer.write(')').newLine();
         break;
       }
       case 'object': {

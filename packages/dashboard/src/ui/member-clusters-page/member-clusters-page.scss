@@ -1,0 +1,57 @@
+@use '../layout';
+@use '../typography';
+@use '../theme';
+@use '../line-chart';
+
+
+:host {
+  display: grid;
+  grid-template-areas: options charts;
+  grid-template-columns: 1fr 2fr;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.options {
+  position: sticky;
+  top: layout.$top-bar-height;
+  height: calc(100vh - #{layout.$top-bar-height});
+  box-sizing: border-box;
+  padding: 2rem 1rem;
+  overflow-y: auto;
+
+  & > :not(:first-child) {
+    margin-top: 2rem;
+  }
+}
+
+.option {
+  /* empty */
+
+  &__label {
+    @include typography.base();
+    color: var(theme.$on-background);
+  }
+
+  &__chips {
+    margin-top: 1rem;
+  }
+}
+
+.charts {
+  padding: 2rem 1rem;
+
+  & > :not(:first-child) {
+    margin-top: 2rem;
+  }
+}
+
+.dendrogram {
+  height: 30rem;
+}
+
+.feature-chart {
+  #{line-chart.$content-aspect-ratio}: 15%;
+}

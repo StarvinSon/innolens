@@ -72,17 +72,37 @@ export const writeQueryEncoder = (
       }
       case 'array': {
         const stringifyMethod = imports.addNamedImport(`@innolens/api/runtime/${runtimeType}/query-stringifier`, 'encodeQueryArray');
-        const itemVar = createVarName('item');
-        writer.write(`${tempTargetVar} = ${stringifyMethod}(${tempSrcVar}, (${itemVar}) => `).inlineBlock(() => {
-          const stringifiedItemVar = createVarName('stringifiedItem');
-          writer.writeLine(`let ${stringifiedItemVar}`);
-          writeQueryEncoder(
-            sourceFile, writer, createVarName, imports,
-            stringifiedItemVar, itemVar, schema.items,
-            runtimeType
-          );
-          writer.writeLine(`return ${stringifiedItemVar}`);
-        }).write(')');
+
+        const itemStrVar = createVarName('itemStr');
+        writer.write(`${tempTargetVar} = ${stringifyMethod}(${tempSrcVar}, `);
+        if ((Array.isArray as (val: unknown) => val is ReadonlyArray<unknown>)(schema.items)) {
+          writer.write('[').newLine();
+          for (const subSchema of schema.items) {
+            writer.write(`(${itemStrVar}) =>`).inlineBlock(() => {
+              const encodedItemVar = createVarName('encodedItem');
+              writer.writeLine(`let ${encodedItemVar}`);
+              writeQueryEncoder(
+                sourceFile, writer, createVarName, imports,
+                encodedItemVar, itemStrVar, subSchema,
+                runtimeType
+              );
+              writer.writeLine(`return ${encodedItemVar}`);
+            }).write(',');
+          }
+          writer.write(']');
+        } else {
+          writer.write(`(${itemStrVar}) =>`).inlineBlock(() => {
+            const encodedItemVar = createVarName('encodedItem');
+            writer.writeLine(`let ${encodedItemVar}`);
+            writeQueryEncoder(
+              sourceFile, writer, createVarName, imports,
+              encodedItemVar, itemStrVar, schema.items as Schema,
+              runtimeType
+            );
+            writer.writeLine(`return ${encodedItemVar}`);
+          });
+        }
+        writer.write(')');
         break;
       }
       case 'object': {

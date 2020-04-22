@@ -37,17 +37,36 @@ export const decodeQueryDate = (str: string): Date | undefined => {
   return time;
 };
 
-export const decodeQueryArray = <T>(
+type ArrayItemParser<T> = (item: string) => T | undefined;
+type ArrayItemParserTuples = ReadonlyArray<ArrayItemParser<any>>;
+
+type DecodedArray<I extends ArrayItemParser<any> | ArrayItemParserTuples> =
+  I extends ArrayItemParser<infer U> ? ReadonlyArray<U>
+    : { readonly [K in keyof I]: I[K] extends ArrayItemParser<infer U> ? U : never };
+
+export const decodeQueryArray = <I extends ArrayItemParser<any> | ArrayItemParserTuples>(
   str: string,
-  itemDecoder: (item: string) => T | undefined
-): Array<T> | undefined => {
-  if (str === '') return [];
-  const itemStrs = str.split(',');
-  const decodedItems: Array<T> = [];
-  for (const itemStr of itemStrs) {
-    const decodedItem = itemDecoder(decodeURIComponent(itemStr));
-    if (decodedItem === undefined) return undefined;
-    decodedItems.push(decodedItem);
+  itemParser: I
+): DecodedArray<I> | undefined => {
+  if (str === '') return [] as any;
+
+  const itemStrs = str.split(',').map(decodeURIComponent);
+  const decodedItems: Array<any> = [];
+
+  if (Array.isArray(itemParser)) {
+    for (let i = 0; i < itemParser.length; i += 1) {
+      if (i >= itemStrs.length) return undefined;
+      const parsedItem = itemParser[i](itemStrs[i]);
+      if (parsedItem === undefined) return undefined;
+      decodedItems.push(parsedItem);
+    }
+  } else {
+    for (let i = 0; i < itemStrs.length; i += 1) {
+      const parsedItem = (itemParser as ArrayItemParser<any>)(itemStrs[i]);
+      if (parsedItem === undefined) return undefined;
+      decodedItems.push(parsedItem);
+    }
   }
-  return decodedItems;
+
+  return decodedItems as any;
 };

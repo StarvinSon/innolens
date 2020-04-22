@@ -142,8 +142,8 @@ export class SpaceController extends FileController(SpaceControllerGlue) {
   ): Promise<void> {
     try {
       ctx.responseBodyData = await this._spaceService.getMemberCountHistory({
-        startTime: ctx.query.fromTime,
-        endTime: ctx.query.toTime,
+        fromTime: ctx.query.fromTime,
+        toTime: ctx.query.toTime,
         timeStepMs: ctx.query.timeStepMs ?? (30 * 60 * 1000),
         filter: {
           spaceIds: ctx.query.filterSpaceIds ?? null,

@@ -24,19 +24,37 @@ export const decodeJsonDate = (val: unknown): Date | undefined => {
   return undefined;
 };
 
-export const decodeJsonArray = <T>(
+type ArrayItemParser<T> = (item: unknown) => T | undefined;
+type ArrayItemParserTuples = ReadonlyArray<ArrayItemParser<any>>;
+
+type DecodedArray<I extends ArrayItemParser<any> | ArrayItemParserTuples> =
+  I extends ArrayItemParser<infer U> ? ReadonlyArray<U>
+    : { readonly [K in keyof I]: I[K] extends ArrayItemParser<infer U> ? U : never };
+
+export const decodeJsonArray = <I extends ArrayItemParser<any> | ArrayItemParserTuples>(
   val: unknown,
-  itemParser: (item: unknown) => T | undefined
-): Array<T> | undefined => {
+  itemParser: I
+): DecodedArray<I> | undefined => {
   if (!Array.isArray(val)) return undefined;
 
-  const parsedItems: Array<T> = [];
-  for (const jsonItem of val) {
-    const parsedItem = itemParser(jsonItem);
-    if (parsedItem === undefined) return undefined;
-    parsedItems.push(parsedItem);
+  const decodedItems: Array<any> = [];
+
+  if (Array.isArray(itemParser)) {
+    for (let i = 0; i < itemParser.length; i += 1) {
+      if (i >= val.length) return undefined;
+      const decodedItem = itemParser[i](val[i]);
+      if (decodedItem === undefined) return undefined;
+      decodedItems.push(decodedItem);
+    }
+  } else {
+    for (let i = 0; i < val.length; i += 1) {
+      const decodedItem = (itemParser as ArrayItemParser<any>)(val[i]);
+      if (decodedItem === undefined) return undefined;
+      decodedItems.push(decodedItem);
+    }
   }
-  return parsedItems;
+
+  return decodedItems as any;
 };
 
 type DecodedJsonType<

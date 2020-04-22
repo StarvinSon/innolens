@@ -219,7 +219,7 @@ const writeGlueFile = (
             writeJsonDecoder(
               sourceFile, writer, createVarName, imports,
               decodedDataVar, `${encodedBodyVar}.data`, endptSpec.responseBody.data.schema,
-              'web', false
+              'web', true
             );
 
             writer.write(`if (${decodedDataVar} === undefined)`).block(() => {

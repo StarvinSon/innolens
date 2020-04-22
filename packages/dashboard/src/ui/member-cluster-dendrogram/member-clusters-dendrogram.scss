@@ -1,0 +1,93 @@
+@use '../theme';
+@use '../typography';
+
+
+@mixin _title() {
+  @include typography.base();
+  font-size: 1.25rem;
+  font-weight: 400;
+}
+
+
+:host {
+  display: grid;
+  box-sizing: border-box;
+  padding-left: 2rem;
+  grid-template-areas:
+    'title title'
+    'svg cluster-labels'
+    'distance-labels .';
+  grid-template-columns: 1fr auto;
+  align-items: stretch;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.title {
+  @include _title();
+  margin: 0rem;
+  text-align: center;
+  color: var(theme.$on-background);
+}
+
+.svg {
+  grid-area: svg;
+  min-height: 0rem;
+  overflow: visible;
+}
+
+.link {
+  stroke: red;
+  stroke-width: 1;
+  fill: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.label-tick {
+  stroke: red;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.cluster-label-box {
+  grid-area: cluster-labels;
+  padding-left: 1rem;
+}
+
+.cluster-label {
+  @include typography.base();
+  display: block;
+  position: relative;
+  transform: translateY(-50%);
+  color: var(theme.$on-background);
+}
+
+.distance-label-box {
+  grid-area: distance-labels;
+  display: flex;
+  padding-top: 1rem;
+}
+
+.distance-label {
+  @include typography.base();
+  display: block;
+  position: relative;
+  transform: translateX(-50%);
+  color: var(theme.$on-background);
+}
+
+.handle-box {
+  grid-area: svg;
+  position: relative;
+}
+
+.handle {
+  position: absolute;
+  top: 0rem;
+  height: 100%;
+  width: 0.0625rem;
+  transform: translateX(-50%);
+  background-color: var(theme.$on-background);
+}

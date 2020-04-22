@@ -443,15 +443,15 @@ export class SpaceService {
 
 
   public async getMemberCountHistory(opts: {
-    readonly startTime: Date;
-    readonly endTime: Date;
+    readonly fromTime: Date;
+    readonly toTime: Date;
     readonly timeStepMs: number;
     readonly filter?: {
       readonly spaceIds?: ReadonlyArray<string> | null;
       readonly memberIds?: ReadonlyArray<string> | null;
     };
     readonly countType: SpaceCountHistoryCountType;
-    readonly groupBy: SpaceCountHistoryGroupBy | null;
+    readonly groupBy?: SpaceCountHistoryGroupBy | null;
   }): Promise<SpaceCountHistory> {
     const memberHistory = await this.getMemberHistory(opts);
     return {
@@ -466,26 +466,26 @@ export class SpaceService {
   }
 
   public async getMemberHistory(opts: {
-    readonly startTime: Date;
-    readonly endTime: Date;
+    readonly fromTime: Date;
+    readonly toTime: Date;
     readonly timeStepMs: number;
     readonly filter?: {
       readonly spaceIds?: ReadonlyArray<string> | null;
       readonly memberIds?: ReadonlyArray<string> | null;
     };
     readonly countType: SpaceCountHistoryCountType;
-    readonly groupBy: SpaceCountHistoryGroupBy | null;
+    readonly groupBy?: SpaceCountHistoryGroupBy | null;
   }): Promise<SpaceMemberHistory> {
     const {
-      startTime,
-      endTime,
+      fromTime,
+      toTime,
       timeStepMs,
       filter: {
         spaceIds: filterSpaceIds = null,
         memberIds: filterMemberIds = null
       } = {},
       countType,
-      groupBy
+      groupBy = null
     } = opts;
 
     let spaceIds: ReadonlyArray<string>;
@@ -514,8 +514,8 @@ export class SpaceService {
                 }
               },
               time: {
-                $gte: startTime,
-                $lt: endTime
+                $gte: fromTime,
+                $lt: toTime
               }
             }, {
               sort: {
@@ -538,7 +538,7 @@ export class SpaceService {
             const record = await this._memberRecordCollection.findOne({
               spaceId,
               time: {
-                $lt: startTime
+                $lt: fromTime
               }
             }, {
               sort: {
@@ -693,8 +693,8 @@ export class SpaceService {
     const records: Array<SpaceMemberHistoryRecord> = [];
     const currentMemberIds = new Map(previousMemberRecords);
     for (
-      let periodStartTime = startTime, periodEndTime = addMilliseconds(periodStartTime, timeStepMs);
-      periodStartTime < endTime;
+      let periodStartTime = fromTime, periodEndTime = addMilliseconds(periodStartTime, timeStepMs);
+      periodStartTime < toTime;
       periodStartTime = periodEndTime, periodEndTime = addMilliseconds(periodEndTime, timeStepMs)
     ) {
       const memberAccumulators = new Map(Array.from(currentMemberIds)

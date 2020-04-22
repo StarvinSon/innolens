@@ -40,6 +40,10 @@ export class MemberService {
     } = options);
   }
 
+  public async getMembers(): Promise<ReadonlyArray<Member>> {
+    return this._memberCollection.find({}).toArray();
+  }
+
   public async getDepartments(): Promise<ReadonlyArray<string>> {
     return this._memberCollection.distinct('department');
   }

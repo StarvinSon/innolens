@@ -81,16 +81,35 @@ export const writeJsonDecoder = (
       case 'array': {
         const encodeFunc = imports.addNamedImport(`@innolens/api/runtime/${runtimeType}/json-parser`, 'decodeJsonArray');
         const itemVar = createVarName('item');
-        writer.writeLine(`${resultVar} = ${encodeFunc}(${srcVar}, (${itemVar}${addLambdaParamUnknownType ? ': unknown' : ''}) => `).inlineBlock(() => {
-          const decodedItemVar = createVarName('decodedItem');
-          writer.writeLine(`let ${decodedItemVar}`);
-          writeJsonDecoder(
-            sourceFile, writer, createVarName, imports,
-            decodedItemVar, itemVar, schema.items,
-            runtimeType, addLambdaParamUnknownType
-          );
-          writer.writeLine(`return ${decodedItemVar}`);
-        }).write(')').newLine();
+        writer.write(`${resultVar} = ${encodeFunc}(${srcVar}, `);
+        if ((Array.isArray as (val: unknown) => val is ReadonlyArray<any>)(schema.items)) {
+          writer.write('[').newLine();
+          for (const subSchema of schema.items) {
+            writer.writeLine(`(${itemVar}${addLambdaParamUnknownType ? ': unknown' : ''}) => `).inlineBlock(() => {
+              const decodedItemVar = createVarName('decodedItem');
+              writer.writeLine(`let ${decodedItemVar}`);
+              writeJsonDecoder(
+                sourceFile, writer, createVarName, imports,
+                decodedItemVar, itemVar, subSchema,
+                runtimeType, addLambdaParamUnknownType
+              );
+              writer.writeLine(`return ${decodedItemVar}`);
+            }).write(',').newLine();
+          }
+          writer.write('] as const');
+        } else {
+          writer.writeLine(`(${itemVar}${addLambdaParamUnknownType ? ': unknown' : ''}) => `).inlineBlock(() => {
+            const decodedItemVar = createVarName('decodedItem');
+            writer.writeLine(`let ${decodedItemVar}`);
+            writeJsonDecoder(
+              sourceFile, writer, createVarName, imports,
+              decodedItemVar, itemVar, schema.items as Schema,
+              runtimeType, addLambdaParamUnknownType
+            );
+            writer.writeLine(`return ${decodedItemVar}`);
+          }).write(',').newLine();
+        }
+        writer.write(')').newLine();
         break;
       }
       case 'object': {

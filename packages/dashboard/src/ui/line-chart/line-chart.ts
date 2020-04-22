@@ -43,6 +43,12 @@ export class LineChart extends LitElement {
   public data: LineChartData<unknown> | null = null;
 
   @property({ attribute: false })
+  public formatLabel: ((label: any) => unknown) | null = null;
+
+  @property({ type: Boolean, attribute: 'no-legend' })
+  public noLegend = false;
+
+  @property({ attribute: false })
   public predictionData: LineChartData<unknown> | null = null;
 
   @property({ attribute: false })
@@ -334,7 +340,7 @@ export class LineChart extends LitElement {
                       style="${styleMap({
                         left: `${iToX(i) * 100}%`
                       })}">
-                      ${(data.formatLabel ?? String)(predictionData === null ? data.labels[i] : data.labels.concat(predictionData.labels)[i])}
+                      ${(data.formatLabel ?? this.formatLabel ?? String)(predictionData === null ? data.labels[i] : data.labels.concat(predictionData.labels)[i])}
                     </span>
                   `)}
               </div>
@@ -354,7 +360,7 @@ export class LineChart extends LitElement {
     return html`
       <div class="${classes.legends}">
         <div class="${classes.legends_content}">
-          ${data === null
+          ${this.noLegend || data === null
             ? []
             : data.lines.map((lineData, lineIdx) => html`
               <div class="${classes.legend}">

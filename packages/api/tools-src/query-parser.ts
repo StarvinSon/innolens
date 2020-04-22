@@ -80,16 +80,35 @@ export const writeQueryDecoder = (
       case 'array': {
         const parseMethod = imports.addNamedImport(`@innolens/api/runtime/${runtimeType}/query-parser`, 'decodeQueryArray');
         const itemStrVar = createVarName('itemStr');
-        writer.write(`${tempTargetVar} = ${parseMethod}(${tempSrcVar}, (${itemStrVar}) =>`).inlineBlock(() => {
-          const parsedItemVar = createVarName('parsedItem');
-          writer.writeLine(`let ${parsedItemVar}`);
-          writeQueryDecoder(
-            sourceFile, writer, createVarName, imports,
-            parsedItemVar, itemStrVar, schema.items,
-            runtimeType
-          );
-          writer.writeLine(`return ${parsedItemVar}`);
-        }).write(')');
+        writer.write(`${tempTargetVar} = ${parseMethod}(${tempSrcVar}, `);
+        if ((Array.isArray as (val: unknown) => val is ReadonlyArray<unknown>)(schema.items)) {
+          writer.write('[').newLine();
+          for (const subSchema of schema.items) {
+            writer.write(`(${itemStrVar}) =>`).inlineBlock(() => {
+              const decodedItemVar = createVarName('decodedItem');
+              writer.writeLine(`let ${decodedItemVar}`);
+              writeQueryDecoder(
+                sourceFile, writer, createVarName, imports,
+                decodedItemVar, itemStrVar, subSchema,
+                runtimeType
+              );
+              writer.writeLine(`return ${decodedItemVar}`);
+            }).write(',');
+          }
+          writer.write('] as const');
+        } else {
+          writer.write(`(${itemStrVar}) =>`).inlineBlock(() => {
+            const decodedItemVar = createVarName('decodedItem');
+            writer.writeLine(`let ${decodedItemVar}`);
+            writeQueryDecoder(
+              sourceFile, writer, createVarName, imports,
+              decodedItemVar, itemStrVar, schema.items as Schema,
+              runtimeType
+            );
+            writer.writeLine(`return ${decodedItemVar}`);
+          });
+        }
+        writer.write(')');
         break;
       }
       case 'object': {

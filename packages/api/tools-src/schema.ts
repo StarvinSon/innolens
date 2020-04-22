@@ -9,7 +9,7 @@ export type Schema = {
   readonly enum: ReadonlyArray<string | number | boolean>;
 } | {
   readonly type: 'array';
-  readonly items: Schema
+  readonly items: Schema | ReadonlyArray<Schema>;
 } | {
   readonly type: 'object';
   readonly required?: ReadonlyArray<string>;
@@ -75,12 +75,24 @@ export const writeSchemaType = (
       break;
     }
     case 'array': {
-      writer.write('ReadonlyArray<');
-      writeSchemaType(
-        sourceFile, writer, imports,
-        schema.items
-      );
-      writer.write('>');
+      if ((Array.isArray as (val: unknown) => val is ReadonlyArray<any>)(schema.items)) {
+        writer.write('readonly [');
+        for (const subSchema of schema.items) {
+          writeSchemaType(
+            sourceFile, writer, imports,
+            subSchema
+          );
+          writer.write(', ');
+        }
+        writer.write(']');
+      } else {
+        writer.write('ReadonlyArray<');
+        writeSchemaType(
+          sourceFile, writer, imports,
+          schema.items
+        );
+        writer.write('>');
+      }
       break;
     }
     case 'object': {

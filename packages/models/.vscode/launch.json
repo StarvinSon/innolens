@@ -29,6 +29,15 @@
         "--log-dir", "${workspaceFolder}/logs/history_forecast",
         "--ui"
       ]
+    },
+    {
+      "name": "History Clustering Server",
+      "type": "python",
+      "request": "launch",
+      "module": "innolens_models",
+      "args": [
+        "history_cluster", "serve"
+      ]
     }
   ]
 }

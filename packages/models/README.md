@@ -59,6 +59,13 @@ python -m innolens_models access_record evaluate --model-dir ./tensorflow_models
 python -m innolens_models user_count evaluate --model-dir ./tensorflow_models/user_count_dnn_0 --data ./preprocessed/inno_wing_user_count_evaluation.csv --category-length ./preprocessed/inno_wing_user_count_category.csv --prediction ./access_user_count_prediction.csv
 ```
 
+
+## 3.1. Server
+
+```shell
+python -m innolens_models history_cluster serve
+```
+
 ## 4. Notes
 
 ## 4.1. File path
@@ -74,3 +81,7 @@ Use TensorBoard to monitor the training process.
 
 tensorboard --logdir ./tensorflow_models
 ```
+
+## 5. Related Tutorials
+
+- https://joernhees.de/blog/2015/08/26/scipy-hierarchical-clustering-and-dendrogram-tutorial/

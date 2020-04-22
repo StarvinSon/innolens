@@ -56,6 +56,18 @@ export const pageEntries: ReadonlyArray<PageEntry | PageGroupEntry> = [
           );
         },
         tagName: 'inno-members-groups-page'
+      },
+      {
+        type: 'pageEntry',
+        name: 'Cluster',
+        href: '/members/clusters',
+        load: async () => {
+          await import(
+            /* webpackChunkName: 'member-clusters-page' */
+            './member-clusters-page'
+          );
+        },
+        tagName: 'inno-member-clusters-page'
       }
     ]
   },

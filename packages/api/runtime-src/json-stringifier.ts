@@ -25,17 +25,28 @@ export const encodeJsonDate = (val: unknown): string | undefined =>
 
 export const encodeJsonArray = (
   val: unknown,
-  itemEncoder: (item: unknown) => unknown
+  itemEncoder: ((item: unknown) => unknown) | ReadonlyArray<(item: unknown) => unknown>
 ): Array<unknown> | undefined => {
   if (!Array.isArray(val)) return undefined;
 
-  const jsonItems: Array<unknown> = [];
-  for (const item of val) {
-    const jsonItem = itemEncoder(item);
-    if (jsonItem === undefined) return undefined;
-    jsonItems.push(jsonItem);
+  const encodedItems: Array<unknown> = [];
+
+  if (Array.isArray(itemEncoder)) {
+    for (let i = 0; i < itemEncoder.length; i += 1) {
+      if (i >= val.length) return undefined;
+      const encodedItem = itemEncoder[i](val[i]);
+      if (encodedItem === undefined) return undefined;
+      encodedItems.push(encodedItem);
+    }
+  } else {
+    for (let i = 0; i < val.length; i += 1) {
+      const encodedItem = (itemEncoder as (item: unknown) => unknown)(val[i]);
+      if (encodedItem === undefined) return undefined;
+      encodedItems.push(encodedItem);
+    }
   }
-  return jsonItems;
+
+  return encodedItems;
 };
 
 export const encodeJsonObject = (
