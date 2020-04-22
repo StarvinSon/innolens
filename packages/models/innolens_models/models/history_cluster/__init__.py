@@ -5,8 +5,6 @@ from typing_extensions import Final
 
 from ...cli import Cli
 
-from .server import create_app
-
 class HistoryClusterCli(Cli):
   name: Final[str] = 'history_cluster'
 
@@ -46,5 +44,6 @@ class HistoryClusterModelServerCli(Cli):
     port: int = args.port
     debug: bool = args.debug
 
+    from .server import create_app
     app = create_app()
     app.run(port=port, debug=debug)

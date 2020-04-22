@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from argparse import ArgumentParser
 
-from .models.access_record import AccessRecordCli
-from .models.user_count import UserCountCli
+# from .models.access_record import AccessRecordCli
+# from .models.user_count import UserCountCli
 from .models.history_forecast import HistoryForecastCli
 from .models.history_cluster import HistoryClusterCli
 
@@ -18,8 +18,8 @@ subparsers = parser.add_subparsers(
   dest='model_name'
 )
 for sub_cli in (
-  AccessRecordCli(),
-  UserCountCli(),
+  # AccessRecordCli(),
+  # UserCountCli(),
   HistoryForecastCli(),
   HistoryClusterCli()
 ):

@@ -5,7 +5,7 @@ import { addMilliseconds } from 'date-fns';
 import fetch from 'node-fetch';
 
 import { MemberService } from './member';
-import { SpaceService, SpaceMemberHistory } from './space';
+import { SpaceService } from './space';
 
 
 export interface MemberActivityHistory {
@@ -76,20 +76,17 @@ export class MemberClusterService {
     }
 
     const spaceIds = (await this._spaceService.getSpaces()).map((space) => space.spaceId);
-    // eslint-disable-next-line max-len
-    const spaceMemberHistorys = new Map(await Promise.all(spaceIds.map(async (spaceId): Promise<[string, SpaceMemberHistory]> => {
-      const memberHistory = await this._spaceService.getMemberHistory({
-        fromTime,
-        toTime,
-        timeStepMs,
-        filter: {
-          spaceIds: [spaceId],
-          memberIds
-        },
-        countType: 'uniqueStay'
-      });
-      return [spaceId, memberHistory];
-    })));
+    const spaceMemberHistory = await this._spaceService.getMemberHistory({
+      fromTime,
+      toTime,
+      timeStepMs,
+      filter: {
+        spaceIds,
+        memberIds
+      },
+      countType: 'uniqueStay',
+      groupBy: 'space'
+    });
 
     const timeSpans: Array<MemberActivityHistory['timeSpans'][number]> = [];
     const values =
@@ -111,10 +108,8 @@ export class MemberClusterService {
       timeSpans.push([periodStartTime, periodEndTime]);
       for (const memberId of memberIds) {
         for (const spaceId of spaceIds) {
-          const spaceMemberHistory = spaceMemberHistorys.get(spaceId)!;
           values[memberId][spaceId].push(
-            spaceMemberHistory
-              .records[i].groups[spaceMemberHistory.groups[0]].includes(memberId) ? 1 : 0
+            spaceMemberHistory.values[spaceId][i].includes(memberId) ? 1 : 0
           );
         }
       }

@@ -41,6 +41,7 @@ query:
         - studyProgramme
         - yearOfStudy
         - affiliatedStudentInterestGroup
+        - space
 
 authentication:
   type: bearer

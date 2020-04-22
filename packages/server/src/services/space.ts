@@ -40,7 +40,7 @@ export interface SpaceCountValues {
 }
 
 
-export type SpaceCountHistoryGroupBy = SpaceCountGroupBy;
+export type SpaceCountHistoryGroupBy = SpaceCountGroupBy | 'space';
 
 export type SpaceCountHistoryCountType =
   'enter'
@@ -68,17 +68,10 @@ export interface SpaceCountRecordValues {
 
 export interface SpaceMemberHistory {
   readonly groups: ReadonlyArray<string>;
-  readonly records: ReadonlyArray<SpaceMemberHistoryRecord>;
-}
-
-export interface SpaceMemberHistoryRecord {
-  readonly startTime: Date;
-  readonly endTime: Date;
-  readonly groups: SpaceMemberHistoryRecordGroups;
-}
-
-export interface SpaceMemberHistoryRecordGroups {
-  readonly [group: string]: ReadonlyArray<string>;
+  readonly timeSpans: ReadonlyArray<readonly [Date, Date]>;
+  readonly values: {
+    readonly [group: string]: ReadonlyArray<ReadonlyArray<string>>;
+  };
 }
 
 
@@ -456,11 +449,11 @@ export class SpaceService {
     const memberHistory = await this.getMemberHistory(opts);
     return {
       groups: memberHistory.groups,
-      records: memberHistory.records.map((record) => ({
-        startTime: record.startTime,
-        endTime: record.endTime,
-        counts: Object.fromEntries(Object.entries(record.groups)
-          .map(([group, memberIds]) => [group, memberIds.length]))
+      records: memberHistory.timeSpans.map(([startTime, endTime], i) => ({
+        startTime,
+        endTime,
+        counts: Object.fromEntries(memberHistory.groups.map((group): [string, number] =>
+          [group, memberHistory.values[group][i].length]))
       }))
     };
   }
@@ -643,7 +636,7 @@ export class SpaceService {
     // Create group filters
     let groupFilters: ReadonlyArray<{
       readonly name: string;
-      readonly filter: (memberId: string) => boolean;
+      readonly filter: (spaceId: string, memberId: string) => boolean;
     }>;
     switch (groupBy) {
       case null: {
@@ -661,7 +654,14 @@ export class SpaceService {
         const groupNames = Array.from(new Set(memberList.map((m) => m[groupBy])));
         groupFilters = groupNames.map((groupName) => ({
           name: groupName,
-          filter: (memberId) => memberMap.get(memberId)?.[groupBy] === groupName
+          filter: (_, memberId) => memberMap.get(memberId)?.[groupBy] === groupName
+        }));
+        break;
+      }
+      case 'space': {
+        groupFilters = spaceIds.map((spaceId) => ({
+          name: spaceId,
+          filter: (sId) => sId === spaceId
         }));
         break;
       }
@@ -689,8 +689,12 @@ export class SpaceService {
       }
     }
 
+    const groups = groupFilters.map((g) => g.name);
+    const timeSpans: Array<readonly [Date, Date]> = [];
+    const values = Object.fromEntries(groups.map((group): [string, Array<ReadonlyArray<string>>] =>
+      [group, []]));
+
     let i = 0;
-    const records: Array<SpaceMemberHistoryRecord> = [];
     const currentMemberIds = new Map(previousMemberRecords);
     for (
       let periodStartTime = fromTime, periodEndTime = addMilliseconds(periodStartTime, timeStepMs);
@@ -712,24 +716,20 @@ export class SpaceService {
         i += 1;
       }
 
-      const groups: Record<string, ReadonlyArray<string>> = {};
+      timeSpans.push([periodStartTime, periodEndTime]);
       for (const groupFilter of groupFilters) {
-        const groupMemberIds = Array.from(memberAccumulators.values())
-          .flatMap((a) => a.get())
-          .filter((id) => groupFilter.filter(id));
-        groups[groupFilter.name] = reduceAccumulatedCount(groupMemberIds);
+        const groupMemberIds = Array.from(memberAccumulators.entries())
+          .flatMap(([spaceId, a]) => a.get().map((mId): [string, string] => [spaceId, mId]))
+          .filter(([spaceId, mId]) => groupFilter.filter(spaceId, mId))
+          .map(([, mId]) => mId);
+        values[groupFilter.name].push(reduceAccumulatedCount(groupMemberIds));
       }
-
-      records.push({
-        startTime: periodStartTime,
-        endTime: periodEndTime,
-        groups
-      });
     }
 
     return {
-      groups: groupFilters.map((g) => g.name),
-      records
+      groups,
+      timeSpans,
+      values
     };
   }
 }
