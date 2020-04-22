@@ -9,6 +9,10 @@ import * as ExpendableInventoryGlue from './glues/expendable-inventory';
 import { OAuth2Service } from './oauth2';
 
 
+export const expendableInventoryTypeCapacity: Readonly<Record<string, number>> = {
+  wood_plank: 100
+};
+
 export interface ExpendableInventoryType {
   readonly typeId: string;
   readonly typeName: string;

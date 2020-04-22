@@ -1,0 +1,63 @@
+@use '../layout';
+@use '../theme';
+@use '../typography';
+
+
+@mixin _title() {
+  @include typography.base();
+  font-size: 2rem;
+  font-weight: 400;
+}
+
+@mixin _percentage() {
+  @include typography.base();
+  font-size: 3rem;
+  font-weight: 400;
+}
+
+:host {
+  display: block;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.content {
+  box-sizing: border-box;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: layout.$max-width;
+  padding: 1rem;
+}
+
+.availability-bar {
+  margin: 3rem 0
+}
+
+.progress {
+  height: 6rem;
+  padding: 0.5rem;
+  border: 0.5rem solid var(theme.$carousel-indicator-inactive);
+  border-radius: 2rem;
+  background-color: white;
+  margin: 3rem 3rem 1rem;
+}
+
+.progress-bar {
+  border-radius: 1rem;
+}
+
+.percentage-text {
+  @include _percentage();
+  margin: 0;
+  color: var(theme.$secondary-text);
+  text-align: center;
+}
+
+.title-text {
+  @include _title();
+  margin: 0;
+  color: var(theme.$secondary-text);
+  text-align: center;
+}

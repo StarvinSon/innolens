@@ -9,12 +9,16 @@ import '../theme';
 import '../user-current-page';
 import '../user-current-week-page';
 import '../user-example-page';
+import '../user-expendable-inventories-page';
 import '../user-heatmap-page';
 import '../user-machines-page';
 import '../user-registered-page';
+import '../user-reusable-inventories-page';
 import '../user-spaces-page';
+import { ExpendableInventoryService, ExpendableInventoryType } from '../../services/expendable-inventory';
 import { MachineService, MachineType } from '../../services/machine';
 import { MemberService } from '../../services/member';
+import { ReusableInventoryService, ReusableInventoryType } from '../../services/reusable-inventory';
 import { SpaceService, Space } from '../../services/space';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
@@ -47,6 +51,14 @@ export class UserPages extends LitElement {
   @observeProperty('_onDependencyInjected')
   public machineService: MachineService | null = null;
 
+  @injectableProperty(ReusableInventoryService)
+  @observeProperty('_onDependencyInjected')
+  public reusableInventoryService: ReusableInventoryService | null = null;
+
+  @injectableProperty(ExpendableInventoryService)
+  @observeProperty('_onDependencyInjected')
+  public expendableInventoryService: ExpendableInventoryService | null = null;
+
   @property({ attribute: false })
   public interactable = false;
 
@@ -62,9 +74,26 @@ export class UserPages extends LitElement {
   @property({ attribute: false })
   private _machineTypeGroups: ReadonlyArray<ReadonlyArray<MachineType>> = [];
 
+  @property({ attribute: false })
+  private _reusableInventoryTypes: ReadonlyArray<ReusableInventoryType> | null = null;
+
+  @property({ attribute: false })
+  private _reusableInventoryTypeGroups: ReadonlyArray<ReadonlyArray<ReusableInventoryType>> = [];
+
+  @property({ attribute: false })
+  private _expendableInventoryTypes: ReadonlyArray<ExpendableInventoryType> | null = null;
+
+  @property({ attribute: false })
+  private _expendableInventoryTypeGroups: ReadonlyArray<ReadonlyArray<ExpendableInventoryType>>
+  = [];
+
   private _spaceFetched = false;
 
   private _machineTypeFetched = false;
+
+  private _reusableInventoryTypeFetched = false;
+
+  private _expendableInventoryTypeFetched = false;
 
 
   private _onDependencyInjected(): void {
@@ -117,6 +146,42 @@ export class UserPages extends LitElement {
       this._machineTypeFetched = true;
     }
 
+    if (this.reusableInventoryService !== null && !this._reusableInventoryTypeFetched) {
+      this.reusableInventoryService.updateTypes().then((data) => {
+        this._reusableInventoryTypes = data;
+        this._reusableInventoryTypeGroups = this._reusableInventoryTypes.reduce(
+          (groups: Array<Array<ReusableInventoryType>>, reusableInventoryType, i) => {
+            if (i % 3 === 0) {
+              groups.push([reusableInventoryType]);
+            } else {
+              groups[Math.floor(i / 3)].push(reusableInventoryType);
+            }
+            return groups;
+          },
+          []
+        );
+      });
+      this._reusableInventoryTypeFetched = true;
+    }
+
+    if (this.expendableInventoryService !== null && !this._expendableInventoryTypeFetched) {
+      this.expendableInventoryService.updateTypes().then((data) => {
+        this._expendableInventoryTypes = data;
+        this._expendableInventoryTypeGroups = this._expendableInventoryTypes.reduce(
+          (groups: Array<Array<ExpendableInventoryType>>, expendableInventoryType, i) => {
+            if (i % 3 === 0) {
+              groups.push([expendableInventoryType]);
+            } else {
+              groups[Math.floor(i / 3)].push(expendableInventoryType);
+            }
+            return groups;
+          },
+          []
+        );
+      });
+      this._expendableInventoryTypeFetched = true;
+    }
+
     super.update(changedProps);
   }
 
@@ -130,7 +195,14 @@ export class UserPages extends LitElement {
           <bs-carousel-indicator class="${classes.indicator}" index="2"></bs-carousel-indicator>
           <bs-carousel-indicator class="${classes.indicator}" index="3"></bs-carousel-indicator>
           <bs-carousel-indicator class="${classes.indicator}" index="4"></bs-carousel-indicator>
-          ${[...Array(this._spaceGroups.length + this._machineTypeGroups.length)].map(
+          ${[
+            ...Array(
+              this._spaceGroups.length
+              + this._machineTypeGroups.length
+              + this._reusableInventoryTypeGroups.length
+              + this._expendableInventoryTypeGroups.length
+            )
+          ].map(
             (_, i) => html`
               <bs-carousel-indicator
                 class="${classes.indicator}"
@@ -193,6 +265,28 @@ export class UserPages extends LitElement {
                 .machineService="${this.machineService}"
                 .machineTypes="${group}"
               ></inno-user-machines-page>
+            </bs-carousel-item>
+          `
+        )}
+        ${this._reusableInventoryTypeGroups.map(
+          (group) => html`
+            <bs-carousel-item class="${classes.carouselItem}">
+              <inno-user-reusable-inventories-page
+                class="${classes.page}"
+                .reusableInventoryService="${this.reusableInventoryService}"
+                .reusableInventoryTypes="${group}"
+              ></inno-user-reusable-inventories-page>
+            </bs-carousel-item>
+          `
+        )}
+        ${this._expendableInventoryTypeGroups.map(
+          (group) => html`
+            <bs-carousel-item class="${classes.carouselItem}">
+              <inno-user-expendable-inventories-page
+                class="${classes.page}"
+                .expendableInventoryService="${this.expendableInventoryService}"
+                .expendableInventoryTypes="${group}"
+              ></inno-user-expendable-inventories-page>
             </bs-carousel-item>
           `
         )}

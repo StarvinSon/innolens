@@ -24,6 +24,7 @@
     "@innolens/api": "*",
     "@innolens/resolver": "*",
     "@lit-element-bootstrap/carousel": "^1.0.0-alpha.2",
+    "@lit-element-bootstrap/progress": "^1.0.0-alpha.2",
     "core-js": "^3.6.5",
     "d3-array": "^2.4.0",
     "d3-scale": "^3.2.1",
