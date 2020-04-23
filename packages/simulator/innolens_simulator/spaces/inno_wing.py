@@ -27,6 +27,10 @@ from .workshop_7 import Workshop7
 from .workshop_8 import Workshop8
 from .workshop_9 import Workshop9
 
+from ..machines.three_d_printer import ThreeDPrinter
+from ..machines.three_d_scanner import ThreeDScanner
+from ..machines.computer import Computer
+
 
 class InnoWing(Space):
   space_id = 'inno_wing'
@@ -63,3 +67,44 @@ class InnoWing(Space):
       space_obj = self.engine.create_object()
       space_obj.add_component(space_class)
       self.attached_object.add_object(space_obj)
+
+    self.__add_three_d_printers()
+    self.__add_three_d_scanners()
+    self.__add_computers()
+
+  def __add_three_d_printers(self) -> None:
+    for i in range(3):
+      machine_obj = self.engine.create_object()
+      machine = machine_obj.add_component(ThreeDPrinter)
+      machine.instance_id = f'ultimaker_3_extended_3D_printer_{i}'
+      machine.instance_name = f'Ultimaker 3 Extended 3D Printer {i}'
+      self.attached_object.add_object(machine_obj)
+
+    for i in range(2):
+      machine_obj = self.engine.create_object()
+      machine = machine_obj.add_component(ThreeDPrinter)
+      machine.instance_id = f'raise_3d_pro_+_3d_printer_{i}'
+      machine.instance_name = f'Raise 3D PRO+ 3D Printer {i}'
+      self.attached_object.add_object(machine_obj)
+
+  def __add_three_d_scanners(self) -> None:
+    for i in range(1):
+      machine_obj = self.engine.create_object()
+      machine = machine_obj.add_component(ThreeDScanner)
+      machine.instance_id = str(i)
+      self.attached_object.add_object(machine_obj)
+
+  def __add_computers(self) -> None:
+    for i in range(2):
+      machine_obj = self.engine.create_object()
+      machine = machine_obj.add_component(Computer)
+      machine.instance_id = f'three_d_printing_area_{i}'
+      machine.instance_name = f'3D Printing Area Computer {i}'
+      self.attached_object.add_object(machine_obj)
+
+    for i in range(6):
+      machine_obj = self.engine.create_object()
+      machine = machine_obj.add_component(Computer)
+      machine.instance_id = f'assembling_area_1_{i}'
+      machine.instance_name = f'Assembling Area 1 Computer {i}'
+      self.attached_object.add_object(machine_obj)

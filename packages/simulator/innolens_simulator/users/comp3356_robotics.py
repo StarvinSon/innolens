@@ -5,15 +5,30 @@ from typing import List, Optional, Tuple
 
 from ..engine.component import Component
 from ..engine.object import Object
+
 from ..users.member import Member
+
+from ..spaces.space import Space
 from ..spaces.inno_wing import InnoWing
-from ..spaces.machine_room import MachineRoom
+from ..spaces.common_makerspace_area_1 import CommonMakerspaceArea1
+from ..spaces.electronic_workbenches import ElectronicWorkbenches
 from ..spaces.laser_cutting_room import LaserCuttingRoom
-from ..machines.waterjet_cutting_machine import WaterjetCuttingMachine
+from ..spaces.machine_room import MachineRoom
+
+from ..machines import Machine
+from ..machines.soldering_station import SolderingStation
+from ..machines.laser_cut_machine import LaserCutMachine
 from ..machines.cnc_milling_machine import CNCMillingMachine
-from ..machines.acrylic_laser_cut_machine import AcrylicLaserCutMachine
-from ..machines.metal_laser_cut_machine import MetalLaserCutMachine
+from ..machines.waterjet_cutting_machine import WaterjetCuttingMachine
+
+from ..reusable_inventories import ReusableInventory
+from ..reusable_inventories.dc_power_supply import DcPowerSupply
+from ..reusable_inventories.hand_tool import HandTool
+from ..reusable_inventories.measuring_tool import MeasuringTool
+from ..reusable_inventories.saw import Saw
+
 from ..expendable_inventories.wood_plank import WoodPlank
+
 from ..utils.random.int import randint_nd
 
 
@@ -21,14 +36,23 @@ class COMP3356RoboticsMember(Component):
   __member: Member
 
   __inno_wing: InnoWing
-
-  __machine_room: MachineRoom
-  __waterjet_cutting_machine: WaterjetCuttingMachine
-  __cnc_milling_machine: CNCMillingMachine
-
+  __common_makerspace_area_1: CommonMakerspaceArea1
+  __electronic_workbenches: ElectronicWorkbenches
   __laser_cutting_room: LaserCuttingRoom
-  __acrylic_laser_cut_machine: AcrylicLaserCutMachine
-  __metal_laser_cut_machine: MetalLaserCutMachine
+  __machine_room: MachineRoom
+  __spaces: List[Space]
+
+  __soldering_station: SolderingStation
+  __laser_cut_machine: LaserCutMachine
+  __cnc_milling_machine: CNCMillingMachine
+  __waterjet_cutting_machine: WaterjetCuttingMachine
+  __machines: List[Machine]
+
+  __dc_power_supply: DcPowerSupply
+  __hand_tool: HandTool
+  __measuring_tool: MeasuringTool
+  __saw: Saw
+  __reusable_inventories: List[ReusableInventory]
 
   __acquire_successful: List[str]
 
@@ -50,29 +74,59 @@ class COMP3356RoboticsMember(Component):
     assert inno_wing is not None
     self.__inno_wing = inno_wing
 
-    machine_room = inno_wing.attached_object.find_component(MachineRoom, recursive=True)
-    assert machine_room is not None
-    self.__machine_room = machine_room
+    common_makerspace_area_1 = inno_wing.attached_object.find_component(CommonMakerspaceArea1, recursive=True)
+    assert common_makerspace_area_1 is not None
+    self.__common_makerspace_area_1 = common_makerspace_area_1
 
-    waterjet_cutting_machine = machine_room.attached_object.find_component(WaterjetCuttingMachine, recursive=True)
-    assert waterjet_cutting_machine is not None
-    self.__waterjet_cutting_machine = waterjet_cutting_machine
-
-    cnc_milling_machine = machine_room.attached_object.find_component(CNCMillingMachine, recursive=True)
-    assert cnc_milling_machine is not None
-    self.__cnc_milling_machine = cnc_milling_machine
+    electronic_workbenches = inno_wing.attached_object.find_component(ElectronicWorkbenches, recursive=True)
+    assert electronic_workbenches is not None
+    self.__electronic_workbenches = electronic_workbenches
 
     laser_cutting_room = inno_wing.attached_object.find_component(LaserCuttingRoom, recursive=True)
     assert laser_cutting_room is not None
     self.__laser_cutting_room = laser_cutting_room
 
-    acrylic_laser_cut_machine = laser_cutting_room.attached_object.find_component(AcrylicLaserCutMachine, recursive=True)
-    assert acrylic_laser_cut_machine is not None
-    self.__acrylic_laser_cut_machine = acrylic_laser_cut_machine
+    machine_room = inno_wing.attached_object.find_component(MachineRoom, recursive=True)
+    assert machine_room is not None
+    self.__machine_room = machine_room
 
-    metal_laser_cut_machine = laser_cutting_room.attached_object.find_component(MetalLaserCutMachine, recursive=True)
-    assert metal_laser_cut_machine is not None
-    self.__metal_laser_cut_machine = metal_laser_cut_machine
+    self.__spaces = [common_makerspace_area_1, electronic_workbenches, laser_cutting_room, machine_room]
+
+    soldering_station = electronic_workbenches.attached_object.find_component(SolderingStation, recursive=True)
+    assert soldering_station is not None
+    self.__soldering_station = soldering_station
+
+    laser_cut_machine = laser_cutting_room.attached_object.find_component(LaserCutMachine, recursive=True)
+    assert laser_cut_machine is not None
+    self.__laser_cut_machine = laser_cut_machine
+
+    cnc_milling_machine = machine_room.attached_object.find_component(CNCMillingMachine, recursive=True)
+    assert cnc_milling_machine is not None
+    self.__cnc_milling_machine = cnc_milling_machine
+
+    waterjet_cutting_machine = machine_room.attached_object.find_component(WaterjetCuttingMachine, recursive=True)
+    assert waterjet_cutting_machine is not None
+    self.__waterjet_cutting_machine = waterjet_cutting_machine
+
+    self.__machines = [soldering_station, laser_cut_machine, cnc_milling_machine, waterjet_cutting_machine]
+
+    dc_power_supply = electronic_workbenches.attached_object.find_component(DcPowerSupply, recursive=True)
+    assert dc_power_supply is not None
+    self.__dc_power_supply = dc_power_supply
+
+    hand_tool = machine_room.attached_object.find_component(HandTool, recursive=True)
+    assert hand_tool is not None
+    self.__hand_tool = hand_tool
+
+    measuring_tool = machine_room.attached_object.find_component(MeasuringTool, recursive=True)
+    assert measuring_tool is not None
+    self.__measuring_tool = measuring_tool
+
+    saw = machine_room.attached_object.find_component(Saw, recursive=True)
+    assert saw is not None
+    self.__saw = saw
+
+    self.__reusable_inventories = [dc_power_supply, hand_tool, measuring_tool, saw]
 
     wood_plank = machine_room.attached_object.find_component(WoodPlank, recursive=True)
     assert wood_plank is not None
@@ -119,19 +173,17 @@ class COMP3356RoboticsMember(Component):
   def __on_activity_start(self) -> None:
     for space in (
       self.__inno_wing,
-      self.__machine_room,
-      self.__laser_cutting_room
+      *self.__spaces,
     ):
       space.enter(self.__member)
-    for machine in (
-      self.__waterjet_cutting_machine,
-      self.__cnc_milling_machine,
-      self.__acrylic_laser_cut_machine,
-      self.__metal_laser_cut_machine
-    ):
+    for machine in self.__machines:
       if not machine.in_use:
         self.__acquire_successful.append(machine.instance_id)
         machine.acquire(self.__member)
+    for reusable_inventory in self.__reusable_inventories:
+      if not reusable_inventory.in_use:
+        self.__acquire_successful.append(reusable_inventory.instance_id)
+        reusable_inventory.acquire(self.__member)
     for expendable_inventory in (
       self.__wood_plank,
     ):
@@ -140,15 +192,14 @@ class COMP3356RoboticsMember(Component):
         expendable_inventory.acquire(self.__member, quantity)
 
   def __on_activity_end(self) -> None:
-    for machine in (
-      self.__waterjet_cutting_machine,
-      self.__cnc_milling_machine,
-      self.__acrylic_laser_cut_machine,
-      self.__metal_laser_cut_machine
-    ):
+    for machine in self.__machines:
       if machine.instance_id in self.__acquire_successful:
         machine.release(self.__member)
         self.__acquire_successful.remove(machine.instance_id)
+    for reusable_inventory in self.__reusable_inventories:
+      if reusable_inventory.instance_id in self.__acquire_successful:
+        reusable_inventory.release(self.__member)
+        self.__acquire_successful.remove(reusable_inventory.instance_id)
     for space in (
       self.__machine_room,
       self.__laser_cutting_room,
