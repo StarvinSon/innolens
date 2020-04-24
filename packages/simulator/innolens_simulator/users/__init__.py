@@ -30,7 +30,7 @@ def add_inno_lens_members(container: Object) -> None:
       affiliated_student_interest_groups_choices=['Project InnoLens and InnoIris (Supervisor: Dr. C.K. Chui [CS])'],
       membership_start_time=randtime_nd(
         lower=datetime(2019, 10, 1, tzinfo=hk_timezone),
-        upper=datetime(2020, 10, 14, tzinfo=hk_timezone),
+        upper=datetime(2019, 10, 14, tzinfo=hk_timezone),
         step=timedelta(days=1),
         mean=datetime(2019, 10, 7, tzinfo=hk_timezone),
         stddev=timedelta(days=2)

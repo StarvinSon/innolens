@@ -14,6 +14,7 @@ from ..spaces.inno_wing import InnoWing
 from ..spaces.ar_vr_room import ArVrRoom
 from ..spaces.machine_room import MachineRoom
 from ..spaces.workshop_1 import Workshop1
+from ..spaces.event_hall_a import EventHallA
 
 from ..machines import Machine
 from ..machines.three_d_printer import ThreeDPrinter
@@ -38,6 +39,7 @@ class InnoLensMember(Component):
   __ar_vr_room: ArVrRoom
   __machine_room: MachineRoom
   __workshop_1: Workshop1
+  __event_hall_a: EventHallA
   __spaces: List[Space]
 
   __drilling_machine: DrillingMachine
@@ -89,6 +91,10 @@ class InnoLensMember(Component):
     assert workshop_1 is not None
     self.__workshop_1 = workshop_1
 
+    event_hall_a = self.engine.world.find_component(EventHallA, recursive=True)
+    assert event_hall_a is not None
+    self.__event_hall_a = event_hall_a
+
     self.__spaces = [ar_vr_room, machine_room, workshop_1]
 
     three_d_printer = inno_wing.attached_object.find_component(ThreeDPrinter, recursive=True)
@@ -130,11 +136,20 @@ class InnoLensMember(Component):
         time_equals(shifted_time, weekday=0, hour=10, minute=0) # Mon 10:00
         or time_equals(shifted_time, weekday=1, hour=11, minute=0) # Tue 11:00
         or time_equals(shifted_time, weekday=2, hour=12, minute=0) # Wed 12:00
-        or time_equals(shifted_time, weekday=3, hour=13, minute=0) # Wed 13:00
+        or time_equals(shifted_time, weekday=3, hour=13, minute=0) # Thr 13:00
         or time_equals(shifted_time, weekday=4, hour=14, minute=0) # Fri 14:00
       )
     ):
       span = randint_nd(lower=5 * 60, upper=7 * 60 + 30, step=30, mean=6 * 60, stddev=60)
+      return current_time + timedelta(minutes=span)
+
+    if (
+      self.__member.membership_start_time <= current_time
+      and (
+        time_equals(current_time, weekday=0, hour=18, minute=30) # Mon 18:30
+      )
+    ):
+      span = 120
       return current_time + timedelta(minutes=span)
     return None
 
@@ -145,52 +160,62 @@ class InnoLensMember(Component):
     )
 
   def __on_schedule_start(self) -> None:
+    current_time = self.engine.clock.current_time
     self.__inno_wing.enter(self.__member)
-    magicNumber = random.randint(0, 3)
-
-    if magicNumber != 3:
-      self.__spaces[magicNumber].enter(self.__member)
-      self.__entered_space = self.__spaces[magicNumber]
+    if (time_equals(current_time, weekday=0, hour=18, minute=30)):
+      self.__event_hall_a.enter(self.__member)
     else:
-      self.__entered_space = self.__inno_wing
+      magicNumber = random.randint(0, 3)
 
-    if magicNumber == 0:
-      if not self.__movable_ar_vr_development_station.in_use:
-        self.__acquire_successful.append(self.__movable_ar_vr_development_station.instance_id)
-        self.__movable_ar_vr_development_station.acquire(self.__member)
-    elif magicNumber == 1:
-      if not self.__drilling_machine.in_use:
-        self.__acquire_successful.append(self.__drilling_machine.instance_id)
-        self.__drilling_machine.acquire(self.__member)
+      if magicNumber != 3:
+        self.__spaces[magicNumber].enter(self.__member)
+        self.__entered_space = self.__spaces[magicNumber]
+      else:
+        self.__entered_space = self.__inno_wing
 
-        magicNumber2 = random.randint(0, 2)
-        if magicNumber2 == 0:
-          if not self.__drill.in_use:
-            self.__acquire_successful.append(self.__drill.instance_id)
-            self.__drill.acquire(self.__member)
-        elif magicNumber2 == 1:
-          if not self.__saw.in_use:
-            self.__acquire_successful.append(self.__saw.instance_id)
-            self.__saw.acquire(self.__member)
-        elif magicNumber2 == 2:
-          if not self.__grinder.in_use:
-            self.__acquire_successful.append(self.__grinder.instance_id)
-            self.__grinder.acquire(self.__member)
-    elif magicNumber == 3:
-      if not self.__three_d_printer.in_use:
-        self.__acquire_successful.append(self.__three_d_printer.instance_id)
-        self.__three_d_printer.acquire(self.__member)
+      if magicNumber == 0:
+        if not self.__movable_ar_vr_development_station.in_use:
+          self.__acquire_successful.append(self.__movable_ar_vr_development_station.instance_id)
+          self.__movable_ar_vr_development_station.acquire(self.__member)
+      elif magicNumber == 1:
+        if not self.__drilling_machine.in_use:
+          self.__acquire_successful.append(self.__drilling_machine.instance_id)
+          self.__drilling_machine.acquire(self.__member)
+
+          magicNumber2 = random.randint(0, 2)
+          if magicNumber2 == 0:
+            if not self.__drill.in_use:
+              self.__acquire_successful.append(self.__drill.instance_id)
+              self.__drill.acquire(self.__member)
+          elif magicNumber2 == 1:
+            if not self.__saw.in_use:
+              self.__acquire_successful.append(self.__saw.instance_id)
+              self.__saw.acquire(self.__member)
+          elif magicNumber2 == 2:
+            if not self.__grinder.in_use:
+              self.__acquire_successful.append(self.__grinder.instance_id)
+              self.__grinder.acquire(self.__member)
+      elif magicNumber == 3:
+        if not self.__three_d_printer.in_use:
+          self.__acquire_successful.append(self.__three_d_printer.instance_id)
+          self.__three_d_printer.acquire(self.__member)
 
   def __on_schedule_end(self) -> None:
-    for reusable_inventory in self.__reusable_inventories:
-      if reusable_inventory.instance_id in self.__acquire_successful:
-        reusable_inventory.release(self.__member)
-        self.__acquire_successful.remove(reusable_inventory.instance_id)
-    for machine in self.__machines:
-      if machine.instance_id in self.__acquire_successful:
-        machine.release(self.__member)
-        self.__acquire_successful.remove(machine.instance_id)
-    if self.__entered_space.space_id != self.__inno_wing.space_id:
-      self.__entered_space.exit(self.__member)
+    current_time = self.engine.clock.current_time
+
+    if (time_equals(current_time, weekday=0, hour=20, minute=30)):
+      self.__event_hall_a.exit(self.__member)
+    else:
+      for reusable_inventory in self.__reusable_inventories:
+        if reusable_inventory.instance_id in self.__acquire_successful:
+          reusable_inventory.release(self.__member)
+          self.__acquire_successful.remove(reusable_inventory.instance_id)
+      for machine in self.__machines:
+        if machine.instance_id in self.__acquire_successful:
+          machine.release(self.__member)
+          self.__acquire_successful.remove(machine.instance_id)
+      if self.__entered_space.space_id != self.__inno_wing.space_id:
+        self.__entered_space.exit(self.__member)
+
     self.__inno_wing.exit(self.__member)
     self.__random_schedule_start_offset = timedelta(minutes=randint_nd(lower=-1 * 60, upper=1 * 60 + 30, step=30, mean=0, stddev=60))
