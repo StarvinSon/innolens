@@ -91,14 +91,24 @@ export class UserCurrentPage extends LitElement {
       // Hard coded predictions
       const time = startOfHour(new Date());
       this._countPrediction = {
-        groups: ['Electrical and Electronic Engineering', 'Mechanical Engineering', 'Computer Science'],
+        groups: [
+          'Biomedical Engineering',
+          'Civil Engineering',
+          'Computer Science',
+          'Electrical and Electronic Engineering',
+          'Industrial and Manufacturing Systems Engineering',
+          'Mechanical Engineering'
+        ],
         records: [...Array(25 - getHours(time))].map((_, i) => ({
           startTime: addHours(time, i),
           endTime: addHours(time, i + 1),
           counts: {
+            'Biomedical Engineering': Math.sin(i / 4 + Math.random()) / 2 + 4,
+            'Civil Engineering': Math.cos(i / 4 + Math.random()) / 2 + 4,
+            'Computer Science': Math.sin(i / 4 + Math.random()) / 2 + 4,
             'Electrical and Electronic Engineering': Math.cos(i / 4 + Math.random()) / 2 + 4,
-            'Mechanical Engineering': Math.sin(i / 4 + Math.random()) / 2 + 4,
-            'Computer Science': Math.sin(i / 4 + Math.random()) / 2 + 4
+            'Industrial and Manufacturing Systems Engineering': Math.sin(i / 4 + Math.random()) / 2 + 4,
+            'Mechanical Engineering': Math.cos(i / 4 + Math.random()) / 2 + 4
           }
         }))
       };

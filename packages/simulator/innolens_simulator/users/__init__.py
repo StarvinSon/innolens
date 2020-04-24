@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from .member import Member
+from .general_user import GeneralUser
 from .inno_lens import InnoLensMember
 from .comp3356_robotics import COMP3356RoboticsMember
 
@@ -15,11 +16,28 @@ from ..utils.time import hk_timezone
 
 
 def add_users(container: Object) -> None:
+  add_general_users(container)
   add_inno_lens_members(container)
   add_comp3356_robotics_members(container)
 
+def add_general_users(container: Object) -> None:
+  for _ in range(420):
+    obj = container.engine.create_object()
+    member = obj.add_component(Member)
+    member.randomize_fields(
+      membership_start_time=randtime_nd(
+        lower=datetime(2019, 9, 1, tzinfo=hk_timezone),
+        upper=datetime(2020, 5, 1, tzinfo=hk_timezone),
+        step=timedelta(days=1),
+        mean=datetime(2019, 11, 1, tzinfo=hk_timezone),
+        stddev=timedelta(days=30)
+      )
+    )
+    obj.add_component(GeneralUser)
+    container.add_object(obj)
+
 def add_inno_lens_members(container: Object) -> None:
-  for _ in range(3):
+  for _ in range(32):
     obj = container.engine.create_object()
     member = obj.add_component(Member)
     member.randomize_fields(
@@ -30,10 +48,10 @@ def add_inno_lens_members(container: Object) -> None:
       affiliated_student_interest_groups_choices=['Project InnoLens and InnoIris (Supervisor: Dr. C.K. Chui [CS])'],
       membership_start_time=randtime_nd(
         lower=datetime(2019, 10, 1, tzinfo=hk_timezone),
-        upper=datetime(2019, 10, 14, tzinfo=hk_timezone),
+        upper=datetime(2019, 10, 30, tzinfo=hk_timezone),
         step=timedelta(days=1),
-        mean=datetime(2019, 10, 7, tzinfo=hk_timezone),
-        stddev=timedelta(days=2)
+        mean=datetime(2019, 10, 15, tzinfo=hk_timezone),
+        stddev=timedelta(days=5)
       ),
       membership_end_time=datetime(2020, 6, 1, tzinfo=hk_timezone)
     )
@@ -41,7 +59,7 @@ def add_inno_lens_members(container: Object) -> None:
     container.add_object(obj)
 
 def add_comp3356_robotics_members(container: Object) -> None:
-  for _ in range(30):
+  for _ in range(69):
     obj = container.engine.create_object()
     memberComp = obj.add_component(Member)
     memberComp.randomize_fields(
@@ -56,10 +74,10 @@ def add_comp3356_robotics_members(container: Object) -> None:
       affiliated_student_interest_groups_choices=['COMP3356 Robotics'],
       membership_start_time=randtime_nd(
         lower=datetime(2020, 1, 1, tzinfo=hk_timezone),
-        upper=datetime(2020, 1, 14, tzinfo=hk_timezone),
+        upper=datetime(2020, 1, 30, tzinfo=hk_timezone),
         step=timedelta(days=1),
-        mean=datetime(2020, 1, 7, tzinfo=hk_timezone),
-        stddev=timedelta(days=3)
+        mean=datetime(2020, 1, 15, tzinfo=hk_timezone),
+        stddev=timedelta(days=5)
       ),
       membership_end_time=datetime(2020, 6, 1, tzinfo=hk_timezone)
     )

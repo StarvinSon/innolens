@@ -5,6 +5,7 @@ from typing import Optional, Sequence, TypeVar
 from datetime import datetime
 
 from ..engine.component import Component
+from ..utils.time import hk_timezone
 
 
 T = TypeVar('T')
@@ -5081,12 +5082,12 @@ class Member(Component):
     )
 
     self.membership_start_time = (
-      datetime(year=2019, month=9, day=1)
+      datetime(year=2019, month=9, day=1, tzinfo=hk_timezone)
       if membership_start_time is None
       else membership_start_time
     )
     self.membership_end_time = (
-      datetime(year=2020, month=6, day=1)
+      datetime(year=2020, month=6, day=1, tzinfo=hk_timezone)
       if membership_end_time is None
       else membership_end_time
     )

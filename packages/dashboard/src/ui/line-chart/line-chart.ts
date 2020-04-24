@@ -327,7 +327,7 @@ export class LineChart extends LitElement {
                       style="${styleMap({
                         top: `${vToY(v) * 100}%`
                       })}">
-                      ${this.showPercentage ? `${v * 100}%` : v}
+                      ${this.showPercentage ? `${Math.round(v * 100)}%` : v}
                     </span>
                   `)}
               </div>
