@@ -115,10 +115,10 @@ export class UserPages extends LitElement {
         this._spaces = data.filter((space) => space.spaceId !== 'inno_wing');
         this._spaceGroups = this._spaces.reduce(
           (groups: Array<Array<Space>>, space, i) => {
-            if (i % 3 === 0) {
+            if (i % 8 === 0) {
               groups.push([space]);
             } else {
-              groups[Math.floor(i / 3)].push(space);
+              groups[Math.floor(i / 8)].push(space);
             }
             return groups;
           },
@@ -133,10 +133,10 @@ export class UserPages extends LitElement {
         this._machineTypes = data;
         this._machineTypeGroups = this._machineTypes.reduce(
           (groups: Array<Array<MachineType>>, machineType, i) => {
-            if (i % 3 === 0) {
+            if (i % 8 === 0) {
               groups.push([machineType]);
             } else {
-              groups[Math.floor(i / 3)].push(machineType);
+              groups[Math.floor(i / 8)].push(machineType);
             }
             return groups;
           },
@@ -151,10 +151,10 @@ export class UserPages extends LitElement {
         this._reusableInventoryTypes = data;
         this._reusableInventoryTypeGroups = this._reusableInventoryTypes.reduce(
           (groups: Array<Array<ReusableInventoryType>>, reusableInventoryType, i) => {
-            if (i % 3 === 0) {
+            if (i % 8 === 0) {
               groups.push([reusableInventoryType]);
             } else {
-              groups[Math.floor(i / 3)].push(reusableInventoryType);
+              groups[Math.floor(i / 8)].push(reusableInventoryType);
             }
             return groups;
           },

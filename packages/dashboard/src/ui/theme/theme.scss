@@ -13,17 +13,23 @@
 :root {
   #{vars.$primary}: #0080FF;
 
-  #{vars.$chart-0}: hsl(0, 80%, 60%);
-  #{vars.$chart-1}: hsl(40, 80%, 60%);
-  #{vars.$chart-2}: hsl(120, 80%, 60%);
-  #{vars.$chart-3}: hsl(240, 80%, 60%);
-  #{vars.$chart-4}: hsl(300, 80%, 60%);
+  #{vars.$chart-0}: rgb(23, 118, 182);
+  #{vars.$chart-1}: rgb(255, 127, 0);
+  #{vars.$chart-2}: rgb(36, 162, 33);
+  #{vars.$chart-3}: rgb(216, 36, 31);
+  #{vars.$chart-4}: rgb(149, 100, 191);
+  #{vars.$chart-5}: rgb(141, 86, 73);
+  #{vars.$chart-6}: rgb(229, 116, 195);
+  #{vars.$chart-7}: rgb(127, 127, 127);
 
-  #{vars.$chart-prediction-0}: hsl(0, 100%, 80%);
-  #{vars.$chart-prediction-1}: hsl(40, 100%, 80%);
-  #{vars.$chart-prediction-2}: hsl(120, 100%, 80%);
-  #{vars.$chart-prediction-3}: hsl(240, 100%, 80%);
-  #{vars.$chart-prediction-4}: hsl(300, 100%, 80%);
+  #{vars.$chart-prediction-0}: rgb(73, 169, 233);
+  #{vars.$chart-prediction-1}: rgb(255, 179, 102);
+  #{vars.$chart-prediction-2}: rgb(80, 219, 77);
+  #{vars.$chart-prediction-3}: rgb(235, 116, 112);
+  #{vars.$chart-prediction-4}: rgb(198, 172, 221);
+  #{vars.$chart-prediction-5}: rgb(189, 138, 127);
+  #{vars.$chart-prediction-6}: rgb(245, 204, 233);
+  #{vars.$chart-prediction-7}: rgb(179, 179, 179);
 }
 
 :root[theme="black"] {

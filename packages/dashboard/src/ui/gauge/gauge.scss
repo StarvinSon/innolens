@@ -5,13 +5,13 @@
 
 @mixin _title() {
   @include typography.base();
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 400;
 }
 
 @mixin _percentage() {
   @include typography.base();
-  font-size: 2.5rem;
+  font-size: 1.75rem;
   font-weight: 400;
 }
 
@@ -32,7 +32,7 @@
 }
 
 img {
-  width: 50%;
+  width: 60%;
   margin: auto;
   display: block;
 }
@@ -66,7 +66,7 @@ img {
   margin: 0;
   color: var(theme.$secondary-text);
   text-align: center;
-  margin-top: 35%;
+  margin-top: 45%;
 }
 
 .title {
