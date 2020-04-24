@@ -111,6 +111,7 @@ export class SpaceService {
             update: {
               $set: {
                 spaceName: space.spaceName,
+                spaceCapacity: space.spaceCapacity,
                 versionId: new ObjectId()
               },
               $setOnInsert: {

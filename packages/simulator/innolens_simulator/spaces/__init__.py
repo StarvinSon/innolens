@@ -28,7 +28,8 @@ def get_space_df(world: Object) -> pd.DataFrame:
 
       yield {
         'space_id': space.space_id,
-        'space_name': space.space_name
+        'space_name': space.space_name,
+        'space_capacity': space.space_capacity
       }
 
   rows = list(iterate_rows())
@@ -36,7 +37,8 @@ def get_space_df(world: Object) -> pd.DataFrame:
     name: pd.Series((row[name] for row in rows), dtype=dtype)
     for name, dtype in {
       'space_id': pd.StringDtype(),
-      'space_name': pd.StringDtype()
+      'space_name': pd.StringDtype(),
+      'space_capacity': pd.Int16Dtype
     }.items()
   })
   assert df.notna().all(axis=None)

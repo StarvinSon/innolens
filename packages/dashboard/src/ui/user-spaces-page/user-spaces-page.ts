@@ -7,7 +7,7 @@ import {
 
 import '../gauge';
 import {
-  SpaceService, Space, SpaceCountHistory, spaceCapacity
+  SpaceService, Space, SpaceCountHistory
 } from '../../services/space';
 
 import { css, classes } from './user-spaces-page.scss';
@@ -115,10 +115,10 @@ export class UserSpacesPage extends LitElement {
       } else {
         this._lineChartData = {
           lines: this._countHistory.map((history, i) => {
-            const { spaceId, spaceName } = this.spaces![i];
+            const { spaceName, spaceCapacity } = this.spaces![i];
             return {
               name: spaceName,
-              values: history.records.map((record) => record.counts.total / spaceCapacity[spaceId])
+              values: history.records.map((record) => record.counts.total / spaceCapacity)
             };
           }),
           labels: this._countHistory[0].records.map((record) => record.startTime),
@@ -134,10 +134,10 @@ export class UserSpacesPage extends LitElement {
       } else {
         this._lineChartPredictionData = {
           lines: this._countPrediction.map((history, i) => {
-            const { spaceId, spaceName } = this.spaces![i];
+            const { spaceName, spaceCapacity } = this.spaces![i];
             return {
               name: spaceName,
-              values: history.records.map((record) => record.counts.total / spaceCapacity[spaceId])
+              values: history.records.map((record) => record.counts.total / spaceCapacity)
             };
           }),
           labels: this._countPrediction[0].records.map((record) => record.startTime),
@@ -152,10 +152,10 @@ export class UserSpacesPage extends LitElement {
         this._gaugeData = null;
       } else {
         this._gaugeData = this._countHistory.map((history, i) => {
-          const { spaceId, spaceName } = this.spaces![i];
+          const { spaceName, spaceCapacity } = this.spaces![i];
           return {
             name: spaceName,
-            value: history.records[history.records.length - 1].counts.total / spaceCapacity[spaceId]
+            value: history.records[history.records.length - 1].counts.total / spaceCapacity
           };
         });
       }

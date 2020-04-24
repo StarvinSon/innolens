@@ -9,7 +9,9 @@ import {
   SpaceService, SpaceNotFoundError,
   Space, SpaceAccessRecord
 } from '../services/space';
-import { decodeCsvString, decodeCsvRecord, decodeCsvDate } from '../utils/csv-parser';
+import {
+  decodeCsvString, decodeCsvRecord, decodeCsvDate, decodeCsvInteger
+} from '../utils/csv-parser';
 
 import { SpaceControllerGlue } from './glues/space';
 import { FileController } from './utils/file-controller';
@@ -49,14 +51,15 @@ export class SpaceController extends FileController(SpaceControllerGlue) {
   protected async handlePostSpaces(ctx: SpaceControllerGlue.PostSpacesContext): Promise<void> {
     const fileStream = this.getFile(ctx.authentication.token, ctx.requestBody.fileId);
 
-    const records: Array<Pick<Space, 'spaceId' | 'spaceName'>> = [];
+    const records: Array<Pick<Space, 'spaceId' | 'spaceName' | 'spaceCapacity'>> = [];
     for await (const csvRecord of fileStream.pipe(csvParse({ columns: true }))) {
       const record = decodeCsvRecord(
         csvRecord,
-        ['space_id', 'space_name'],
+        ['space_id', 'space_name', 'space_capacity'],
         {
           space_id: decodeCsvString,
-          space_name: decodeCsvString
+          space_name: decodeCsvString,
+          space_capacity: decodeCsvInteger
         }
       );
       if (record === undefined) {
@@ -64,7 +67,8 @@ export class SpaceController extends FileController(SpaceControllerGlue) {
       }
       records.push({
         spaceId: record.space_id,
-        spaceName: record.space_name
+        spaceName: record.space_name,
+        spaceCapacity: record.space_capacity
       });
     }
 
@@ -76,7 +80,8 @@ export class SpaceController extends FileController(SpaceControllerGlue) {
     const spaces = await this._spaceService.getSpaces();
     ctx.responseBodyData = spaces.map((space) => ({
       spaceId: space.spaceId,
-      spaceName: space.spaceName
+      spaceName: space.spaceName,
+      spaceCapacity: space.spaceCapacity
     }));
   }
 

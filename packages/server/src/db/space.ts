@@ -11,6 +11,7 @@ export interface Space {
   readonly _id: ObjectId;
   readonly spaceId: string;
   readonly spaceName: string;
+  readonly spaceCapacity: number;
   readonly currentMemberIds: ReadonlyArray<string>;
   readonly versionId: ObjectId;
 }
@@ -34,6 +35,7 @@ export const SpaceCollection = decorate(
             '_id',
             'spaceId',
             'spaceName',
+            'spaceCapacity',
             'currentMemberIds',
             'versionId'
           ],
@@ -46,6 +48,9 @@ export const SpaceCollection = decorate(
             },
             spaceName: {
               bsonType: 'string'
+            },
+            spaceCapacity: {
+              bsonType: 'int'
             },
             currentMemberIds: {
               bsonType: 'array',

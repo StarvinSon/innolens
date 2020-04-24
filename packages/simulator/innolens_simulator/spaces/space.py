@@ -12,6 +12,7 @@ from ..users.member import Member
 class Space(Component):
   space_id: ClassVar[str] = ''
   space_name: ClassVar[str] = ''
+  space_capacity: ClassVar[int] = 40
 
   __log: Final[MutableSequence[Tuple[datetime, str, str]]]
 

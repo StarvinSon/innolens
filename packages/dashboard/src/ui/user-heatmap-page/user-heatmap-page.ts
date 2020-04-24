@@ -58,7 +58,8 @@ export class UserHeatMapPage extends LitElement {
           );
           return {
             spaceId: space.spaceId,
-            value: countData.counts[countData.groups[0]]
+            spaceCapacity: space.spaceCapacity,
+            currentUserCount: countData.counts[countData.groups[0]]
           };
         }
       );

@@ -7,6 +7,7 @@ export const path = '/api/spaces';
 type ResponseData = ReadonlyArray<{
   readonly spaceId: string;
   readonly spaceName: string;
+  readonly spaceCapacity: number;
 }>;
 
 export interface ResponseBody extends CommonResponse.ResponseBody<ResponseData> {}
@@ -16,13 +17,16 @@ export const responseBodyJsonSchema = CommonResponse.responseBodyJsonSchema({
   items: {
     type: 'object',
     additionalProperties: false,
-    required: ['spaceId', 'spaceName'],
+    required: ['spaceId', 'spaceName', 'spaceCapacity'],
     properties: {
       spaceId: {
         type: 'string'
       },
       spaceName: {
         type: 'string'
+      },
+      spaceCapacity: {
+        type: 'integer'
       }
     }
   }

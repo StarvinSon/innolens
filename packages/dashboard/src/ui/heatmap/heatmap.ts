@@ -5,7 +5,6 @@ import {
 import { styleMap } from 'lit-html/directives/style-map';
 
 import '../theme';
-import { spaceCapacity } from '../../services/space';
 
 import { css, classes } from './heatmap.scss';
 
@@ -16,7 +15,8 @@ export interface HeatmapData {
 
 export interface HeatmapSpaceData {
   readonly spaceId: string;
-  readonly value: number;
+  readonly spaceCapacity: number;
+  readonly currentUserCount: number;
 }
 
 export type HeatmapSpaceFloor = 'gf' | 'lgf';
@@ -54,17 +54,17 @@ export class Heatmap extends LitElement {
   private _calcRatio(): void {
     if (this.data === null) return;
 
-    for (const { spaceId, value } of this.data.spaces) {
-      this.ratio[spaceId] = value / spaceCapacity[spaceId];
+    for (const { spaceId, spaceCapacity, currentUserCount } of this.data.spaces) {
+      this.ratio[spaceId] = currentUserCount / spaceCapacity;
     }
   }
 
   private _getRatio(spaceId: string): number {
-    const value = this.ratio[spaceId];
-    if (value === undefined) {
+    const currentUserCount = this.ratio[spaceId];
+    if (currentUserCount === undefined) {
       return 1;
     }
-    return Math.max(1 - value, 0);
+    return Math.max(1 - currentUserCount, 0);
   }
 
   protected render(): TemplateResult {
