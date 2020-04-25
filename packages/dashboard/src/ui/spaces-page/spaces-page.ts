@@ -1,4 +1,7 @@
-import { subDays, startOfDay } from 'date-fns';
+import {
+  subDays, format as formatDate, startOfMinute,
+  setMinutes
+} from 'date-fns';
 import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
 import {
   customElement, LitElement, TemplateResult,
@@ -10,19 +13,21 @@ import {
 import '../chart-card';
 import '../choice-chips';
 import '../choice-chip';
-import '../space-count-history-chart';
+import '../line-chart-2';
 import {
   SpaceService, Space,
-  SpaceCountHistoryGroupBy, SpaceCountHistoryCountType
+  SpaceMemberCountHistoryGroupBy, SpaceMemberCountHistoryCountType, SpaceMemberCountForecast,
+  SpaceMemberCountHistory2
 } from '../../services/space';
 import { toggleNullableArray } from '../../utils/array';
+import { generateKey } from '../../utils/key';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
 
 import { css, classes } from './spaces-page.scss';
 
 
-const spaceCountHistoryPastDaysChoices: ReadonlyArray<number> = [
+const pastDaysChoices: ReadonlyArray<number> = [
   1,
   2,
   3,
@@ -35,8 +40,8 @@ const spaceCountHistoryPastDaysChoices: ReadonlyArray<number> = [
   360
 ];
 
-const spaceCountHistoryCountTypeChoices: ReadonlyArray<{
-  readonly type: SpaceCountHistoryCountType;
+const countTypeChoices: ReadonlyArray<{
+  readonly type: SpaceMemberCountHistoryCountType;
   readonly name: string;
 }> = [
   {
@@ -65,8 +70,8 @@ const spaceCountHistoryCountTypeChoices: ReadonlyArray<{
   }
 ];
 
-const spaceCountHistoryGroupByChoices: ReadonlyArray<{
-  readonly type: SpaceCountHistoryGroupBy | null;
+const groupByChoices: ReadonlyArray<{
+  readonly type: SpaceMemberCountHistoryGroupBy | null;
   readonly name: string;
 }> = [
   {
@@ -92,6 +97,26 @@ const spaceCountHistoryGroupByChoices: ReadonlyArray<{
   {
     type: 'affiliatedStudentInterestGroup',
     name: 'Affiliated Student Interest Group'
+  },
+  {
+    type: 'space',
+    name: 'Space'
+  }
+];
+
+type ChartStyle = 'normal' | 'stacked';
+
+const chartStyleChoices: ReadonlyArray<{
+  readonly type: ChartStyle;
+  readonly name: string;
+}> = [
+  {
+    type: 'normal',
+    name: 'Normal'
+  },
+  {
+    type: 'stacked',
+    name: 'Stacked'
   }
 ];
 
@@ -121,20 +146,23 @@ export class SpacesPage extends LitElement {
   private _selectedSpaceIds: ReadonlyArray<string> | null = null;
 
   @property({ attribute: false })
-  private _selectedCountType: SpaceCountHistoryCountType = 'stay';
+  private _selectedCountType: SpaceMemberCountHistoryCountType = 'stay';
 
   @property({ attribute: false })
-  private _selectedGroupBy: SpaceCountHistoryGroupBy | null = null;
+  private _selectedGroupBy: SpaceMemberCountHistoryGroupBy | null = null;
+
+  @property({ attribute: false })
+  private _selectedChartStyle: ChartStyle = 'normal';
 
 
   @property({ attribute: false })
   private _selectedFromTime: Date | null = null;
 
   @property({ attribute: false })
-  private _selectedToTime: Date | null = new Date();
+  private _selectedToTime: Date | null = null;
 
   @property({ attribute: false })
-  private _selectedTimeStepMs = 30 * 60 * 1000;
+  private readonly _selectedTimeStepMs = 1800000;
 
 
   private _spaceFetched = false;
@@ -143,38 +171,180 @@ export class SpacesPage extends LitElement {
   private _spaces: ReadonlyArray<Space> | null = null;
 
 
+  private _historyKey: string | null = null;
+
+  @property({ attribute: false })
+  private _history: SpaceMemberCountHistory2 | null = null;
+
+
+  private _forecastKey: string | null = null;
+
+  @property({ attribute: false })
+  private _forecast: SpaceMemberCountForecast | null = null;
+
+
+  private _chartPropsDeps: readonly [
+    SpaceMemberCountHistory2 | null,
+    SpaceMemberCountForecast | null
+  ] = [null, null];
+
+  @property({ attribute: false })
+  private _chartYs: ReadonlyArray<ReadonlyArray<number>> | null = null;
+
+  @property({ attribute: false })
+  private _chartDashedStartIndex: number | null = null;
+
+  @property({ attribute: false })
+  private _chartXLabels: ReadonlyArray<Date> | null = null;
+
+  @property({ attribute: false })
+  private _chartLineLabels: ReadonlyArray<string> | null = null;
+
+
+  public constructor() {
+    super();
+    this._formatLineChartLabel = this._formatLineChartLabel.bind(this);
+  }
+
   private _onServiceInjected(): void {
     this.requestUpdate();
   }
 
 
   protected update(changedProps: PropertyValues): void {
-    if (this.spaceService !== null) {
-      if (this._selectedToTime !== null) {
-        let fromTime = subDays(this._selectedToTime, this._selectedPastDays);
-        fromTime = utcToZonedTime(fromTime, 'Asia/Hong_Kong');
-        fromTime = startOfDay(fromTime);
-        fromTime = zonedTimeToUtc(fromTime, 'Asia/Hong_Kong');
-        if (
-          this._selectedFromTime === null
-          || this._selectedFromTime.getTime() !== fromTime.getTime()
-        ) {
-          this._selectedFromTime = fromTime;
-        }
-      }
+    this._updateProperties();
+    super.update(changedProps);
+  }
 
-      if (!this._spaceFetched) {
-        this.spaceService
-          .fetchSpaces()
-          .then((spaces) => {
-            this._spaces = spaces;
-          });
-      }
-      this._spaceFetched = true;
+  private _updateProperties(): void {
+    if (this.spaceService === null) return;
 
+    if (this._selectedToTime === null) {
+      let toTime = new Date();
+      toTime = utcToZonedTime(toTime, 'Asia/Hong_Kong');
+      toTime = startOfMinute(toTime);
+      toTime = setMinutes(toTime, Math.floor(toTime.getMinutes() / 30) * 30);
+      toTime = zonedTimeToUtc(toTime, 'Asia/Hong_Kong');
+      this._selectedToTime = toTime;
     }
 
-    super.update(changedProps);
+    if (this._selectedToTime !== null) {
+      const fromTime = subDays(this._selectedToTime, this._selectedPastDays);
+      if (
+        this._selectedFromTime === null
+        || this._selectedFromTime.getTime() !== fromTime.getTime()
+      ) {
+        this._selectedFromTime = fromTime;
+      }
+    }
+
+    if (!this._spaceFetched) {
+      this.spaceService
+        .fetchSpaces()
+        .then((spaces) => {
+          this._spaces = spaces;
+        });
+      this._spaceFetched = true;
+    }
+
+    const historyKey = generateKey({
+      fromTime: this._selectedFromTime?.toISOString(),
+      toTime: this._selectedToTime?.toISOString(),
+      timeStepMs: String(this._selectedTimeStepMs),
+      spaceIds: this._selectedSpaceIds?.map(encodeURIComponent).join(',') ?? undefined,
+      countType: this._selectedCountType,
+      groupBy: this._selectedGroupBy ?? undefined
+    });
+    if (this._historyKey !== historyKey) {
+      if (this._selectedFromTime === null || this._selectedToTime === null) {
+        this._history = null;
+      } else {
+        this.spaceService
+          .fetchMemberCountHistory2({
+            fromTime: this._selectedFromTime,
+            toTime: this._selectedToTime,
+            timeStepMs: this._selectedTimeStepMs,
+            filterSpaceIds: this._selectedSpaceIds,
+            countType: this._selectedCountType,
+            groupBy: this._selectedGroupBy
+          })
+          .then((data) => {
+            if (this._historyKey === historyKey) {
+              this._history = data;
+            }
+          })
+          .catch((err) => {
+            console.error(err);
+            if (this._historyKey === historyKey) {
+              this._history = null;
+            }
+          });
+      }
+      this._historyKey = historyKey;
+    }
+
+    const forecastKey = generateKey({
+      fromTime: this._selectedToTime?.toISOString(),
+      timeStepMs: String(this._selectedTimeStepMs),
+      spaceIds: this._selectedSpaceIds?.map(encodeURIComponent).join(','),
+      countType: this._selectedCountType,
+      groupBy: this._selectedGroupBy ?? undefined
+    });
+    if (this._forecastKey !== forecastKey) {
+      if (this._selectedToTime === null) {
+        this._forecast = null;
+      } else {
+        this.spaceService
+          .fetchMemberCountForecast({
+            fromTime: this._selectedToTime,
+            timeStepMs: this._selectedTimeStepMs,
+            filterSpaceIds: this._selectedSpaceIds,
+            filterMemberIds: null,
+            countType: this._selectedCountType,
+            groupBy: this._selectedGroupBy
+          })
+          .then((data) => {
+            if (this._forecastKey === forecastKey) {
+              this._forecast = data;
+            }
+          })
+          .catch((err) => {
+            console.error(err);
+            if (this._forecastKey === forecastKey) {
+              this._forecast = null;
+            }
+          });
+      }
+      this._forecastKey = forecastKey;
+    }
+
+    if (this._chartPropsDeps[0] !== this._history || this._chartPropsDeps[1] !== this._forecast) {
+      if (this._history === null || this._forecast === null) {
+        this._chartYs = null;
+        this._chartDashedStartIndex = null;
+        this._chartXLabels = null;
+        this._chartLineLabels = null;
+      } else {
+        this._chartLineLabels = Array.from(new Set(
+          this._history.groups.concat(this._forecast.groups)
+        ));
+        this._chartYs = this._chartLineLabels.map((group) => {
+          const historyG = this._history!.groups.indexOf(group);
+          const forecastG = this._forecast!.groups.indexOf(group);
+          const historyGroupY = historyG >= 0
+            ? this._history!.values[historyG]
+            : this._history!.timeSpans.map(() => 0);
+          const forecastGroupY = forecastG >= 0
+            ? this._forecast!.values[forecastG]
+            : this._forecast!.timeSpans.map(() => 0);
+          return historyGroupY.concat(forecastGroupY);
+        });
+        this._chartDashedStartIndex = this._history.timeSpans.length - 1;
+        this._chartXLabels = this._history.timeSpans.concat(this._forecast.timeSpans)
+          .map(([, endTime]) => endTime);
+      }
+      this._chartPropsDeps = [this._history, this._forecast];
+    }
   }
 
   protected render(): TemplateResult {
@@ -193,7 +363,7 @@ export class SpacesPage extends LitElement {
 
         ${this._renderChipOptions({
           title: 'Past Days',
-          items: spaceCountHistoryPastDaysChoices,
+          items: pastDaysChoices,
           selectItem: (item) => item === this._selectedPastDays,
           formatItem: (item) => html`${item} Days`,
           onClick: (item) => this._onPastDaysChipClick(item)
@@ -217,7 +387,7 @@ export class SpacesPage extends LitElement {
 
         ${this._renderChipOptions({
           title: 'Count Type',
-          items: spaceCountHistoryCountTypeChoices,
+          items: countTypeChoices,
           selectItem: (item) => item.type === this._selectedCountType,
           formatItem: (item) => item.name,
           onClick: (item) => this._onCountTypeChipClick(item.type)
@@ -225,10 +395,18 @@ export class SpacesPage extends LitElement {
 
         ${this._renderChipOptions({
           title: 'Group By',
-          items: spaceCountHistoryGroupByChoices,
+          items: groupByChoices,
           selectItem: (item) => item.type === this._selectedGroupBy,
           formatItem: (item) => item.name,
           onClick: (item) => this._onGroupByChipClick(item.type)
+        })}
+
+        ${this._renderChipOptions({
+          title: 'Chart Style',
+          items: chartStyleChoices,
+          selectItem: (item) => item.type === this._selectedChartStyle,
+          formatItem: (item) => item.name,
+          onClick: (item) => this._onChartStyleChipClick(item.type)
         })}
 
       </div>
@@ -265,22 +443,28 @@ export class SpacesPage extends LitElement {
     return html`
       <div class="${classes.chartCards}">
         <inno-chart-card>
-          <inno-space-count-history-chart
+          <inno-line-chart-2
             class="${classes.lineChart}"
-            .spaceService="${this.spaceService}"
-            .fromTime="${this._selectedFromTime}"
-            .toTime="${this._selectedToTime}"
-            .timeStepMs="${this._selectedTimeStepMs}"
-            .spaceIds="${this._selectedSpaceIds}"
-            .countType="${this._selectedCountType}"
-            .groupBy="${this._selectedGroupBy}"
+            .ys="${this._chartYs}"
+            .dashedStartIndex="${this._chartDashedStartIndex}"
+            .xLabels="${this._chartXLabels}"
+            .lineLabels="${this._chartLineLabels}"
+            .formatXLabel="${this._formatLineChartLabel}"
+            .stacked="${this._selectedChartStyle === 'stacked'}"
+            .fill="${this._selectedChartStyle === 'stacked'}"
           >
             <span slot="title">Space Member Count History</span>
-          </inno-space-count-history-chart>
+          </inno-line-chart-2>
         </inno-chart-card>
       </div>
     `;
   }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private _formatLineChartLabel(time: Date, i: number): string {
+    return formatDate(time, 'd/M');
+  }
+
 
   private _onPastDaysChipClick(day: number): void {
     this._selectedPastDays = day;
@@ -294,11 +478,15 @@ export class SpacesPage extends LitElement {
     }
   }
 
-  private _onCountTypeChipClick(type: SpaceCountHistoryCountType): void {
+  private _onCountTypeChipClick(type: SpaceMemberCountHistoryCountType): void {
     this._selectedCountType = type;
   }
 
-  private _onGroupByChipClick(groupBy: SpaceCountHistoryGroupBy | null): void {
+  private _onGroupByChipClick(groupBy: SpaceMemberCountHistoryGroupBy | null): void {
     this._selectedGroupBy = groupBy;
+  }
+
+  private _onChartStyleChipClick(groupBy: ChartStyle): void {
+    this._selectedChartStyle = groupBy;
   }
 }

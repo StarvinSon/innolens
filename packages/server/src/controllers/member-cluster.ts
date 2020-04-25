@@ -37,9 +37,7 @@ export class MemberClusterController extends MemberClusterControllerGlue {
       fromTime: ctx.query.fromTime,
       toTime: ctx.query.toTime,
       timeStepMs: ctx.query.timeStepMs ?? (30 * 60 * 1000),
-      filter: {
-        memberIds: ctx.query.filterMemberIds ?? null
-      }
+      filterMemberIds: ctx.query.filterMemberIds ?? null
     });
   }
 
@@ -50,9 +48,7 @@ export class MemberClusterController extends MemberClusterControllerGlue {
       fromTime: ctx.query.fromTime,
       toTime: ctx.query.toTime,
       timeStepMs: ctx.query.timeStepMs ?? (30 * 60 * 1000),
-      filter: {
-        memberIds: ctx.query.filterMemberIds ?? null
-      }
+      filterMemberIds: ctx.query.filterMemberIds ?? null
     });
   }
 }

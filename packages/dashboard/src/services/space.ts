@@ -2,6 +2,7 @@ import { injectableConstructor, singleton } from '@innolens/resolver/web';
 
 import { stringTag } from '../utils/class';
 import { Debouncer } from '../utils/debouncer';
+import { PromiseValue } from '../utils/promise';
 
 import { FileService } from './file';
 import * as SpaceGlue from './glues/space';
@@ -31,13 +32,13 @@ export interface SpaceCountRecordValues {
 }
 
 
-export type SpaceCountHistoryCountType =
+export type SpaceMemberCountHistoryCountType =
   Exclude<Parameters<typeof SpaceGlue.GetMemberCountHistory.createRequest>[0]['query']['countType'], undefined>;
 
-export type SpaceCountHistoryGroupBy =
+export type SpaceMemberCountHistoryGroupBy =
   Exclude<Parameters<typeof SpaceGlue.GetMemberCountHistory.createRequest>[0]['query']['groupBy'], undefined>;
 
-export interface SpaceCountHistory {
+export interface SpaceMemberCountHistory {
   readonly groups: ReadonlyArray<string>;
   readonly records: ReadonlyArray<SpaceCountHistoryRecord>;
 }
@@ -51,6 +52,26 @@ export interface SpaceCountHistoryRecord {
 export interface SpaceCountHistoryRecordValues {
   readonly [group: string]: number;
 }
+
+
+export type SpaceMemberCountHistory2CountType =
+  Exclude<Parameters<typeof SpaceGlue.GetMemberCountHistory2.createRequest>[0]['body']['countType'], undefined>;
+
+export type SpaceMemberCountHistory2GroupBy =
+  Exclude<Parameters<typeof SpaceGlue.GetMemberCountHistory2.createRequest>[0]['body']['groupBy'], undefined>;
+
+export type SpaceMemberCountHistory2 =
+  PromiseValue<ReturnType<typeof SpaceGlue.GetMemberCountHistory2.handleResponse>>;
+
+
+export type SpaceMemberCountForecastCountType =
+  Exclude<Parameters<typeof SpaceGlue.GetMemberCountForecast.createRequest>[0]['body']['countType'], undefined>;
+
+export type SpaceMemberCountForecastGroupBy =
+  Exclude<Parameters<typeof SpaceGlue.GetMemberCountForecast.createRequest>[0]['body']['groupBy'], undefined>;
+
+export type SpaceMemberCountForecast =
+  PromiseValue<ReturnType<typeof SpaceGlue.GetMemberCountForecast.handleResponse>>;
 
 
 @injectableConstructor({
@@ -152,9 +173,9 @@ export class SpaceService {
     toTime: Date,
     timeStepMs: number,
     spaceIds: ReadonlyArray<string> | null,
-    countType: SpaceCountHistoryCountType,
-    groupBy: SpaceCountHistoryGroupBy | null
-  ): Promise<SpaceCountHistory> {
+    countType: SpaceMemberCountHistoryCountType,
+    groupBy: SpaceMemberCountHistoryGroupBy | null
+  ): Promise<SpaceMemberCountHistory> {
     const params = new URLSearchParams();
     params.set('fromTime', fromTime.toISOString());
     params.set('toTime', toTime.toISOString());
@@ -179,6 +200,64 @@ export class SpaceService {
           }
         })))
         .then(SpaceGlue.GetMemberCountHistory.handleResponse);
+      return data;
+    });
+  }
+
+  public async fetchMemberCountHistory2(opts: {
+    readonly fromTime: Date;
+    readonly toTime: Date;
+    readonly timeStepMs?: number;
+    readonly filterSpaceIds?: ReadonlyArray<string> | null;
+    readonly countType?: SpaceMemberCountHistory2CountType;
+    readonly groupBy?: SpaceMemberCountHistory2GroupBy;
+  }): Promise<SpaceMemberCountHistory2> {
+    const key = JSON.stringify(opts);
+
+    return this._debouncer.debounce(`count-history:${key}`, async () => {
+      const data = await this._oauth2Service
+        .withAccessToken((token) => fetch(SpaceGlue.GetMemberCountHistory2.createRequest({
+          authentication: { token },
+          body: {
+            fromTime: opts.fromTime,
+            toTime: opts.toTime,
+            timeStepMs: opts.timeStepMs,
+            filterSpaceIds: opts.filterSpaceIds,
+            // filterMemberIds
+            countType: opts.countType,
+            groupBy: opts.groupBy
+          }
+        })))
+        .then(SpaceGlue.GetMemberCountHistory2.handleResponse);
+      return data;
+    });
+  }
+
+
+  public async fetchMemberCountForecast(opts: {
+    readonly fromTime: Date;
+    readonly timeStepMs?: 1800000;
+    readonly filterSpaceIds?: ReadonlyArray<string> | null;
+    readonly filterMemberIds?: ReadonlyArray<string> | null;
+    readonly countType?: SpaceMemberCountForecastCountType;
+    readonly groupBy?: SpaceMemberCountForecastGroupBy;
+  }): Promise<SpaceMemberCountForecast> {
+    const key = JSON.stringify(opts);
+
+    return this._debouncer.debounce(`count-forecast:${key}`, async () => {
+      const data = await this._oauth2Service
+        .withAccessToken((token) => fetch(SpaceGlue.GetMemberCountForecast.createRequest({
+          authentication: { token },
+          body: {
+            fromTime: opts.fromTime,
+            timeStepMs: opts.timeStepMs,
+            filterSpaceIds: opts.filterSpaceIds,
+            filterMemberIds: opts.filterMemberIds,
+            countType: opts.countType,
+            groupBy: opts.groupBy
+          }
+        })))
+        .then(SpaceGlue.GetMemberCountForecast.handleResponse);
       return data;
     });
   }

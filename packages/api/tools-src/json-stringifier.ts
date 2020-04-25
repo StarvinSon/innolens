@@ -34,16 +34,37 @@ export const writeJsonEncoder = (
     }
   } else if ('enum' in schema) {
     for (let i = 0; i < schema.enum.length; i += 1) {
-      writer.writeLine(`if (${resultVar} === undefined && ${srcVar} ===`);
-      const literal = schema.enum[i];
-      switch (typeof literal) {
-        case 'boolean':
-        case 'number': writer.write(String(literal)); break;
-        case 'string': writer.quote(literal); break;
-        default: throw new Error('Enum only support boolean, number and string literal');
-      }
-      writer.write(')').block(() => {
-        writer.writeLine(`${resultVar} = ${srcVar}`);
+      writer.write(`if (${resultVar} === undefined)`).block(() => {
+        const literal = schema.enum[i];
+
+        writer.write(`if (${srcVar} === `);
+        if (literal === null) {
+          writer.write('null');
+        } else {
+          switch (typeof literal) {
+            case 'boolean':
+            case 'number': writer.write(String(literal)); break;
+            case 'string': writer.quote(literal); break;
+            default: throw new Error('enum can support boolean, number and string literal');
+          }
+        }
+        writer.write(')').block(() => {
+          const literalType = literal === null ? 'null' : typeof literal;
+          switch (literalType) {
+            case 'boolean':
+            case 'number':
+            case 'string':
+            case 'null': {
+              writeJsonEncoder(
+                sourceFile, writer, createVarName, imports,
+                resultVar, srcVar, { type: literalType },
+                runtimeType
+              );
+              break;
+            }
+            default: throw new Error('enum can support boolean, number and string literal');
+          }
+        });
       });
     }
   } else {

@@ -1,3 +1,8 @@
+'''
+This model use LSTM model, which does not perform well...
+Reference: https://www.tensorflow.org/tutorials/structured_data/time_series
+'''
+
 from __future__ import annotations
 
 from datetime import timedelta, timezone
@@ -6,14 +11,13 @@ from typing_extensions import Final
 from pathlib import Path
 import logging
 from pprint import pprint
+from math import ceil
 import os.path
 import re
-import json
 
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-from tensorflow import keras
 import pandas as pd
 
 
@@ -49,7 +53,7 @@ class HistoryForecastModel:
 
   __model: Final[Any]
   __input_size: Final = 24 * 2 * 14 # 2 week
-  __input_shift: Final = 1 # 30 minutes
+  __input_shift: Final = 24 * 2 # 1 day
   __predict_size: Final = 2 * 24 * 2 # 2 days
   __mean: float
   __stddev: float
@@ -66,14 +70,17 @@ class HistoryForecastModel:
     self.__checkpoint_dir_path = checkpoint_dir_path
     self.__log_dir_path = log_dir_path
 
-    model = keras.models.Sequential([
-      # keras.layers.Dense(256, activation=tf.nn.relu),
-      keras.layers.Dense(self.__predict_size)
+    model = tf.keras.models.Sequential([
+      tf.keras.layers.LSTM(
+        32,
+        input_shape=(self.__input_size, 1)
+      ),
+      tf.keras.layers.Dense(self.__predict_size)
     ])
     self.__model = model
 
     model.compile(
-      optimizer=keras.optimizers.Adam(
+      optimizer=tf.keras.optimizers.RMSprop(
         # clipvalue=1.0
       ),
       loss='mae',
@@ -104,20 +111,23 @@ class HistoryForecastModel:
     *,
     epochs: Optional[int] = None,
     steps_per_epoch: Optional[int] = None,
-    validation_steps: Optional[int] = None,
     show_ui: bool = False
   ) -> None:
     if epochs is None:
-      epochs = 20
+      epochs = 10
     if steps_per_epoch is None:
-      steps_per_epoch = 20
-    if validation_steps is None:
-      validation_steps = 10
+      steps_per_epoch = 10
 
     if self.__last_epoch == 0:
-      df = self.__load_dataframe(path)
-      self.__mean = df.values.mean()
-      self.__stddev = df.values.std()
+      series = pd.read_csv(
+        path,
+        usecols=['stay_count'],
+        dtype={
+          'stay_count': np.float64
+        }
+      )['stay_count']
+      self.__mean = series.mean()
+      self.__stddev = series.std()
       std_path = Path(self.__checkpoint_dir_path) / 'standardize_params.npz'
       std_path.parent.mkdir(parents=True, exist_ok=True)
       np.savez(
@@ -126,27 +136,27 @@ class HistoryForecastModel:
         stddev=self.__stddev
       )
 
-    ds = self.__load_dataset(path)
-    train_ds = ds.skip(30 * 24 * 2).shuffle(10000).batch(128).repeat()
-    val_ds = ds.take(30 * 24 * 2).batch(128).repeat()
-    example_ds = val_ds.unbatch().shuffle(1000).take(24)
+    ds = self.__load_ds(path)
+    train_ds = ds.skip(7).shuffle(10000).batch(128).repeat()
+    val_ds = ds.take(7).batch(128).repeat()
+    example_ds = ds.take(7).shuffle(1000).take(6)
 
     callbacks = []
-    callbacks.append(keras.callbacks.ModelCheckpoint(
+    callbacks.append(tf.keras.callbacks.ModelCheckpoint(
       filepath=os.path.join(self.__checkpoint_dir_path, 'checkpoint-{epoch:04d}'),
       verbose=1,
       save_weights_only=True
     ))
     if self.__log_dir_path is not None:
-      callbacks.append(keras.callbacks.TensorBoard(self.__log_dir_path))
+      callbacks.append(tf.keras.callbacks.TensorBoard(self.__log_dir_path))
 
     training_history = self.__model.fit(
       train_ds,
       initial_epoch=self.__last_epoch,
       epochs=self.__last_epoch + epochs,
-      steps_per_epoch=steps_per_epoch,
+      steps_per_epoch=10,
       validation_data=val_ds,
-      validation_steps=validation_steps,
+      validation_steps=10,
       callbacks=callbacks
     )
     self.last_epoch = training_history.epoch[-1]
@@ -156,13 +166,13 @@ class HistoryForecastModel:
       self.__visualize_examples(examples, 'Validation')
 
   def evaluate(self, path: str, *, show_ui: bool = False) -> Any:
-    ds = self.__load_dataset(path)
-    eval_ds = ds.shuffle(1000).batch(128).repeat().take(10)
-    exmaple_ds = ds.shuffle(1000).take(12)
+    ds = self.__load_ds(path)
+    exmaple_ds = ds.shuffle(1000).take(6)
+    eval_ds = ds.batch(128)
 
     callbacks = []
     if self.__log_dir_path is not None:
-      callbacks.append(keras.callbacks.TensorBoard(self.__log_dir_path))
+      callbacks.append(tf.keras.callbacks.TensorBoard(self.__log_dir_path))
 
     result = self.__model.evaluate(
       eval_ds,
@@ -175,56 +185,43 @@ class HistoryForecastModel:
 
     return result
 
-  def __load_dataframe(self, path: str) -> pd.DataFrame:
-    with open(path) as file:
-      data = json.load(file)
-    df = pd.DataFrame({
-      group: pd.Series(data['values'][group], dtype=np.int32)
-      for group in data['groups']
-    })
-    assert df.notna().all(None)
-    return df
-
-  def __load_dataset(self, path: str) -> Any:
-    df = self.__load_dataframe(path)
-
-    ds = tf.data.Dataset.from_tensor_slices({
-      name: series.to_numpy()
-      for name, series in df.items()
-    })
-    ds = ds.map(lambda xs: {
-      name: (x - self.__mean) / self.__stddev
-      for name, x in xs.items()
-    })
+  def __load_ds(self, path: str) -> Any:
+    ds = tf.data.experimental.make_csv_dataset(
+      file_pattern=path,
+      header=True,
+      select_columns=[
+        'stay_count'
+      ],
+      column_defaults=[
+        tf.float64
+      ],
+      shuffle=False,
+      batch_size=1,
+      num_epochs=1
+    ).unbatch()
+    ds = ds.map(lambda x: x['stay_count'])
+    ds = ds.map(lambda x: (x - self.__mean) / self.__stddev)
     ds = ds.window(size=self.__input_size + self.__predict_size, shift=self.__input_shift, drop_remainder=True)
-    ds = ds.flat_map(lambda dsd: tf.data.Dataset.zip({
-      name: sub_vals.batch(self.__input_size + self.__predict_size).map(lambda x: tf.reshape(x, [self.__input_size + self.__predict_size]))
-      for name, sub_vals in dsd.items()
-    }))
-    ds = ds.map(lambda xs: {
-      name: (x[:-self.__predict_size], x[-self.__predict_size:])
-      for name, x in xs.items()
-    })
-    ds = ds.flat_map(lambda xs: tf.data.Dataset.from_tensor_slices((
-      [xy[0] for xy in xs.values()],
-      [xy[1] for xy in xs.values()]
-    )))
+    ds = ds.flat_map(lambda sub: sub.batch(self.__input_size + self.__predict_size).map(lambda x: tf.reshape(x, [self.__input_size + self.__predict_size])))
+    ds = ds.map(lambda x: (
+      tf.reshape(x[:-self.__predict_size], [-1, 1]),
+      x[-self.__predict_size:]
+    ))
     return ds
 
   def __visualize_examples(self, examples: Sequence[Any], title: str) -> None:
-    for i in range(0, len(examples), 6):
-      fig = plt.figure()
-      axs = fig.subplots(3, 2).flatten()
-      for j, ((X, Y), ax) in enumerate(zip(examples[i:i+6], axs)):
-        prediction = self.__model.predict(X.reshape((1, -1)))[0]
-        ax.set_title(f'{title} {i + j}')
-        ax.plot(range(-X.shape[0], 0), X, label='Input')
-        ax.plot(range(0, Y.shape[0]), Y, label='Label', marker='o', alpha=0.4)
-        ax.plot(range(0, prediction.shape[0]), prediction, label='Predict', marker='o', alpha=0.4)
-        ax.grid(True)
-        ax.legend()
-      fig.tight_layout()
-      plt.show()
+    fig = plt.figure()
+    axs = fig.subplots(ceil(len(examples) / 2), 2).reshape((-1,))
+    for i, ((X, Y), ax) in enumerate(zip(examples, axs)):
+      prediction = self.__model.predict(X.reshape((1, -1, 1)))[0]
+      ax.set_title(f'{title} {i}')
+      ax.plot(range(-X.shape[0], 0), X, label='Input')
+      ax.plot(range(0, Y.shape[0]), Y, label='Label', marker='o', alpha=0.4)
+      ax.plot(range(0, prediction.shape[0]), prediction, label='Predict', marker='o', alpha=0.4)
+      ax.grid(True)
+      ax.legend()
+    fig.tight_layout()
+    plt.show()
 
   def predict(self, X_batch: Any) -> Any:
     predictions = self.__model.predict((X_batch - self.__mean) / self.__stddev)

@@ -1,24 +1,27 @@
-name: GetMemberCountForecast
+# This is the updated version of the API get-member-count-history.yaml
+name: GetMemberCountHistory2
 
 method: post
-path: /api/spaces/member-count-forecast
+path: /api/spaces/member-count-history-2
 
 authentication:
   type: bearer
 
 requestBody:
-  contentType: 'application/json'
+  contentType: application/json
   schema:
     type: object
     required:
       - fromTime
+      - toTime
     additionalProperties: false
     properties:
       fromTime:
         type: date
+      toTime:
+        type: date
       timeStepMs:
-        enum:
-          - 1800000
+        type: integer
       filterSpaceIds:
         anyOf:
           - type: 'null'

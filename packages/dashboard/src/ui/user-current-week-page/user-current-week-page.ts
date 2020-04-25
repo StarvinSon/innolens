@@ -8,7 +8,7 @@ import {
 
 // eslint-disable-next-line import/no-duplicates
 import '../line-chart';
-import { SpaceService, SpaceCountHistory } from '../../services/space';
+import { SpaceService, SpaceMemberCountHistory } from '../../services/space';
 // eslint-disable-next-line import/no-duplicates
 import { LineChartLineData } from '../line-chart';
 
@@ -47,7 +47,7 @@ export class UserCurrentWeekPage extends LitElement {
   public spaceService: SpaceService | null = null;
 
   @property({ attribute: false })
-  private _countHistory: SpaceCountHistory | null = null;
+  private _countHistory: SpaceMemberCountHistory | null = null;
 
   @property({ attribute: false })
   private _countPrediction: SpaceCountPrediction | null = null;
@@ -58,7 +58,7 @@ export class UserCurrentWeekPage extends LitElement {
   @property({ attribute: false })
   private _lineChartPredictionData: import('../line-chart').LineChartData<Date> | null = null;
 
-  private _lineChartDataDeps: readonly [SpaceCountHistory | null] = [null];
+  private _lineChartDataDeps: readonly [SpaceMemberCountHistory | null] = [null];
 
   private _lineChartPredictionDataDeps: readonly [SpaceCountPrediction | null] = [null];
 

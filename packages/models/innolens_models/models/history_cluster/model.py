@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.cluster import hierarchy as sch
 
 
-class Model:
+class HistoryClusterModel:
 
   def cluster(self, histories: np.ndarray, *, show_ui: bool = False) -> np.ndarray:
     dists = []

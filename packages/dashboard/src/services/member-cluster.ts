@@ -2,9 +2,9 @@ import { injectableConstructor, singleton } from '@innolens/resolver/web';
 
 import { stringTag } from '../utils/class';
 import { Debouncer } from '../utils/debouncer';
+import { generateKey } from '../utils/key';
 
 import * as MemberClusterGlue from './glues/member-cluster';
-import { generateKey } from './key';
 import { OAuth2Service } from './oauth2';
 
 

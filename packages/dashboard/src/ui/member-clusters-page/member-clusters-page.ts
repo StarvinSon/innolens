@@ -11,8 +11,8 @@ import '../choice-chip';
 import '../choice-chips';
 import '../line-chart'; // eslint-disable-line import/no-duplicates
 import '../member-cluster-dendrogram';
-import { generateKey } from '../../services/key';
 import { MemberClusterService, MemberClusterResult } from '../../services/member-cluster';
+import { generateKey } from '../../utils/key';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
 import { LineChartData, LineChartLineData } from '../line-chart'; // eslint-disable-line import/no-duplicates

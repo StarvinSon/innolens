@@ -31,20 +31,40 @@ export const writeQueryDecoder = (
       });
     }
   } else if ('enum' in schema) {
-    writer.write('if (false');
     for (let i = 0; i < schema.enum.length; i += 1) {
-      writer.write(` || ${tempSrcVar} === `);
-      const literal = schema.enum[i];
-      switch (typeof literal) {
-        case 'boolean':
-        case 'number': writer.write(String(literal)); break;
-        case 'string': writer.quote(literal); break;
-        default: throw new Error('enum can support boolean, number and string literal');
-      }
+      writer.write(`if (${tempTargetVar} === undefined)`).block(() => {
+        const literal = schema.enum[i];
+
+        const literalVar = createVarName('literalVal');
+        writer.writeLine(`let ${literalVar}`);
+
+        const literalType = typeof literal;
+        switch (literalType) {
+          case 'boolean':
+          case 'number':
+          case 'string': {
+            writeQueryDecoder(
+              sourceFile, writer, createVarName, imports,
+              literalVar, tempSrcVar, { type: literalType },
+              runtimeType
+            );
+            break;
+          }
+          default: throw new Error('enum can support boolean, number and string literal');
+        }
+
+        writer.write(`if (${literalVar} !== undefined && ${literalVar} === `);
+        switch (typeof literal) {
+          case 'boolean':
+          case 'number': writer.write(String(literal)); break;
+          case 'string': writer.quote(literal); break;
+          default: throw new Error('enum can support boolean, number and string literal');
+        }
+        writer.write(')').block(() => {
+          writer.writeLine(`${tempTargetVar} = ${literalVar}`);
+        });
+      });
     }
-    writer.write(')').block(() => {
-      writer.writeLine(`${tempTargetVar} = ${tempSrcVar}`);
-    });
   } else {
     switch (schema.type) {
       case 'null': {

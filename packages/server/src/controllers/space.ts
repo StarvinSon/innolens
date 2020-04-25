@@ -1,6 +1,6 @@
 import { singleton, injectableConstructor } from '@innolens/resolver/node';
 import csvParse from 'csv-parse';
-import createHttpError, { BadRequest, NotImplemented } from 'http-errors';
+import createHttpError, { BadRequest } from 'http-errors';
 import { CREATED, BAD_REQUEST } from 'http-status-codes';
 
 import { FileService } from '../services/file';
@@ -150,10 +150,8 @@ export class SpaceController extends FileController(SpaceControllerGlue) {
         fromTime: ctx.query.fromTime,
         toTime: ctx.query.toTime,
         timeStepMs: ctx.query.timeStepMs ?? (30 * 60 * 1000),
-        filter: {
-          spaceIds: ctx.query.filterSpaceIds ?? null,
-          memberIds: ctx.query.filterMemberIds ?? null
-        },
+        filterSpaceIds: ctx.query.filterSpaceIds ?? null,
+        filterMemberIds: ctx.query.filterMemberIds ?? null,
         countType: ctx.query.countType ?? 'stay',
         groupBy: ctx.query.groupBy ?? null
       });
@@ -165,11 +163,45 @@ export class SpaceController extends FileController(SpaceControllerGlue) {
     }
   }
 
+  protected async handleGetMemberCountHistory2(
+    ctx: SpaceControllerGlue.GetMemberCountHistory2Context
+  ): Promise<void> {
+    try {
+      ctx.responseBodyData = await this._spaceService.getMemberCountHistory2({
+        fromTime: ctx.requestBody.fromTime,
+        toTime: ctx.requestBody.toTime,
+        timeStepMs: ctx.requestBody.timeStepMs ?? (30 * 60 * 1000),
+        filterSpaceIds: ctx.requestBody.filterSpaceIds ?? null,
+        filterMemberIds: ctx.requestBody.filterMemberIds ?? null,
+        countType: ctx.requestBody.countType ?? 'stay',
+        groupBy: ctx.requestBody.groupBy ?? null
+      });
+    } catch (err) {
+      if (err instanceof SpaceNotFoundError) {
+        throw createHttpError(BAD_REQUEST, err);
+      }
+      throw err;
+    }
+  }
+
 
   protected async handleGetMemberCountForecast(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     ctx: SpaceControllerGlue.GetMemberCountForecastContext
   ): Promise<void> {
-    throw new NotImplemented('Forecast is not implemented');
+    try {
+      ctx.responseBodyData = await this._spaceService.getMemberCountForecast({
+        fromTime: ctx.requestBody.fromTime,
+        timeStepMs: ctx.requestBody.timeStepMs ?? (30 * 60 * 1000),
+        filterSpaceIds: ctx.requestBody.filterSpaceIds ?? null,
+        filterMemberIds: ctx.requestBody.filterMemberIds ?? null,
+        countType: ctx.requestBody.countType ?? 'stay',
+        groupBy: ctx.requestBody.groupBy ?? null
+      });
+    } catch (err) {
+      if (err instanceof SpaceNotFoundError) {
+        throw createHttpError(BAD_REQUEST, err);
+      }
+      throw err;
+    }
   }
 }

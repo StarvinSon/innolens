@@ -1,5 +1,5 @@
 import { singleton, injectableConstructor } from '@innolens/resolver/node';
-import { addMilliseconds } from 'date-fns';
+import { subWeeks } from 'date-fns';
 import { ObjectId } from 'mongodb';
 
 import { MemberCollection } from '../db/member';
@@ -7,6 +7,9 @@ import { Space, SpaceCollection } from '../db/space';
 import { SpaceAccessRecordCollection, SpaceAccessRecord } from '../db/space-access-record';
 import { SpaceMemberRecordCollection, SpaceMemberRecord } from '../db/space-member-record';
 import { raceSettled } from '../utils/promise';
+
+import { HistoryForecastService } from './history-forecast';
+import { timeSpanRange, timeSpanRepeat } from './time';
 
 
 export class SpaceNotFoundError extends Error {
@@ -66,20 +69,29 @@ export interface SpaceCountRecordValues {
 }
 
 
+export interface SpaceMemberCountHistory2 {
+  readonly groups: ReadonlyArray<string>;
+  readonly timeSpans: ReadonlyArray<readonly [Date, Date]>;
+  readonly values: ReadonlyArray<ReadonlyArray<number>>;
+}
+
+
 export interface SpaceMemberHistory {
   readonly groups: ReadonlyArray<string>;
   readonly timeSpans: ReadonlyArray<readonly [Date, Date]>;
-  readonly values: {
-    readonly [group: string]: ReadonlyArray<ReadonlyArray<string>>;
-  };
+  readonly values: ReadonlyArray<ReadonlyArray<ReadonlyArray<string>>>;
 }
+
+
+export type SpaceMemberCountForecast = SpaceMemberCountHistory2;
 
 
 @injectableConstructor({
   spaceCollection: SpaceCollection,
   spaceMemberRecordCollection: SpaceMemberRecordCollection,
   spaceAccessRecordCollection: SpaceAccessRecordCollection,
-  memberCollection: MemberCollection
+  memberCollection: MemberCollection,
+  historyForecastService: HistoryForecastService
 })
 @singleton()
 export class SpaceService {
@@ -87,18 +99,21 @@ export class SpaceService {
   private readonly _memberRecordCollection: SpaceMemberRecordCollection;
   private readonly _accessRecordCollection: SpaceAccessRecordCollection;
   private readonly _memberCollection: MemberCollection;
+  private readonly _historyForecastService: HistoryForecastService;
 
   public constructor(deps: {
     spaceCollection: SpaceCollection;
     spaceMemberRecordCollection: SpaceMemberRecordCollection,
     spaceAccessRecordCollection: SpaceAccessRecordCollection,
-    memberCollection: MemberCollection
+    memberCollection: MemberCollection,
+    historyForecastService: HistoryForecastService
   }) {
     ({
       spaceCollection: this._spaceCollection,
       spaceMemberRecordCollection: this._memberRecordCollection,
       spaceAccessRecordCollection: this._accessRecordCollection,
-      memberCollection: this._memberCollection
+      memberCollection: this._memberCollection,
+      historyForecastService: this._historyForecastService
     } = deps);
   }
 
@@ -440,22 +455,38 @@ export class SpaceService {
     readonly fromTime: Date;
     readonly toTime: Date;
     readonly timeStepMs: number;
-    readonly filter?: {
-      readonly spaceIds?: ReadonlyArray<string> | null;
-      readonly memberIds?: ReadonlyArray<string> | null;
-    };
+    readonly filterSpaceIds: ReadonlyArray<string> | null;
+    readonly filterMemberIds: ReadonlyArray<string> | null;
     readonly countType: SpaceCountHistoryCountType;
-    readonly groupBy?: SpaceCountHistoryGroupBy | null;
+    readonly groupBy: SpaceCountHistoryGroupBy | null;
   }): Promise<SpaceCountHistory> {
     const memberHistory = await this.getMemberHistory(opts);
     return {
       groups: memberHistory.groups,
-      records: memberHistory.timeSpans.map(([startTime, endTime], i) => ({
+      records: memberHistory.timeSpans.map(([startTime, endTime], t) => ({
         startTime,
         endTime,
-        counts: Object.fromEntries(memberHistory.groups.map((group): [string, number] =>
-          [group, memberHistory.values[group][i].length]))
+        counts: Object.fromEntries(memberHistory.groups.map((group, g): [string, number] =>
+          [group, memberHistory.values[g][t].length]))
       }))
+    };
+  }
+
+  public async getMemberCountHistory2(opts: {
+    readonly fromTime: Date;
+    readonly toTime: Date;
+    readonly timeStepMs: number;
+    readonly filterSpaceIds: ReadonlyArray<string> | null;
+    readonly filterMemberIds: ReadonlyArray<string> | null;
+    readonly countType: SpaceCountHistoryCountType;
+    readonly groupBy: SpaceCountHistoryGroupBy | null;
+  }): Promise<SpaceMemberCountHistory2> {
+    const memberHistory = await this.getMemberHistory(opts);
+    return {
+      ...memberHistory,
+      values: memberHistory.groups
+        .map((_, g): ReadonlyArray<number> => memberHistory.values[g]
+          .map((mIds) => mIds.length))
     };
   }
 
@@ -463,23 +494,19 @@ export class SpaceService {
     readonly fromTime: Date;
     readonly toTime: Date;
     readonly timeStepMs: number;
-    readonly filter?: {
-      readonly spaceIds?: ReadonlyArray<string> | null;
-      readonly memberIds?: ReadonlyArray<string> | null;
-    };
+    readonly filterSpaceIds: ReadonlyArray<string> | null;
+    readonly filterMemberIds: ReadonlyArray<string> | null;
     readonly countType: SpaceCountHistoryCountType;
-    readonly groupBy?: SpaceCountHistoryGroupBy | null;
+    readonly groupBy: SpaceCountHistoryGroupBy | null;
   }): Promise<SpaceMemberHistory> {
     const {
       fromTime,
       toTime,
       timeStepMs,
-      filter: {
-        spaceIds: filterSpaceIds = null,
-        memberIds: filterMemberIds = null
-      } = {},
+      filterSpaceIds,
+      filterMemberIds,
       countType,
-      groupBy = null
+      groupBy
     } = opts;
 
     let spaceIds: ReadonlyArray<string>;
@@ -691,17 +718,12 @@ export class SpaceService {
     }
 
     const groups = groupFilters.map((g) => g.name);
-    const timeSpans: Array<readonly [Date, Date]> = [];
-    const values = Object.fromEntries(groups.map((group): [string, Array<ReadonlyArray<string>>] =>
-      [group, []]));
+    const timeSpans = timeSpanRange(fromTime, toTime, timeStepMs);
+    const values = groups.map((): Array<ReadonlyArray<string>> => []);
 
     let i = 0;
     const currentMemberIds = new Map(previousMemberRecords);
-    for (
-      let periodStartTime = fromTime, periodEndTime = addMilliseconds(periodStartTime, timeStepMs);
-      periodStartTime < toTime;
-      periodStartTime = periodEndTime, periodEndTime = addMilliseconds(periodEndTime, timeStepMs)
-    ) {
+    for (const [, periodEndTime] of timeSpans) {
       const memberAccumulators = new Map(Array.from(currentMemberIds)
         .map(([spaceId, ids]) => [
           spaceId,
@@ -717,13 +739,13 @@ export class SpaceService {
         i += 1;
       }
 
-      timeSpans.push([periodStartTime, periodEndTime]);
-      for (const groupFilter of groupFilters) {
+      for (let g = 0; g < groupFilters.length; g += 1) {
+        const groupFilter = groupFilters[g];
         const groupMemberIds = Array.from(memberAccumulators.entries())
           .flatMap(([spaceId, a]) => a.get().map((mId): [string, string] => [spaceId, mId]))
           .filter(([spaceId, mId]) => groupFilter.filter(spaceId, mId))
           .map(([, mId]) => mId);
-        values[groupFilter.name].push(reduceAccumulatedCount(groupMemberIds));
+        values[g].push(reduceAccumulatedCount(groupMemberIds));
       }
     }
 
@@ -731,6 +753,38 @@ export class SpaceService {
       groups,
       timeSpans,
       values
+    };
+  }
+
+
+  public async getMemberCountForecast(opts: {
+    readonly fromTime: Date;
+    readonly timeStepMs: number;
+    readonly filterSpaceIds: ReadonlyArray<string> | null;
+    readonly filterMemberIds: ReadonlyArray<string> | null;
+    readonly countType: SpaceCountHistoryCountType;
+    readonly groupBy: SpaceCountHistoryGroupBy | null;
+  }): Promise<SpaceMemberCountForecast> {
+    const historyToTime = opts.fromTime;
+    const historyFromTime = subWeeks(historyToTime, 2); // 2 weeks
+    const history = await this.getMemberCountHistory2({
+      ...opts,
+      fromTime: historyFromTime,
+      toTime: historyToTime
+    });
+
+    const predictions = await this._historyForecastService.predict(history.values);
+
+    const forecastTimeSpans = timeSpanRepeat(
+      historyToTime,
+      opts.timeStepMs,
+      predictions[0].length
+    );
+
+    return {
+      groups: history.groups,
+      timeSpans: forecastTimeSpans,
+      values: predictions
     };
   }
 }

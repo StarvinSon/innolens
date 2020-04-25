@@ -25,7 +25,7 @@ $env:CUDA_VISIBLE_DEVICES='-1'
 
 Preprocess:
 ```shell
-# For history forecast
+# For history forecast (old) (**not working**)
 python -m innolens_models history_forecast preprocess --input ../simulator/simulation_result/space_access_records/inno_wing.csv --space --training-data ./preprocessed/history_forecast/training.csv --evaluation-data ./preprocessed/history_forecast/evaluation.csv --start-time "2020-01-15T00:00+08:00" --end-time "2020-06-01T00:00+08:00"
 
 # For access record
@@ -37,8 +37,11 @@ python -m innolens_models user_count preprocess --input ../simulator/simulation_
 
 Train:
 ```shell
-# For history forecast
+# For history forecast (old) (**not working**)
 python -m innolens_models history_forecast train --checkpoint-dir ./checkpoints/history_forecast --training-data ./preprocessed/history_forecast/training.csv --log-dir ./logs/history_forecast --ui
+
+# For history forecast
+python -m innolens_models history_forecast train --checkpoint-dir ./checkpoints/history_forecast --training-data ./history-train.json --log-dir ./logs/history_forecast --ui
 
 # For access record
 python -m innolens_models access_record train --model-dir ./tensorflow_models/access_record_dnn_0 --training-data ./preprocessed/inno_wing_access_records_training.csv --evaluation-data ./preprocessed/inno_wing_access_records_evaluation.csv --evaluation-prediction ./access_record_evaluation_prediction.csv
@@ -63,7 +66,7 @@ python -m innolens_models user_count evaluate --model-dir ./tensorflow_models/us
 ## 3.1. Server
 
 ```shell
-python -m innolens_models history_cluster serve
+python -m innolens_models serve --forecast-checkpoint-dir ./checkpoints/history_forecast
 ```
 
 ## 4. Notes

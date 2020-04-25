@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from argparse import ArgumentParser, Namespace
-from datetime import datetime, timedelta, timezone
-from typing import Any, Optional, Callable, TypeVar
+from datetime import timedelta, timezone
+from typing import Optional
 from typing_extensions import Final
 from pathlib import Path
 
@@ -22,8 +22,8 @@ class HistoryForecastCli(Cli):
       dest='action'
     )
     for sub_cli in (
-      HistoryForecastPreprocessorCli(),
-      HistoryForecastModelTrainingCli()
+      # HistoryForecastPreprocessorCli(),
+      HistoryForecastModelTrainingCli(),
     ):
       subparser = subparsers.add_parser(name=sub_cli.name)
       sub_cli.configure_parser(subparser)
@@ -32,65 +32,65 @@ class HistoryForecastCli(Cli):
   def handle(self, args: Namespace) -> None:
     args._HistoryForecastCli__handler(args)
 
-class HistoryForecastPreprocessorCli(Cli):
-  name: Final[str] = 'preprocess'
+# class HistoryForecastPreprocessorCli(Cli):
+#   name: Final[str] = 'preprocess'
 
-  def configure_parser(self, parser: ArgumentParser) -> None:
-    T = TypeVar('T', bound=Callable[..., Any])
-    def rename(name: str, f: T) -> T:
-      f.__name__ = name
-      return f
+#   def configure_parser(self, parser: ArgumentParser) -> None:
+#     T = TypeVar('T', bound=Callable[..., Any])
+#     def rename(name: str, f: T) -> T:
+#       f.__name__ = name
+#       return f
 
-    parser.add_argument(
-      '--input',
-      help='Path to the input data csv',
-      required=True
-    )
-    parser.add_argument(
-      '--space',
-      help='Whether the access records belongs to a space or something else',
-      action="store_true"
-    )
-    parser.add_argument(
-      '--training-data',
-      help='Path to the training data csv',
-      required=True
-    )
-    parser.add_argument(
-      '--evaluation-data',
-      help='Path to the evaluation data csv',
-      required=True
-    )
-    parser.add_argument(
-      '--start-time',
-      help='Start time',
-      type=rename('datetime', lambda s: datetime.fromisoformat(s)),
-      required=True
-    )
-    parser.add_argument(
-      '--end-time',
-      help='End time',
-      type=rename('datetime', lambda s: datetime.fromisoformat(s)),
-      required=True
-    )
+#     parser.add_argument(
+#       '--input',
+#       help='Path to the input data csv',
+#       required=True
+#     )
+#     parser.add_argument(
+#       '--space',
+#       help='Whether the access records belongs to a space or something else',
+#       action="store_true"
+#     )
+#     parser.add_argument(
+#       '--training-data',
+#       help='Path to the training data csv',
+#       required=True
+#     )
+#     parser.add_argument(
+#       '--evaluation-data',
+#       help='Path to the evaluation data csv',
+#       required=True
+#     )
+#     parser.add_argument(
+#       '--start-time',
+#       help='Start time',
+#       type=rename('datetime', lambda s: datetime.fromisoformat(s)),
+#       required=True
+#     )
+#     parser.add_argument(
+#       '--end-time',
+#       help='End time',
+#       type=rename('datetime', lambda s: datetime.fromisoformat(s)),
+#       required=True
+#     )
 
-  def handle(self, args: Namespace) -> None:
-    input_path: str = args.input
-    is_space: bool = args.space
-    training_data_path: str = args.training_data
-    evaluation_data_path: str = args.evaluation_data
-    start_time: datetime = args.start_time
-    end_time: datetime = args.end_time
+#   def handle(self, args: Namespace) -> None:
+#     input_path: str = args.input
+#     is_space: bool = args.space
+#     training_data_path: str = args.training_data
+#     evaluation_data_path: str = args.evaluation_data
+#     start_time: datetime = args.start_time
+#     end_time: datetime = args.end_time
 
-    from .preprocessor import preprocess
-    preprocess(
-      input_path=input_path,
-      is_space=is_space,
-      training_data_path=training_data_path,
-      evaluation_data_path=evaluation_data_path,
-      start_time=start_time,
-      end_time=end_time
-    )
+#     from .preprocessor import preprocess
+#     preprocess(
+#       input_path=input_path,
+#       is_space=is_space,
+#       training_data_path=training_data_path,
+#       evaluation_data_path=evaluation_data_path,
+#       start_time=start_time,
+#       end_time=end_time
+#     )
 
 class HistoryForecastModelTrainingCli(Cli):
   name: Final[str] = 'train'

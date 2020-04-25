@@ -31,13 +31,35 @@ export const writeQueryEncoder = (
       });
     }
   } else if ('enum' in schema) {
-    writer.write('if (false');
     for (let i = 0; i < schema.enum.length; i += 1) {
-      writer.write(` || ${tempSrcVar} === ${JSON.stringify(schema.enum[i])}`);
+      writer.write(`if (${tempTargetVar} === undefined)`).block(() => {
+        const literal = schema.enum[i];
+
+        writer.write(`if (${tempSrcVar} === `);
+        switch (typeof literal) {
+          case 'boolean':
+          case 'number': writer.write(String(literal)); break;
+          case 'string': writer.quote(literal); break;
+          default: throw new Error('enum can support boolean, number and string literal');
+        }
+        writer.write(')').block(() => {
+          const literalType = typeof literal;
+          switch (literalType) {
+            case 'boolean':
+            case 'number':
+            case 'string': {
+              writeQueryEncoder(
+                sourceFile, writer, createVarName, imports,
+                tempTargetVar, tempSrcVar, { type: literalType },
+                runtimeType
+              );
+              break;
+            }
+            default: throw new Error('enum can support boolean, number and string literal');
+          }
+        });
+      });
     }
-    writer.write(')').block(() => {
-      writer.writeLine(`${tempTargetVar} = ${tempSrcVar}`);
-    });
   } else {
     switch (schema.type) {
       case 'null': {

@@ -12,7 +12,7 @@
       "args": [
         "history_forecast", "train",
         "--checkpoint-dir", "${workspaceFolder}/checkpoints/history_forecast",
-        "--training-data", "${workspaceFolder}/preprocessed/history_forecast/training.csv",
+        "--training-data", "${workspaceFolder}/history-train.json",
         "--log-dir", "${workspaceFolder}/logs/history_forecast",
         "--ui"
       ]
@@ -31,13 +31,13 @@
       ]
     },
     {
-      "name": "History Clustering Server",
+      "name": "Model Server",
       "type": "python",
       "request": "launch",
       "module": "innolens_models",
       "args": [
-        "history_cluster", "serve"
+        "serve"
       ]
-    }
+    },
   ]
 }

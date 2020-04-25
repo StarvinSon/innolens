@@ -7,7 +7,7 @@ import {
 
 import '../gauge';
 import {
-  SpaceService, Space, SpaceCountHistory
+  SpaceService, Space, SpaceMemberCountHistory
 } from '../../services/space';
 
 import { css, classes } from './user-spaces-page.scss';
@@ -46,7 +46,7 @@ export class UserSpacesPage extends LitElement {
   public spaces: ReadonlyArray<Space> | null = null;
 
   @property({ attribute: false })
-  private _countHistory: ReadonlyArray<SpaceCountHistory> | null = null;
+  private _countHistory: ReadonlyArray<SpaceMemberCountHistory> | null = null;
 
   @property({ attribute: false })
   private _countPrediction: ReadonlyArray<SpaceCountPrediction> | null = null;
@@ -60,13 +60,13 @@ export class UserSpacesPage extends LitElement {
   @property({ attribute: false })
   private _gaugeData: ReadonlyArray<{ name: string; value: number }> | null = null;
 
-  private _lineChartDataDeps: readonly [ReadonlyArray<SpaceCountHistory> | null] = [null];
+  private _lineChartDataDeps: readonly [ReadonlyArray<SpaceMemberCountHistory> | null] = [null];
 
   private _lineChartPredictionDataDeps: readonly [
     ReadonlyArray<SpaceCountPrediction> | null
   ] = [null];
 
-  private _gaugeDataDeps: readonly [ReadonlyArray<SpaceCountHistory> | null] = [null];
+  private _gaugeDataDeps: readonly [ReadonlyArray<SpaceMemberCountHistory> | null] = [null];
 
   private _dataFetched = false;
 
@@ -81,7 +81,7 @@ export class UserSpacesPage extends LitElement {
     if (!this._dataFetched && this.spaces !== null) {
       const current = new Date();
       const spaceCountPromises = this.spaces.map(
-        async (space): Promise<SpaceCountHistory> =>
+        async (space): Promise<SpaceMemberCountHistory> =>
           this.spaceService!.fetchMemberCountHistory(
             startOfDay(current),
             startOfHour(current),

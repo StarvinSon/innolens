@@ -55,9 +55,7 @@ export class MemberClusterService {
     readonly fromTime: Date;
     readonly toTime: Date;
     readonly timeStepMs: number;
-    readonly filter?: {
-      readonly memberIds?: ReadonlyArray<string> | null;
-    };
+    readonly filterMemberIds: ReadonlyArray<string> | null;
   }): Promise<MemberActivityHistory> {
     const {
       fromTime,
@@ -66,11 +64,8 @@ export class MemberClusterService {
     } = opts;
 
     let memberIds: ReadonlyArray<string>;
-    if (
-      opts.filter !== undefined && opts.filter.memberIds !== undefined
-      && opts.filter.memberIds !== null
-    ) {
-      memberIds = opts.filter.memberIds;
+    if (opts.filterMemberIds !== undefined && opts.filterMemberIds !== null) {
+      memberIds = opts.filterMemberIds;
     } else {
       memberIds = (await this._memberService.getMembers()).map((m) => m.memberId);
     }
@@ -80,10 +75,8 @@ export class MemberClusterService {
       fromTime,
       toTime,
       timeStepMs,
-      filter: {
-        spaceIds,
-        memberIds
-      },
+      filterSpaceIds: spaceIds,
+      filterMemberIds: memberIds,
       countType: 'uniqueStay',
       groupBy: 'space'
     });
@@ -107,9 +100,9 @@ export class MemberClusterService {
     ) {
       timeSpans.push([periodStartTime, periodEndTime]);
       for (const memberId of memberIds) {
-        for (const spaceId of spaceIds) {
-          values[memberId][spaceId].push(
-            spaceMemberHistory.values[spaceId][i].includes(memberId) ? 1 : 0
+        for (let s = 0; s < spaceIds.length; s += 1) {
+          values[memberId][spaceIds[s]].push(
+            spaceMemberHistory.values[s][i].includes(memberId) ? 1 : 0
           );
         }
       }
@@ -127,21 +120,16 @@ export class MemberClusterService {
     readonly fromTime: Date;
     readonly toTime: Date;
     readonly timeStepMs: number;
-    readonly filter?: {
-      readonly memberIds?: ReadonlyArray<string> | null;
-    };
+    readonly filterMemberIds: ReadonlyArray<string> | null;
   }): Promise<MemberClusterResult> {
     const history = await this.getMemberActivityHistory({
       fromTime: opts.fromTime,
       toTime: opts.toTime,
       timeStepMs: opts.timeStepMs,
-      filter: {
-        memberIds: opts.filter?.memberIds
-      }
+      filterMemberIds: opts.filterMemberIds
     });
 
     const url = new URL('http://localhost:5000/cluster');
-    // url.searchParams.set('ui', '');
     const res = await fetch(url.href, {
       method: 'post',
       headers: {

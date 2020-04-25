@@ -6,7 +6,7 @@ import { Imports } from './imports';
 export type Schema = {
   readonly type: 'null' | 'boolean' | 'integer' | 'number' | 'string' | 'date';
 } | {
-  readonly enum: ReadonlyArray<string | number | boolean>;
+  readonly enum: ReadonlyArray<string | number | boolean | null>;
 } | {
   readonly type: 'array';
   readonly items: Schema | ReadonlyArray<Schema>;
@@ -42,11 +42,15 @@ export const writeSchemaType = (
     for (let i = 0; i < schema.enum.length; i += 1) {
       if (i > 0) writer.write(' | ');
       const literal = schema.enum[i];
-      switch (typeof literal) {
-        case 'boolean':
-        case 'number': writer.write(String(literal)); break;
-        case 'string': writer.quote(literal); break;
-        default: throw new Error('Enum only support boolean, number and string literal');
+      if (literal === null) {
+        writer.write('null');
+      } else {
+        switch (typeof literal) {
+          case 'boolean':
+          case 'number': writer.write(String(literal)); break;
+          case 'string': writer.quote(literal); break;
+          default: throw new Error('Enum only support boolean, number and string literal');
+        }
       }
     }
     writer.newLine();
@@ -99,7 +103,11 @@ export const writeSchemaType = (
       writer.inlineBlock(() => {
         if (schema.properties !== undefined) {
           for (const [key, valSchema] of Object.entries(schema.properties)) {
-            writer.write(`readonly ${key}: `);
+            writer.write(`readonly ${key}`);
+            if (schema.required === undefined || !schema.required.includes(key)) {
+              writer.write('?');
+            }
+            writer.write(': ');
             writeSchemaType(
               sourceFile, writer, imports,
               valSchema
