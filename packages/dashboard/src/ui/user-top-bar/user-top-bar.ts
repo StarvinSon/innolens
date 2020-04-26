@@ -1,10 +1,11 @@
 import { format as formatDate } from 'date-fns';
 import {
   LitElement, TemplateResult, html,
-  customElement, property
+  customElement, property, PropertyValues
 } from 'lit-element';
 
 import logo from '../../images/logo-2-horizontal.png';
+import { CurrentWeather, WeatherService } from '../../services/weather';
 import '../button';
 import '../theme';
 import '../typography';
@@ -16,7 +17,7 @@ const TAG_NAME = 'inno-user-top-bar';
 
 declare global {
   interface HTMLElementTagNameMap {
-    [TAG_NAME]: TopBar;
+    [TAG_NAME]: UserTopBar;
   }
 }
 
@@ -24,17 +25,33 @@ declare global {
  * @event drawer-toggled
  */
 @customElement(TAG_NAME)
-export class TopBar extends LitElement {
+export class UserTopBar extends LitElement {
   public static readonly styles = css;
 
   @property({ attribute: false })
-  private currentTime: string = formatDate(new Date(), 'eee d MMM  HH:mm');
+  public weatherService: WeatherService | null = null;
+
+  @property({ attribute: false })
+  private _currentTime: string = formatDate(new Date(), 'eee d MMM  HH:mm');
+
+  @property({ attribute: false })
+  private _currentWeather: CurrentWeather | null = null;
 
   public constructor() {
     super();
     setInterval(() => {
-      this.currentTime = formatDate(new Date(), 'eee d MMM  HH:mm');
+      this._currentTime = formatDate(new Date(), 'eee d MMM  HH:mm');
     }, 1000);
+  }
+
+  protected async update(changedProps: PropertyValues): Promise<void> {
+    if (this.weatherService === null) return;
+
+    if (this._currentWeather === null) {
+      this._currentWeather = await this.weatherService.getCurrentWeather();
+    }
+
+    super.update(changedProps);
   }
 
   protected render(): TemplateResult {
@@ -46,8 +63,20 @@ export class TopBar extends LitElement {
       </inno-button>
 
       <div class="${classes.info}">
-        ${this.currentTime}
+        ${this._renderCurrentWeather()}
+        <div class="${classes.time}">${this._currentTime}</div>
       </div>
+    `;
+  }
+
+  private _renderCurrentWeather(): TemplateResult {
+    if (this._currentWeather === null) return html``;
+
+    return html`
+      <div class="${classes.icon}">
+        <img src="${this._currentWeather.icon}" />
+      </div>
+      <div class="${classes.temperature}">${this._currentWeather.temperature.value}ºC</div>
     `;
   }
 

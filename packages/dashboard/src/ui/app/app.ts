@@ -5,6 +5,7 @@ import {
 } from 'lit-element';
 
 import { PathService } from '../../services/path';
+import { WeatherService } from '../../services/weather';
 import { classes as rootClasses } from '../../style.scss';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
@@ -34,6 +35,9 @@ export class App extends PropertyInjectorElement(LitElement) {
   @observeProperty('_updatePathListener')
   public pathService: PathService | null;
 
+  @injectableProperty(WeatherService)
+  public weatherService: WeatherService | null;
+
   @property({ attribute: false })
   private _path: string = '';
 
@@ -44,7 +48,7 @@ export class App extends PropertyInjectorElement(LitElement) {
   private readonly _topBarElem!: import('../top-bar').TopBar;
 
   @query('inno-user-top-bar')
-  private readonly _userTopBarElem!: import('../user-top-bar').TopBar;
+  private readonly _userTopBarElem!: import('../user-top-bar').UserTopBar;
 
   @query('inno-drawer')
   private readonly _drawerElement!: import('../drawer').Drawer;
@@ -79,6 +83,7 @@ export class App extends PropertyInjectorElement(LitElement) {
     super();
     this._bindPath = this._bindPath.bind(this);
     this.pathService = null;
+    this.weatherService = null;
   }
 
   public connectedCallback(): void {
@@ -113,7 +118,8 @@ export class App extends PropertyInjectorElement(LitElement) {
       <inno-pages class="${classes.pages}"></inno-pages>
       ${(this._path === '/') ? html`
         <inno-user-top-bar
-          @drawer-toggled="${this._onTopBarDrawerToggled}"></inno-user-top-bar>
+          @drawer-toggled="${this._onTopBarDrawerToggled}"
+          .weatherService="${this.weatherService}"></inno-user-top-bar>
       ` : html`
         <inno-top-bar
           @drawer-toggled="${this._onTopBarDrawerToggled}"></inno-top-bar>
