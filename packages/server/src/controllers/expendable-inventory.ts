@@ -5,9 +5,7 @@ import { CREATED, BAD_REQUEST, NOT_FOUND } from 'http-status-codes';
 
 import {
   ExpendableInventoryService, ExpendableInventoryTypeNotFoundError,
-  ExpendableInventoryQuantityRecord, ExpendableInventoryAccessRecord,
-  ExpendableInventoryAggregatedQuantityHistory, ExpendableInventoryAggregatedAccessHistory,
-  ExpendableInventoryType
+  ExpendableInventoryType, ExpendableInventoryImportAccessRecord
 } from '../services/expendable-inventory';
 import { FileService } from '../services/file';
 import { OAuth2Service } from '../services/oauth2';
@@ -61,11 +59,12 @@ export class ExpendableInventoryController extends FileController(ExpendableInve
     }));
   }
 
-  // eslint-disable-next-line max-len
-  protected async handlePostTypes(ctx: ExpendableInventoryControllerGlue.PostTypesContext): Promise<void> {
+  protected async handleImportTypes(
+    ctx: ExpendableInventoryControllerGlue.ImportTypesContext
+  ): Promise<void> {
     const fileStream = this.getFile(ctx.authentication.token, ctx.requestBody.fileId);
 
-    const records: Array<Omit<ExpendableInventoryType, '_id'>> = [];
+    const records: Array<Pick<ExpendableInventoryType, 'typeId' | 'typeName'>> = [];
     const csvRecordStream = fileStream.pipe(csvParse({ columns: true }));
     for await (const csvRecord of csvRecordStream) {
       const record = decodeCsvRecord(
@@ -90,66 +89,63 @@ export class ExpendableInventoryController extends FileController(ExpendableInve
   }
 
 
-  // eslint-disable-next-line max-len
-  protected async handlePostQuantitySetAndAccessRecords(ctx: ExpendableInventoryControllerGlue.PostQuantitySetAndAccessRecordsContext): Promise<void> {
-    const quantitySetRecordsStream =
-      this.getFile(ctx.authentication.token, ctx.requestBody.quantitySetRecordsFileId);
-    const accessRecordsStream =
-      this.getFile(ctx.authentication.token, ctx.requestBody.accessRecordsFileId);
+  protected async handleImportAccessRecords(
+    ctx: ExpendableInventoryControllerGlue.ImportAccessRecordsContext
+  ): Promise<void> {
+    const accessRecordsStream = this.getFile(ctx.authentication.token, ctx.requestBody.fileId);
 
-    const [quantitySetRecords, accessRecords] = await Promise.all([
-      Promise.resolve().then(async () => {
-        const csvRecordStream = quantitySetRecordsStream.pipe(csvParse({ columns: true }));
-        const records: Array<Omit<ExpendableInventoryQuantityRecord, '_id' | 'typeId' | 'mode'>> = [];
-        for await (const csvRecord of csvRecordStream) {
-          const record = decodeCsvRecord(
-            csvRecord,
-            ['time', 'quantity'],
-            {
-              time: decodeCsvDate,
-              quantity: decodeCsvInteger
-            }
-          );
-          if (record === undefined) {
-            throw new BadRequest('Failed to parse a row in the quantity set records csv file');
-          }
-          records.push(record);
+    const csvRecordStream = accessRecordsStream.pipe(csvParse({ columns: true }));
+    const records: Array<ExpendableInventoryImportAccessRecord> = [];
+    for await (const csvRecord of csvRecordStream) {
+      const record = decodeCsvRecord(
+        csvRecord,
+        ['action', 'time', 'member_id', 'quantity', 'take_quantity'],
+        {
+          action: decodeCsvString,
+          time: decodeCsvDate,
+          member_id: decodeCsvString,
+          quantity: (item) => decodeCsvInteger(item) ?? -1,
+          take_quantity: (item) => decodeCsvInteger(item) ?? -1
         }
-        return records;
-      }),
-      Promise.resolve().then(async () => {
-        const csvRecordStream = accessRecordsStream.pipe(csvParse({ columns: true }));
-        const records: Array<Omit<ExpendableInventoryAccessRecord, '_id' | 'typeId'>> = [];
-        for await (const csvRecord of csvRecordStream) {
-          const record = decodeCsvRecord(
-            csvRecord,
-            ['time', 'member_id', 'quantity'],
-            {
-              time: decodeCsvDate,
-              member_id: decodeCsvString,
-              quantity: decodeCsvInteger
-            }
-          );
-          if (record === undefined) {
-            throw new BadRequest('Failed to parse a row in the access records csv file');
+      );
+      if (record === undefined) {
+        throw new BadRequest('Failed to parse a row in the access records csv file');
+      }
+      switch (record.action) {
+        case 'set': {
+          if (record.quantity < 0) {
+            throw new BadRequest(`record with action "set" should has a positive or zero quantity, got ${record.quantity}`);
           }
           records.push({
+            action: 'set',
             time: record.time,
-            memberId: record.member_id,
             quantity: record.quantity
           });
+          break;
         }
-        return records;
-      })
-    ] as const);
+        case 'take': {
+          if (record.take_quantity < 0) {
+            throw new BadRequest(`record with action "set" should has a positive or zero take_quantity, got ${record.take_quantity}`);
+          }
+          records.push({
+            action: 'take',
+            time: record.time,
+            memberId: record.member_id,
+            takeQuantity: record.take_quantity
+          });
+          break;
+        }
+        default: {
+          throw new BadRequest(`Csv file contains a row with unsupported action: ${record.action}`);
+        }
+      }
+    }
 
     try {
-      await this._expendableInventoryService.importQuantitySetAndAccessRecords(
+      await this._expendableInventoryService.importAccessRecords(
         ctx.params.typeId,
         ctx.requestBody.deleteFromTime,
-        ctx.requestBody.deleteToTime,
-        quantitySetRecords,
-        accessRecords
+        records
       );
     } catch (err) {
       if (err instanceof ExpendableInventoryTypeNotFoundError) {
@@ -162,47 +158,43 @@ export class ExpendableInventoryController extends FileController(ExpendableInve
   }
 
 
-  // eslint-disable-next-line max-len
-  protected async handleGetQuantityHistory(ctx: ExpendableInventoryControllerGlue.GetQuantityHistoryContext): Promise<void> {
-    let history: ExpendableInventoryAggregatedQuantityHistory;
+  protected async handleGetQuantityHistory(
+    ctx: ExpendableInventoryControllerGlue.GetQuantityHistoryContext
+  ): Promise<void> {
     try {
-      history = await this._expendableInventoryService.getQuantityHistory(
-        ctx.query.startTime,
-        ctx.query.endTime,
-        ctx.query.timeStepMs,
-        ctx.query.typeIds ?? null,
-        ctx.query.groupBy ?? null
-      );
+      ctx.responseBodyData = await this._expendableInventoryService.getQuantityHistory({
+        fromTime: ctx.requestBody.fromTime,
+        toTime: ctx.requestBody.toTime,
+        timeStepMs: ctx.requestBody.timeStepMs,
+        filterTypeIds: ctx.requestBody.filterTypeIds ?? null,
+        groupBy: ctx.requestBody.groupBy ?? null,
+        countType: ctx.requestBody.countType ?? 'quantity'
+      });
     } catch (err) {
       if (err instanceof ExpendableInventoryTypeNotFoundError) {
         throw createHttpError(BAD_REQUEST, err);
       }
       throw err;
     }
-
-    ctx.responseBodyData = history;
   }
 
-  // eslint-disable-next-line max-len
-  protected async handleGetAccessHistory(ctx: ExpendableInventoryControllerGlue.GetAccessHistoryContext): Promise<void> {
-
-    let history: ExpendableInventoryAggregatedAccessHistory;
+  protected async handleGetQuantityForecast(
+    ctx: ExpendableInventoryControllerGlue.GetQuantityForecastContext
+  ): Promise<void> {
     try {
-      history = await this._expendableInventoryService.getAccessHistory(
-        ctx.query.startTime,
-        ctx.query.endTime,
-        ctx.query.timeStepMs,
-        ctx.query.typeIds ?? null,
-        ctx.query.groupBy ?? null,
-        ctx.query.countType ?? 'total'
-      );
+      ctx.responseBodyData = await this._expendableInventoryService.getQuantityForecast({
+        fromTime: ctx.requestBody.fromTime,
+        timeStepMs: ctx.requestBody.timeStepMs,
+        filterTypeIds: ctx.requestBody.filterTypeIds ?? null,
+        groupBy: ctx.requestBody.groupBy ?? null,
+        countType: ctx.requestBody.countType ?? 'quantity'
+      });
     } catch (err) {
       if (err instanceof ExpendableInventoryTypeNotFoundError) {
         throw createHttpError(BAD_REQUEST, err);
       }
       throw err;
     }
-
-    ctx.responseBodyData = history;
   }
+
 }

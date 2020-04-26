@@ -1,7 +1,7 @@
 @use '../layout';
 @use '../theme';
 @use '../typography';
-
+@use '../line-chart-2' as line-chart;
 
 :host {
   display: block;
@@ -51,4 +51,8 @@
   & > :not(:first-child) {
     margin-top: 2rem;
   }
+}
+
+.line-chart {
+  #{line-chart.$content-aspect-ratio}: 33%;
 }

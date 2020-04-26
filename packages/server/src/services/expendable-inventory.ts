@@ -1,16 +1,16 @@
 import { singleton, injectableConstructor } from '@innolens/resolver/node';
-import { addMilliseconds } from 'date-fns';
-import { FilterQuery, QuerySelector } from 'mongodb';
+import { addMilliseconds, subMilliseconds } from 'date-fns';
+import { ObjectId } from 'mongodb';
 
-// eslint-disable-next-line import/order
-import { MemberCollection } from '../db/member';
-import { ExpendableInventoryAccessRecord, ExpendableInventoryAccessRecordCollection } from '../db/expendable-inventory-access-record';
-import { ExpendableInventoryQuantityRecord, ExpendableInventoryQuantityRecordCollection } from '../db/expendable-inventory-quantity-record';
+import {
+  ExpendableInventoryQuantityRecord, ExpendableInventoryQuantityRecordCollection,
+  ExpendableInventoryQuantitySetRecord, ExpendableInventoryQuantityTakeRecord
+} from '../db/expendable-inventory-quantity-record';
 import { ExpendableInventoryType, ExpendableInventoryTypeCollection } from '../db/expendable-inventory-type';
-import { Writable } from '../utils/object';
-import { raceSettled } from '../utils/promise';
+import { MemberCollection } from '../db/member';
 
-import { Member } from './member';
+import { HistoryForecastService } from './history-forecast';
+import { timeSpanRange, timeSpanRepeat } from './time';
 
 
 export class ExpendableInventoryTypeNotFoundError extends Error {
@@ -22,102 +22,103 @@ export class ExpendableInventoryTypeNotFoundError extends Error {
 
 export {
   ExpendableInventoryType,
-  ExpendableInventoryQuantityRecord,
-  ExpendableInventoryAccessRecord
+  ExpendableInventoryQuantityRecord
 };
 
 
-export const expendableInventoryAggregatedQuantityHistoryGroupBys = [
-  'typeId'
-] as const;
+export type ExpendableInventoryImportAccessRecord =
+  Pick<ExpendableInventoryQuantitySetRecord, 'action' | 'time' | 'quantity'>
+  | Pick<ExpendableInventoryQuantityTakeRecord, 'action' | 'time' | 'memberId' | 'takeQuantity'>;
 
-export type ExpendableInventoryAggregatedQuantityHistoryGroupBy =
-  (typeof expendableInventoryAggregatedQuantityHistoryGroupBys)[number];
 
-export interface ExpendableInventoryAggregatedQuantityHistory {
+export type ExpendableInventoryQuantityGroupBy =
+  'type'
+  | null;
+
+export interface ExpendableInventoryQuantity {
   readonly groups: ReadonlyArray<string>;
-  readonly records: ReadonlyArray<ExpendableInventoryAggregatedQuantityRecord>;
-}
-
-export interface ExpendableInventoryAggregatedQuantityRecord {
-  readonly time: Date;
-  readonly counts: {
-    readonly [group: string]: number;
-  };
+  readonly values: ReadonlyArray<number>;
 }
 
 
-export const expendableInventoryAggregatedAccessHistoryGroupBys = [
-  'department',
-  'typeOfStudy',
-  'studyProgramme',
-  'yearOfStudy',
-  'affiliatedStudentInterestGroup'
-] as const;
+export type ExpendableInventoryQuantityHistoryGroupBy =
+  null
+  | 'type'
+  | 'member'
+  | 'department'
+  | 'typeOfStudy'
+  | 'studyProgramme'
+  | 'yearOfStudy'
+  | 'affiliatedStudentInterestGroup';
 
-export type ExpendableInventoryAggregatedAccessHistoryGroupBy =
-  (typeof expendableInventoryAggregatedAccessHistoryGroupBys)[number];
+export type ExpendableInventoryQuantityHistoryCountType =
+  'quantity'
+  | 'take'
+  | 'uniqueTake';
 
-export const expendableInventoryAggregatedAccessHistoryCountTypes = [
-  'total',
-  'uniqueMember'
-] as const;
-
-export type ExpendableInventoryAggregatedAccessHistoryCountType =
-  (typeof expendableInventoryAggregatedAccessHistoryCountTypes)[number];
-
-export interface ExpendableInventoryAggregatedAccessHistory {
+export interface ExpendableInventoryQuantityHistory {
+  readonly timeSpans: ReadonlyArray<readonly [Date, Date]>;
   readonly groups: ReadonlyArray<string>;
-  readonly records: ReadonlyArray<ExpendableInventoryAggregatedAccessRecord>;
+  readonly values: ReadonlyArray<ReadonlyArray<number>>;
 }
 
-export interface ExpendableInventoryAggregatedAccessRecord {
-  readonly startTime: Date;
-  readonly endTime: Date;
-  readonly counts: {
-    readonly [group: string]: number;
-  };
-}
+
+export type ExpendableInventoryQuantityForecastGroupBy =
+  ExpendableInventoryQuantityHistoryGroupBy;
+
+export type ExpendableInventoryQuantityForecastCountType =
+  ExpendableInventoryQuantityHistoryCountType;
+
+export type ExpendableInventoryQuantityForecast =
+  ExpendableInventoryQuantityHistory;
 
 
 @injectableConstructor({
   expendableInventoryTypeCollection: ExpendableInventoryTypeCollection,
   expendableInventoryInstanceCollection: ExpendableInventoryQuantityRecordCollection,
-  expendableInventoryAccessRecordCollection: ExpendableInventoryAccessRecordCollection,
-  memberCollection: MemberCollection
+  memberCollection: MemberCollection,
+  historyForecastService: HistoryForecastService
 })
 @singleton()
 export class ExpendableInventoryService {
   private readonly _typeCollection: ExpendableInventoryTypeCollection;
   private readonly _quantityRecordCollection: ExpendableInventoryQuantityRecordCollection;
-  private readonly _accessRecordCollection: ExpendableInventoryAccessRecordCollection;
   private readonly _memberCollection: MemberCollection;
+  private readonly _historyForecastService: HistoryForecastService;
 
   public constructor(deps: {
     expendableInventoryTypeCollection: ExpendableInventoryTypeCollection;
     expendableInventoryInstanceCollection: ExpendableInventoryQuantityRecordCollection;
-    expendableInventoryAccessRecordCollection: ExpendableInventoryAccessRecordCollection;
     memberCollection: MemberCollection;
+    historyForecastService: HistoryForecastService;
   }) {
     ({
       expendableInventoryTypeCollection: this._typeCollection,
       expendableInventoryInstanceCollection: this._quantityRecordCollection,
-      expendableInventoryAccessRecordCollection: this._accessRecordCollection,
-      memberCollection: this._memberCollection
+      memberCollection: this._memberCollection,
+      historyForecastService: this._historyForecastService
     } = deps);
   }
 
 
-  public async importTypes(types: ReadonlyArray<Omit<ExpendableInventoryType, '_id'>>): Promise<void> {
+  public async importTypes(types: ReadonlyArray<Pick<ExpendableInventoryType, 'typeId' | 'typeName'>>): Promise<void> {
     if (types.length === 0) return;
     await this._typeCollection
       .bulkWrite(
         types.map((type) => ({
-          replaceOne: {
+          updateOne: {
             filter: {
               typeId: type.typeId
             },
-            replacement: type,
+            update: {
+              $set: {
+                typeName: type.typeName,
+                versionId: new ObjectId()
+              },
+              $setOnInsert: {
+                currentQuantity: 0
+              }
+            },
             upsert: true
           }
         })),
@@ -135,159 +136,134 @@ export class ExpendableInventoryService {
     return count >= 1;
   }
 
-  private async _hasAllTypes(typeIds: ReadonlyArray<string>): Promise<boolean> {
-    const promises = new Set(typeIds.map(async (id) => this._hasType(id)));
-    while (promises.size > 0) {
-      // eslint-disable-next-line no-await-in-loop
-      const result = await raceSettled(promises);
-      promises.delete(result.promise);
-      if (result.status === 'rejected') {
-        throw result.reason;
+  private async _hasAllTypes(typeIds: ReadonlyArray<string>): Promise<ReadonlyArray<string>> {
+    const matchedTypes = await this._typeCollection.find({
+      typeId: {
+        $in: typeIds.slice()
       }
-      if (!result.value) {
-        return false;
-      }
-    }
-    return true;
+    }).toArray();
+    const matchedTypeIds = new Set(matchedTypes.map((type) => type.typeId));
+    return typeIds.filter((typeId) => !matchedTypeIds.has(typeId));
   }
 
 
-  public async importQuantitySetAndAccessRecords(
+  public async importAccessRecords(
     typeId: string,
     deleteFromTime: Date | null,
-    deleteToTime: Date | null,
-    quantitySetRecords: ReadonlyArray<Omit<ExpendableInventoryQuantityRecord, '_id' | 'typeId' | 'mode'>>,
-    accessRecords: ReadonlyArray<Omit<ExpendableInventoryAccessRecord, '_id' | 'typeId'>>
+    importRecords: ReadonlyArray<ExpendableInventoryImportAccessRecord>
   ): Promise<void> {
     if (!await this._hasType(typeId)) {
       throw new ExpendableInventoryTypeNotFoundError([typeId]);
     }
 
-    const iterateSortedRecords = function* (): IterableIterator<{
-      type: 'quantitySet',
-      record: Omit<ExpendableInventoryQuantityRecord, '_id' | 'typeId' | 'mode'>
-    } | {
-      type: 'access',
-      record: Omit<ExpendableInventoryAccessRecord, '_id' | 'typeId'>
-    }> {
-      let i = 0;
-      let j = 0;
-      while (i < quantitySetRecords.length || j < accessRecords.length) {
-        while (
-          i < quantitySetRecords.length
-          && (j >= accessRecords.length || quantitySetRecords[i].time <= accessRecords[j].time)
-        ) {
-          yield {
-            type: 'quantitySet',
-            record: quantitySetRecords[i]
-          };
-          i += 1;
-        }
-        while (
-          j < accessRecords.length
-          && (i >= quantitySetRecords.length || accessRecords[j].time < quantitySetRecords[i].time)
-        ) {
-          yield {
-            type: 'access',
-            record: accessRecords[j]
-          };
-          j += 1;
+    await this._quantityRecordCollection.deleteMany({
+      typeId,
+      ...deleteFromTime === null ? {} : {
+        time: {
+          $gte: deleteFromTime
         }
       }
-    };
+    });
 
-    const quantityRecordsToStore: Array<Omit<ExpendableInventoryQuantityRecord, '_id'>> = [];
-    const accessRecordsToStore: Array<Omit<ExpendableInventoryAccessRecord, '_id'>> = [];
+    const latestQuantityRecord = await this._quantityRecordCollection.findOne({
+      typeId
+    }, {
+      sort: {
+        time: -1,
+        _id: -1
+      }
+    });
 
-    let currQuantity = 0;
-    for (const record of iterateSortedRecords()) {
-      switch (record.type) {
-        case 'quantitySet': {
-          currQuantity = record.record.quantity;
-          quantityRecordsToStore.push({
-            time: record.record.time,
+    let latestQuantity = latestQuantityRecord === null ? 0 : latestQuantityRecord.quantity;
+    const quantityRecords: Array<Omit<ExpendableInventoryQuantitySetRecord, '_id'> | Omit<ExpendableInventoryQuantityTakeRecord, '_id'>> = [];
+
+    for (const importRecord of importRecords) {
+      switch (importRecord.action) {
+        case 'set': {
+          latestQuantity = importRecord.quantity;
+          quantityRecords.push({
+            action: 'set',
+            time: importRecord.time,
             typeId,
-            quantity: record.record.quantity,
-            mode: 'set'
+            quantity: importRecord.quantity
           });
           break;
         }
-        case 'access': {
-          currQuantity -= record.record.quantity;
-          quantityRecordsToStore.push({
-            time: record.record.time,
+        case 'take': {
+          latestQuantity -= importRecord.takeQuantity;
+          quantityRecords.push({
+            action: 'take',
+            time: importRecord.time,
             typeId,
-            quantity: currQuantity,
-            mode: 'access'
-          });
-          accessRecordsToStore.push({
-            time: record.record.time,
-            typeId,
-            memberId: record.record.memberId,
-            quantity: record.record.quantity
+            memberId: importRecord.memberId,
+            quantity: latestQuantity,
+            takeQuantity: importRecord.takeQuantity
           });
           break;
         }
         default: {
-          throw new Error(`Unknown record type: ${record!.type}`);
+          throw new Error(`Unknown action: ${importRecord!.action}`);
         }
       }
     }
 
-    const deleteQuantityRecordFilter: FilterQuery<Writable<ExpendableInventoryQuantityRecord>> = {
+    const promises: Array<Promise<unknown>> = [];
+    promises.push(this._typeCollection.updateOne({
       typeId
-    };
-    const deleteAccessRecordFilter: FilterQuery<Writable<ExpendableInventoryAccessRecord>> = {
-      typeId
-    };
-    if (deleteFromTime !== null || deleteToTime !== null) {
-      const timeQuerySelector: QuerySelector<Date> = {};
-      if (deleteFromTime !== null) timeQuerySelector.$gte = deleteFromTime;
-      if (deleteToTime !== null) timeQuerySelector.$lt = deleteToTime;
-      deleteQuantityRecordFilter.time = timeQuerySelector;
-      deleteAccessRecordFilter.time = timeQuerySelector;
+    }, {
+      $set: {
+        currentQuantity: latestQuantity,
+        versionId: new ObjectId()
+      }
+    }));
+    if (quantityRecords.length > 0) {
+      promises.push(this._quantityRecordCollection.insertMany(quantityRecords));
     }
-    await Promise.all([
-      this._quantityRecordCollection.deleteMany(deleteQuantityRecordFilter),
-      this._accessRecordCollection.deleteMany(deleteQuantityRecordFilter)
-    ]);
-
-    await Promise.all([
-      this._quantityRecordCollection.insertMany(quantityRecordsToStore),
-      this._accessRecordCollection.insertMany(accessRecordsToStore)
-    ]);
+    await Promise.all(promises);
   }
 
 
-  public async getQuantityHistory(
-    startTime: Date,
-    endTime: Date,
-    timeStepMs: number,
-    typeIds: ReadonlyArray<string> | null,
-    groupBy: ExpendableInventoryAggregatedQuantityHistoryGroupBy | null
-  ): Promise<ExpendableInventoryAggregatedQuantityHistory> {
-    if (typeIds !== null && !await this._hasAllTypes(typeIds)) {
-      throw new ExpendableInventoryTypeNotFoundError(typeIds);
+  private async _normalizeFilterTypeIds(
+    filterTypeIds: ReadonlyArray<string> | null
+  ): Promise<ReadonlyArray<string>> {
+    if (filterTypeIds !== null) {
+      const notFoundTypeIds = await this._hasAllTypes(filterTypeIds);
+      if (notFoundTypeIds.length > 0) {
+        throw new ExpendableInventoryTypeNotFoundError(notFoundTypeIds);
+      }
+      return filterTypeIds;
     }
+    const types = await this.getTypes();
+    return types.map((type) => type.typeId);
+  }
 
-    type QuantityRecord = Pick<ExpendableInventoryQuantityRecord, 'time' | 'typeId' | 'quantity'>;
-    const [lastQuantityRecords, quantityRecords] = await Promise.all([
-      this._quantityRecordCollection.aggregate<QuantityRecord>([
+  private async _getLatestQuantityRecordsBefore(opts: {
+    readonly typeIds: ReadonlyArray<string>,
+    readonly time: Date,
+    readonly range: 'lt' | 'lte'
+  }): Promise<Map<string, number>> {
+    const {
+      typeIds,
+      time,
+      range
+    } = opts;
+
+    /* eslint-disable @typescript-eslint/indent */
+    const result = await this._quantityRecordCollection
+      .aggregate<{ doc: ExpendableInventoryQuantityRecord }>([
         {
           $match: {
-            ...typeIds === null ? {} : {
-              typeId: {
-                $in: typeIds.slice()
-              }
+            typeId: {
+              $in: typeIds
             },
             time: {
-              $lt: startTime
+              [`$${range}`]: time
             }
           }
         },
         {
           $sort: {
-            typeId: 1,
+            typeId: -1,
             time: -1,
             _id: -1
           }
@@ -295,167 +271,150 @@ export class ExpendableInventoryService {
         {
           $group: {
             _id: '$typeId',
-            typeId: { $first: '$typeId' },
-            time: { $first: '$time' },
-            quantity: { $first: '$quantity' }
-          }
-        }
-      ]).toArray(),
-      this._quantityRecordCollection.find(
-        {
-          ...typeIds === null ? {} : {
-            typeId: {
-              $in: typeIds.slice()
+            doc: {
+              $first: '$$ROOT'
             }
-          },
-          time: {
-            $gte: startTime,
-            $lt: endTime
-          }
-        },
-        {
-          sort: {
-            time: 1
           }
         }
-      ).toArray()
-    ] as const);
+      ])
+      .toArray();
+    /* eslint-enable @typescript-eslint/indent */
+    const resultMap = new Map(result.map(({ doc }) => [doc.typeId, doc.quantity]));
+    return new Map(typeIds.map((typeId) => [typeId, resultMap.get(typeId) ?? 0]));
+  }
 
-    // Create group filters
-    let groupFilters: ReadonlyArray<{
-      readonly name: string;
-      readonly filter: (record: QuantityRecord) => boolean;
-    }>;
-    switch (groupBy) {
-      case null: {
-        groupFilters = [{
-          name: 'total',
-          filter: () => true
-        }];
-        break;
-      }
-      case 'typeId': {
-        const groupNames = Array.from(new Set(quantityRecords.map((record) => record.typeId)));
-        groupFilters = groupNames.map((groupName) => ({
-          name: groupName,
-          filter: (record) => record.typeId === groupName
-        }));
-        break;
-      }
-      default: {
-        throw new Error(`Unsupported groupBy: ${groupBy}`);
-      }
-    }
 
-    const reduceGroupRecords =
-      (records: ReadonlyArray<QuantityRecord>): number => {
-        let quantity = 0;
-        for (const record of records) {
-          quantity += record.quantity;
-        }
-        return quantity;
-      };
+  public async getQuantity(opts: {
+    readonly time: Date;
+    readonly filterTypeIds?: ReadonlyArray<string> | null;
+    readonly groupBy: ExpendableInventoryQuantityGroupBy;
+  }): Promise<ExpendableInventoryQuantity> {
+    const {
+      time,
+      filterTypeIds = null,
+      groupBy
+    } = opts;
 
-    // Get history
-    let i = 0;
-    const historyRecords: Array<ExpendableInventoryAggregatedQuantityRecord> = [];
-    const latestQuantityRecords: Map<string, QuantityRecord> = new Map();
-    for (const lastQuantityRecord of lastQuantityRecords) {
-      latestQuantityRecords.set(lastQuantityRecord.typeId, lastQuantityRecord);
-    }
-    for (
-      let time = addMilliseconds(startTime, timeStepMs);
-      time <= endTime;
-      time = addMilliseconds(time, timeStepMs)
-    ) {
-      while (i < quantityRecords.length && quantityRecords[i].time <= time) {
-        latestQuantityRecords.set(quantityRecords[i].typeId, quantityRecords[i]);
-        i += 1;
-      }
-
-      // eslint-disable-next-line max-len
-      interface WritableAggregatedQuantityRecord extends ExpendableInventoryAggregatedQuantityRecord {
-        readonly counts: Writable<ExpendableInventoryAggregatedQuantityRecord['counts']>;
-      }
-      const historyRecord: WritableAggregatedQuantityRecord = {
-        time,
-        counts: {}
-      };
-      for (const groupFilter of groupFilters) {
-        const groupRecords = Array
-          .from(latestQuantityRecords.values())
-          .filter((r) => groupFilter.filter(r));
-        const groupValue = reduceGroupRecords(groupRecords);
-        historyRecord.counts[groupFilter.name] = groupValue;
-      }
-      historyRecords.push(historyRecord);
-    }
+    const history = await this.getQuantityHistory({
+      fromTime: time,
+      toTime: addMilliseconds(time, 1),
+      timeStepMs: 1,
+      filterTypeIds,
+      groupBy,
+      countType: 'quantity'
+    });
 
     return {
-      groups: groupFilters.map((filter) => filter.name),
-      records: historyRecords
+      groups: history.groups,
+      values: history.values.map((groupValues) => groupValues[0])
     };
   }
 
-  public async getAccessHistory(
-    startTime: Date,
-    endTime: Date,
-    timeStepMs: number,
-    typeIds: ReadonlyArray<string> | null,
-    groupBy: ExpendableInventoryAggregatedAccessHistoryGroupBy | null,
-    countType: ExpendableInventoryAggregatedAccessHistoryCountType | null
-  ): Promise<ExpendableInventoryAggregatedAccessHistory> {
-    if (typeIds !== null && !await this._hasAllTypes(typeIds)) {
-      throw new ExpendableInventoryTypeNotFoundError(typeIds);
+  public async getQuantityHistory(opts: {
+    readonly fromTime: Date;
+    readonly toTime: Date;
+    readonly timeStepMs: number;
+    readonly filterTypeIds: ReadonlyArray<string> | null;
+    readonly groupBy: ExpendableInventoryQuantityHistoryGroupBy;
+    readonly countType: ExpendableInventoryQuantityHistoryCountType
+  }): Promise<ExpendableInventoryQuantityHistory> {
+    const {
+      fromTime,
+      toTime,
+      timeStepMs,
+      filterTypeIds,
+      groupBy,
+      countType
+    } = opts;
+
+    const typeIds = await this._normalizeFilterTypeIds(filterTypeIds);
+    const [
+      quantityRecords,
+      initialQuantityMap
+    ] = await Promise.all([
+      this._quantityRecordCollection
+        .find(
+          {
+            ...filterTypeIds === null ? {} : {
+              typeId: {
+                $in: filterTypeIds.slice()
+              }
+            },
+            time: {
+              $gte: fromTime,
+              $lt: toTime
+            }
+          }, {
+            sort: {
+              time: 1,
+              _id: 1
+            }
+          }
+        )
+        .toArray(),
+      this._getLatestQuantityRecordsBefore({
+        typeIds,
+        time: fromTime,
+        range: 'lt'
+      })
+    ]);
+
+    const timeSpans = timeSpanRange(fromTime, toTime, timeStepMs);
+    const timeSpanRecords: Array<ReadonlyArray<ExpendableInventoryQuantityRecord>> = [];
+    const timeSpanQuantityMaps: Array<ReadonlyMap<string, number>> = [];
+
+    const currentQuantityMap = new Map(initialQuantityMap);
+    let i = 0;
+    for (const [, periodEndTime] of timeSpans) {
+      const periodRecords: Array<ExpendableInventoryQuantityRecord> = [];
+      while (i < quantityRecords.length && quantityRecords[i].time <= periodEndTime) {
+        currentQuantityMap.set(quantityRecords[i].typeId, quantityRecords[i].quantity);
+        periodRecords.push(quantityRecords[i]);
+        i += 1;
+      }
+      timeSpanRecords.push(periodRecords);
+      timeSpanQuantityMaps.push(new Map(currentQuantityMap));
     }
 
-    type Record = ExpendableInventoryAccessRecord & { readonly member?: Member };
-    const accessRecords = await this._accessRecordCollection.aggregate<Record>([
-      {
-        $match: {
-          ...typeIds === null ? {} : {
-            typeId: {
-              $in: typeIds
-            }
-          },
-          time: {
-            $gte: startTime,
-            $lt: endTime
-          }
-        }
-      },
-      {
-        $sort: {
-          time: 1
-        }
-      },
-      {
-        $lookup: {
-          from: this._memberCollection.collectionName,
-          localField: 'memberId',
-          foreignField: 'memberId',
-          as: 'member'
-        }
-      },
-      {
-        $unwind: {
-          path: '$member',
-          preserveNullAndEmptyArrays: true
-        }
-      }
-    ]).toArray();
-
-    // Create group filters
-    let groupFilters: ReadonlyArray<{
-      readonly name: string;
-      readonly filter: (accessRecord: Record) => boolean;
-    }>;
+    let groups: ReadonlyArray<string>;
+    // eslint-disable-next-line max-len
+    let groupedTimeSpanQuantities: ReadonlyArray<Array<number>> | null = null; // for countType=quantity
+    // eslint-disable-next-line max-len
+    let groupedTimeSpanRecords: ReadonlyArray<Array<ReadonlyArray<ExpendableInventoryQuantityRecord>>>;
     switch (groupBy) {
       case null: {
-        groupFilters = [{
-          name: 'total',
-          filter: () => true
-        }];
+        groups = ['total'];
+        groupedTimeSpanQuantities = [
+          timeSpanQuantityMaps.map((timeSpanQuantityMap) =>
+            Array.from(timeSpanQuantityMap.values()).reduce((s, a) => s + a, 0))
+        ];
+        groupedTimeSpanRecords = [
+          timeSpanRecords
+        ];
+        break;
+      }
+      case 'type': {
+        groups = typeIds;
+        groupedTimeSpanQuantities = typeIds.map((typeId) =>
+          timeSpanQuantityMaps.map((timeSpanQuantityMap) =>
+            timeSpanQuantityMap.get(typeId)!));
+        groupedTimeSpanRecords = typeIds.map((typeId) =>
+          timeSpanRecords.map((periodRecords) =>
+            periodRecords.filter((periodRecord) => periodRecord.typeId === typeId)));
+        break;
+      }
+      case 'member': {
+        groups = Array.from(new Set(timeSpanRecords.flatMap((periodRecords) =>
+          periodRecords
+            .filter((periodRecord): periodRecord is ExpendableInventoryQuantityTakeRecord => periodRecord.action === 'take')
+            .map((periodRecord) => periodRecord.memberId))));
+        groupedTimeSpanQuantities = null;
+        groupedTimeSpanRecords = groups.map((memberId) =>
+          timeSpanRecords.map((periodRecords) =>
+            periodRecords.filter((periodRecord) => (
+              periodRecord.action === 'take'
+              && periodRecord.memberId === memberId
+            ))));
         break;
       }
       case 'department':
@@ -463,12 +422,27 @@ export class ExpendableInventoryService {
       case 'studyProgramme':
       case 'yearOfStudy':
       case 'affiliatedStudentInterestGroup': {
-        const getGroupName = (record: Record): string => record.member?.[groupBy] ?? 'unknown';
-        const groupNames = Array.from(new Set(accessRecords.map(getGroupName)));
-        groupFilters = groupNames.map((groupName) => ({
-          name: groupName,
-          filter: (record: Record) => getGroupName(record) === groupName
-        }));
+        const memberList = await this._memberCollection
+          .find({
+            memberId: {
+              $in: Array.from(new Set(
+                timeSpanRecords.flatMap((periodRecords) => periodRecords
+                  .filter((periodRecord): periodRecord is ExpendableInventoryQuantityTakeRecord => periodRecord.action === 'take')
+                  .map((periodRecord) => periodRecord.memberId))
+              ))
+            }
+          })
+          .toArray();
+        const memberMap = new Map(memberList.map((m) => [m.memberId, m]));
+
+        groups = Array.from(new Set(memberList.map((member) => member[groupBy])));
+        groupedTimeSpanQuantities = null;
+        groupedTimeSpanRecords = groups.map((group) =>
+          timeSpanRecords.map((periodRecords) =>
+            periodRecords.filter((periodRecord) => (
+              periodRecord.action === 'take'
+              && memberMap.get(periodRecord.memberId)?.[groupBy] === group
+            ))));
         break;
       }
       default: {
@@ -476,27 +450,32 @@ export class ExpendableInventoryService {
       }
     }
 
-    // Create group record reducer
-    let reduceGroupRecords: (records: ReadonlyArray<Record>) => number;
+    let values: ReadonlyArray<Array<number>>;
     switch (countType) {
-      case 'total': {
-        reduceGroupRecords = (records) => {
-          let quantity = 0;
-          for (const record of records) {
-            quantity += record.quantity;
-          }
-          return quantity;
-        };
+      case 'quantity': {
+        if (groupedTimeSpanQuantities === null) {
+          throw new Error('countType=quantity can only be used with groupBy=null|type');
+        }
+        values = groupedTimeSpanQuantities;
         break;
       }
-      case 'uniqueMember': {
-        reduceGroupRecords = (records) => {
-          const memberIds = records
-            .filter((r) => r.quantity > 0)
-            .map((r) => r.member?.memberId)
-            .filter((id): id is string => id !== undefined);
-          return new Set(memberIds).size;
-        };
+      case 'take': {
+        values = groupedTimeSpanRecords.map((groupTimeSpanRecords) =>
+          groupTimeSpanRecords.map((periodRecords) =>
+            periodRecords.filter((periodRecord) => periodRecord.action === 'take').length));
+        break;
+      }
+      case 'uniqueTake': {
+        values = groupedTimeSpanRecords.map((groupTimeSpanRecords) =>
+          groupTimeSpanRecords.map((periodRecords) => {
+            const acquiredMemberIds = new Set<string>();
+            for (const periodRecord of periodRecords) {
+              if (periodRecord.action === 'take') {
+                acquiredMemberIds.add(periodRecord.memberId);
+              }
+            }
+            return acquiredMemberIds.size;
+          }));
         break;
       }
       default: {
@@ -504,42 +483,46 @@ export class ExpendableInventoryService {
       }
     }
 
-    // Get history
-    let i = 0;
-    const historyRecords: Array<ExpendableInventoryAggregatedAccessRecord> = [];
-    for (
-      let periodStartTime = startTime, periodEndTime = addMilliseconds(periodStartTime, timeStepMs);
-      periodEndTime <= endTime;
-      periodStartTime = periodEndTime, periodEndTime = addMilliseconds(periodEndTime, timeStepMs)
-    ) {
-      const recordsWithinPeriod: Array<Record> = [];
-      while (
-        i < accessRecords.length
-        && accessRecords[i].time < periodEndTime
-      ) {
-        recordsWithinPeriod.push(accessRecords[i]);
-        i += 1;
-      }
+    return {
+      timeSpans,
+      groups,
+      values
+    };
+  }
 
-      interface WritableRecord extends Writable<ExpendableInventoryAggregatedAccessRecord> {
-        readonly counts: Writable<ExpendableInventoryAggregatedAccessRecord['counts']>;
-      }
-      const historyRecord: WritableRecord = {
-        startTime: periodStartTime,
-        endTime: periodEndTime,
-        counts: {}
-      };
-      for (const groupFilter of groupFilters) {
-        const groupRecords = recordsWithinPeriod.filter((r) => groupFilter.filter(r));
-        const reducedValue = reduceGroupRecords(groupRecords);
-        historyRecord.counts[groupFilter.name] = reducedValue;
-      }
-      historyRecords.push(historyRecord);
-    }
+  public async getQuantityForecast(opts: {
+    readonly fromTime: Date;
+    readonly timeStepMs: number;
+    readonly filterTypeIds: ReadonlyArray<string> | null;
+    readonly groupBy: ExpendableInventoryQuantityForecastGroupBy;
+    readonly countType: ExpendableInventoryQuantityForecastCountType
+  }): Promise<ExpendableInventoryQuantityForecast> {
+    const {
+      fromTime,
+      timeStepMs,
+      filterTypeIds,
+      groupBy,
+      countType
+    } = opts;
+
+    const historyToTime = fromTime;
+    const historyFromTime = subMilliseconds(fromTime, timeStepMs * 14 * 24 * 2);
+    const history = await this.getQuantityHistory({
+      fromTime: historyFromTime,
+      toTime: historyToTime,
+      timeStepMs,
+      filterTypeIds,
+      groupBy,
+      countType
+    });
+
+    const forecast = await this._historyForecastService.predict(history.values);
+    const forecastTimeSpans = timeSpanRepeat(fromTime, timeStepMs, 2 * 24 * 2);
 
     return {
-      groups: groupFilters.map((filter) => filter.name),
-      records: historyRecords
+      timeSpans: forecastTimeSpans,
+      groups: history.groups,
+      values: forecast
     };
   }
 }

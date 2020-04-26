@@ -91,7 +91,7 @@ export class LineChart2 extends LitElement {
       this._scaleI = null;
     } else {
       this._scaleI = scaleLinear()
-        .domain([0, this._renderingYs[0].length])
+        .domain([0, this._renderingYs[0].length - 1])
         .range([0, 1]);
     }
 

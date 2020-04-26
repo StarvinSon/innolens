@@ -8,7 +8,7 @@ import {
 import '../availability-bar';
 import {
   ExpendableInventoryService, ExpendableInventoryType,
-  ExpendableInventoryQuantityHistory, expendableInventoryTypeCapacity
+  expendableInventoryTypeCapacity, ExpendableInventoryQuantityHistoryLegacy
 } from '../../services/expendable-inventory';
 
 import { css, classes } from './user-expendable-inventories-page.scss';
@@ -46,7 +46,7 @@ export class UserExpendableInventoriesPage extends LitElement {
   public expendableInventoryTypes: ReadonlyArray<ExpendableInventoryType> | null = null;
 
   @property({ attribute: false })
-  private _countHistory: ReadonlyArray<ExpendableInventoryQuantityHistory> | null = null;
+  private _countHistory: ReadonlyArray<ExpendableInventoryQuantityHistoryLegacy> | null = null;
 
   @property({ attribute: false })
   private _countPrediction: ReadonlyArray<ExpendableInventoryQuantityPrediction> | null = null;
@@ -61,7 +61,7 @@ export class UserExpendableInventoriesPage extends LitElement {
   private _availabilityBarData: ReadonlyArray<{ name: string; value: number }> | null = null;
 
   private _lineChartDataDeps: readonly [
-    ReadonlyArray<ExpendableInventoryQuantityHistory> | null
+    ReadonlyArray<ExpendableInventoryQuantityHistoryLegacy> | null
   ] = [null];
 
   private _lineChartPredictionDataDeps: readonly [
@@ -69,7 +69,7 @@ export class UserExpendableInventoriesPage extends LitElement {
   ] = [null];
 
   private _availabilityBarDataDeps: readonly [
-    ReadonlyArray<ExpendableInventoryQuantityHistory> | null
+    ReadonlyArray<ExpendableInventoryQuantityHistoryLegacy> | null
   ] = [null];
 
   private _dataFetched = false;
@@ -86,13 +86,13 @@ export class UserExpendableInventoriesPage extends LitElement {
       const current = new Date();
 
       const expendableInventoryCountPromises = this.expendableInventoryTypes.map(
-        async (expendableInventoryType): Promise<ExpendableInventoryQuantityHistory> =>
-          this.expendableInventoryService!.fetchQuantityHistory(
+        async (expendableInventoryType): Promise<ExpendableInventoryQuantityHistoryLegacy> =>
+          this.expendableInventoryService!.fetchQuantityHistoryLegacy(
             startOfDay(current),
             startOfHour(current),
             3600000,
             [expendableInventoryType.typeId],
-            undefined
+            null
           )
       );
       Promise.all(expendableInventoryCountPromises).then((expendableInventoryData) => {

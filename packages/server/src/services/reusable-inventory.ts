@@ -218,11 +218,13 @@ export class ReusableInventoryService {
     }
     await this._reusableInventoryAccessRecordCollection.deleteMany(deleteFilterQuery);
 
-    await this._reusableInventoryAccessRecordCollection.insertMany(records.map((record) => ({
-      ...record,
-      typeId,
-      instanceId
-    })));
+    if (records.length > 0) {
+      await this._reusableInventoryAccessRecordCollection.insertMany(records.map((record) => ({
+        ...record,
+        typeId,
+        instanceId
+      })));
+    }
   }
 
 

@@ -11,6 +11,8 @@ export interface ExpendableInventoryType {
   readonly _id: ObjectId;
   readonly typeId: string;
   readonly typeName: string;
+  readonly currentQuantity: number;
+  readonly versionId: ObjectId;
 }
 
 export interface ExpendableInventoryTypeCollection extends Collection<ExpendableInventoryType> {}
@@ -30,7 +32,9 @@ export const ExpendableInventoryTypeCollection = decorate(
           required: [
             '_id',
             'typeId',
-            'typeName'
+            'typeName',
+            'currentQuantity',
+            'versionId'
           ],
           properties: {
             _id: {
@@ -41,6 +45,12 @@ export const ExpendableInventoryTypeCollection = decorate(
             },
             typeName: {
               bsonType: 'string'
+            },
+            currentQuantity: {
+              bsonType: 'int'
+            },
+            versionId: {
+              bsonType: 'objectId'
             }
           }
         }

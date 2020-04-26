@@ -15,8 +15,7 @@
       "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/nodemon",
       "program": "${workspaceFolder}/out/index.js",
       "env": {
-        "NODE_ENV": "development",
-        "DEBUG": "koa*"
+        "NODE_ENV": "development"
       },
       "runtimeArgs": [
         "--config",

@@ -152,16 +152,18 @@ export class MemberService {
   }
 
   public async import(members: ReadonlyArray<Omit<Member, '_id'>>): Promise<void> {
-    await this._memberCollection
-      .bulkWrite(
-        members.map((member) => ({
-          replaceOne: {
-            filter: { memberId: member.memberId },
-            replacement: member,
-            upsert: true
-          }
-        })),
-        { ordered: false }
-      );
+    if (members.length > 0) {
+      await this._memberCollection
+        .bulkWrite(
+          members.map((member) => ({
+            replaceOne: {
+              filter: { memberId: member.memberId },
+              replacement: member,
+              upsert: true
+            }
+          })),
+          { ordered: false }
+        );
+    }
   }
 }

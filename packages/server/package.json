@@ -16,8 +16,8 @@
     "generate:glue:watch": "nodemon --watch ../api/spec --watch ./tools --ext js,yaml ./tools/glue-generator.js",
     "build:server": "tsc --build ./tsconfig-server.json",
     "build:server:watch": "tsc --build ./tsconfig-server.json --watch",
-    "start": "cross-env NODE_ENV=\"development\" DEBUG=\"koa*\" node ./out/index.js start --config ./server.config.js",
-    "start:watch": "cross-env NODE_ENV=\"development\" DEBUG=\"koa*\" nodemon --config ./nodemon.json ./out/index.js -- start --config ./server.config.js",
+    "start": "cross-env NODE_ENV=\"development\" node ./out/index.js start --config ./server.config.js",
+    "start:watch": "cross-env NODE_ENV=\"development\" nodemon --config ./nodemon.json ./out/index.js -- start --config ./server.config.js",
     "deploy": "pm2 start ./ecosystem.config.js"
   },
   "dependencies": {

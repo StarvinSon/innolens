@@ -8,10 +8,11 @@ from typing import Mapping
 import pandas as pd
 
 from .engine import create_engine
+from .progress_printer import add_progress_printer
 from .users import add_users, get_members_df
 from .spaces import add_spaces, get_space_df, get_space_access_record_dfs
 from .machines import get_machine_type_df, get_machine_instance_dfs, get_machine_access_record_dfs
-from .expendable_inventories import get_expendable_inventory_type_df, get_expendable_inventory_quantity_set_record_dfs, get_expendable_inventory_access_record_dfs
+from .expendable_inventories import get_expendable_inventory_type_df, get_expendable_inventory_access_record_dfs
 from .reusable_inventories import get_reusable_inventory_type_df, get_reusable_inventory_instance_dfs, get_reusable_inventory_access_record_dfs
 from .utils.time import hk_timezone
 
@@ -31,6 +32,7 @@ engine = create_engine(
   time_step=timedelta(minutes=10)
 )
 
+add_progress_printer(engine.world)
 add_spaces(engine.world)
 add_users(engine.world)
 
@@ -66,10 +68,6 @@ dfs: Mapping[str, pd.DataFrame] = {
   },
 
   'expendable_inventory_types.csv': get_expendable_inventory_type_df(engine.world),
-  **{
-    f'expendable_inventory_quantity_set_records/{inventory_id}.csv': df
-    for inventory_id, df in get_expendable_inventory_quantity_set_record_dfs(engine.world).items()
-  },
   **{
     f'expendable_inventory_access_records/{inventory_id}.csv': df
     for inventory_id, df in get_expendable_inventory_access_record_dfs(engine.world).items()

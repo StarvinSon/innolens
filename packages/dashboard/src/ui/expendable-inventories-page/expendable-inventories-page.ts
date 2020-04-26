@@ -1,4 +1,7 @@
-import { subDays, startOfDay } from 'date-fns';
+import {
+  subDays, startOfMinute, setMinutes,
+  format as formatDate
+} from 'date-fns';
 import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz';
 import {
   customElement, LitElement, TemplateResult,
@@ -8,36 +11,37 @@ import {
 import '../choice-chip';
 import '../choice-chips';
 import '../chart-card';
-import '../expenable-inventory-access-history-chart'; // eslint-disable-line import/no-duplicates
-import '../expenable-inventory-quantity-history-chart'; // eslint-disable-line import/no-duplicates
+import '../line-chart-2';
 import {
-  ExpendableInventoryService, ExpendableInventoryType
+  ExpendableInventoryService, ExpendableInventoryType, ExpendableInventoryQuantityHistoryGroupBy,
+  ExpendableInventoryQuantityHistoryCountType, ExpendableInventoryQuantityHistory,
+  ExpendableInventoryQuantityForecast
 } from '../../services/expendable-inventory';
-import { mergeArray } from '../../utils/immutable/array';
+import { toggleNullableArray } from '../../utils/array';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
-import { ExpendableInventoryAccessHistoryChart } from '../expenable-inventory-access-history-chart'; // eslint-disable-line import/no-duplicates
-import { ExpendableInventoryQuantityHistoryChart } from '../expenable-inventory-quantity-history-chart'; // eslint-disable-line import/no-duplicates
 
 import { css, classes } from './expendable-inventories-page.scss';
 
 
-const pastDaysChoices = [1, 2, 7, 30, 60, 120, 360];
+const pastDaysChoices = [1, 2, 3, 7, 14, 30, 60, 120, 360];
 
-const quantityHistoryGroupByChoices: ReadonlyArray<{
-  readonly type: ExpendableInventoryQuantityHistoryChart['groupBy'],
+const groupByChoices: ReadonlyArray<{
+  readonly type: ExpendableInventoryQuantityHistoryGroupBy,
   readonly name: string
 }> = [
   {
-    type: 'typeId',
-    name: 'Type ID'
-  }
-];
-
-const accessHistoryGroupByChoices: ReadonlyArray<{
-  readonly type: ExpendableInventoryAccessHistoryChart['groupBy'],
-  readonly name: string
-}> = [
+    type: null,
+    name: 'None'
+  },
+  {
+    type: 'type',
+    name: 'Type'
+  },
+  {
+    type: 'member',
+    name: 'Member'
+  },
   {
     type: 'department',
     name: 'Department'
@@ -60,22 +64,39 @@ const accessHistoryGroupByChoices: ReadonlyArray<{
   }
 ];
 
-const accessHistoryCountTypeChoices: ReadonlyArray<{
-  readonly type: ExpendableInventoryAccessHistoryChart['countType'],
+const countTypeChoices: ReadonlyArray<{
+  readonly type: ExpendableInventoryQuantityHistoryCountType,
   readonly name: string
 }> = [
   {
-    type: 'total',
-    name: 'Total'
+    type: 'quantity',
+    name: 'Quantity'
   },
   {
-    type: 'uniqueMember',
-    name: 'Unique Member'
+    type: 'take',
+    name: 'Take'
+  },
+  {
+    type: 'uniqueTake',
+    name: 'Unique Take'
   }
 ];
 
+type ChartStyle = 'normal' | 'stacked';
 
-const emptyArray: ReadonlyArray<never> = [];
+const chartStyleChoices: ReadonlyArray<{
+  readonly type: ChartStyle;
+  readonly name: string;
+}> = [
+  {
+    type: 'normal',
+    name: 'Normal'
+  },
+  {
+    type: 'stacked',
+    name: 'Stacked'
+  }
+];
 
 
 const TAG_NAME = 'inno-expendable-inventories-page';
@@ -92,8 +113,8 @@ export class ExpendableInventoriesPage extends LitElement {
 
 
   @injectableProperty(ExpendableInventoryService)
-  @observeProperty('_onDependencyInjected')
-  public expendableInventoryService: ExpendableInventoryService | null;
+  @observeProperty('_onServiceInjected')
+  public expendableInventoryService: ExpendableInventoryService | null = null;
 
 
   @property({ attribute: false })
@@ -103,48 +124,72 @@ export class ExpendableInventoriesPage extends LitElement {
   @property({ attribute: false })
   private _selectedPastDays = 7;
 
-  private _selectedFromTime: Date | null = null;
-
-  private _selectedToTime: Date | null = null;
-
-  private _selectedTimeStepMs: number = 30 * 60 * 1000;
-
-  @property({ attribute: false })
-  private _types: ReadonlyArray<ExpendableInventoryType> | null = null;
-
   @property({ attribute: false })
   private _selectedTypeIds: ReadonlyArray<string> | null = null;
 
   @property({ attribute: false })
-  private _selectedQuantityHistoryGroupBy: ExpendableInventoryQuantityHistoryChart['groupBy'] | null = null;
+  private _selectedGroupBy: ExpendableInventoryQuantityHistoryGroupBy = null;
 
   @property({ attribute: false })
-  private _selectedAccessHistoryGroupBy: ExpendableInventoryAccessHistoryChart['groupBy'] | null = null;
+  private _selectedCountType: ExpendableInventoryQuantityHistoryCountType = 'quantity';
 
   @property({ attribute: false })
-  private _selectedAccessHistoryCountType: ExpendableInventoryAccessHistoryChart['countType'] = 'total';
+  private _selectedChartStyle: ChartStyle = 'normal';
 
 
-  private _selectedTypeIdsDeps: readonly [ReadonlyArray<ExpendableInventoryType> | null] = [null];
+  @property({ attribute: false })
+  private _fromTime: Date | null = null;
+
+  @property({ attribute: false })
+  private _toTime: Date | null = null;
+
+  @property({ attribute: false })
+  private readonly _timeStepMs: number = 1800000;
+
+
+  private _typeFetched = false;
+
+  @property({ attribute: false })
+  private _types: ReadonlyArray<ExpendableInventoryType> | null = null;
+
+
+  private _historyKey: string | null = null;
+
+  @property({ attribute: false })
+  private _history: ExpendableInventoryQuantityHistory | null = null;
+
+
+  private _forecastKey: string | null = null;
+
+  @property({ attribute: false })
+  private _forecast: ExpendableInventoryQuantityForecast | null = null;
+
+
+  private _chartPropsDeps: readonly [
+    ExpendableInventoryQuantityHistory | null,
+    ExpendableInventoryQuantityForecast | null
+  ] = [null, null];
+
+  @property({ attribute: false })
+  private _chartYs: ReadonlyArray<ReadonlyArray<number>> | null = null;
+
+  @property({ attribute: false })
+  private _chartDashedStartIndex: number | null = null;
+
+  @property({ attribute: false })
+  private _chartXLabels: ReadonlyArray<Date> | null = null;
+
+  @property({ attribute: false })
+  private _chartLineLabels: ReadonlyArray<string> | null = null;
 
 
   public constructor() {
     super();
-    this._onExpendableInventoryServiceUpdated =
-      this._onExpendableInventoryServiceUpdated.bind(this);
-    this.expendableInventoryService = null;
+    this._formatLineChartLabel = this._formatLineChartLabel.bind(this);
   }
 
 
-  private _onDependencyInjected(): void {
-    if (this.expendableInventoryService !== null) {
-      this.expendableInventoryService.addEventListener('types-updated', this._onExpendableInventoryServiceUpdated);
-      this.expendableInventoryService.addEventListener('instances-updated', this._onExpendableInventoryServiceUpdated);
-      this._updateProperties();
-    }
-  }
-
-  private _onExpendableInventoryServiceUpdated(): void {
+  private _onServiceInjected(): void {
     this.requestUpdate();
   }
 
@@ -161,38 +206,133 @@ export class ExpendableInventoriesPage extends LitElement {
   private _updateProperties(): void {
     if (this.expendableInventoryService === null) return;
 
-    if (this._selectedToTime === null) {
-      this._selectedToTime = new Date();
-    }
-    let fromTime = subDays(this._selectedToTime, this._selectedPastDays);
-    fromTime = utcToZonedTime(fromTime, 'Asia/Hong_Kong');
-    fromTime = startOfDay(fromTime);
-    fromTime = zonedTimeToUtc(fromTime, 'Asia/Hong_Kong');
-    if (
-      this._selectedFromTime === null
-      || this._selectedFromTime.getTime() !== fromTime.getTime()
-    ) {
-      this._selectedFromTime = fromTime;
+    if (this._toTime === null) {
+      let toTime = new Date();
+      toTime = utcToZonedTime(toTime, 'Asia/Hong_Kong');
+      toTime = startOfMinute(toTime);
+      toTime = setMinutes(toTime, Math.floor(toTime.getMinutes() / 30) * 30);
+      toTime = zonedTimeToUtc(toTime, 'Asia/Hong_Kong');
+      this._toTime = toTime;
     }
 
-    this._types = this.expendableInventoryService.types;
-    if (this._types === null) {
-      this.expendableInventoryService.updateTypes();
-    }
-
-    if (this._selectedTypeIdsDeps[0] !== this._types) {
-      if (this._types === null) {
-        this._selectedTypeIds = null;
-      } else {
-        const ids = new Set(this._types.map((type) => type.typeId));
-        this._selectedTypeIds = mergeArray(
-          this._selectedTypeIds,
-          this._selectedTypeIds === null
-            ? emptyArray
-            : this._selectedTypeIds.filter((id) => ids.has(id))
-        );
+    if (this._toTime !== null) {
+      const fromTime = subDays(this._toTime, this._selectedPastDays);
+      if (
+        this._fromTime === null
+        || this._fromTime.getTime() !== fromTime.getTime()
+      ) {
+        this._fromTime = fromTime;
       }
-      this._selectedTypeIdsDeps = [this._types];
+    }
+
+    if (!this._typeFetched) {
+      this.expendableInventoryService
+        .fetchTypes()
+        .then((data) => {
+          this._types = data;
+        })
+        .catch((err) => {
+          console.error(err);
+        });
+      this._typeFetched = true;
+    }
+
+    const historyKey = JSON.stringify({
+      fromTime: this._fromTime?.toISOString(),
+      toTime: this._toTime?.toISOString(),
+      timeStepMs: String(this._timeStepMs),
+      spaceIds: this._selectedTypeIds,
+      countType: this._selectedCountType,
+      groupBy: this._selectedGroupBy
+    });
+    if (this._historyKey !== historyKey) {
+      if (this._fromTime === null || this._toTime === null) {
+        this._history = null;
+      } else {
+        this.expendableInventoryService
+          .fetchQuantityHistory({
+            fromTime: this._fromTime,
+            toTime: this._toTime,
+            timeStepMs: this._timeStepMs,
+            filterTypeIds: this._selectedTypeIds,
+            countType: this._selectedCountType,
+            groupBy: this._selectedGroupBy
+          })
+          .then((data) => {
+            if (this._historyKey === historyKey) {
+              this._history = data;
+            }
+          })
+          .catch((err) => {
+            console.error(err);
+            if (this._historyKey === historyKey) {
+              this._history = null;
+            }
+          });
+      }
+      this._historyKey = historyKey;
+    }
+
+    const forecastKey = JSON.stringify({
+      fromTime: this._toTime?.toISOString(),
+      timeStepMs: String(this._timeStepMs),
+      typeIds: this._selectedTypeIds,
+      countType: this._selectedCountType,
+      groupBy: this._selectedGroupBy
+    });
+    if (this._forecastKey !== forecastKey) {
+      if (this._toTime === null) {
+        this._forecast = null;
+      } else {
+        this.expendableInventoryService
+          .fetchQuantityForecast({
+            fromTime: this._toTime,
+            timeStepMs: this._timeStepMs,
+            filterTypeIds: this._selectedTypeIds,
+            countType: this._selectedCountType,
+            groupBy: this._selectedGroupBy
+          })
+          .then((data) => {
+            if (this._forecastKey === forecastKey) {
+              this._forecast = data;
+            }
+          })
+          .catch((err) => {
+            console.error(err);
+            if (this._forecastKey === forecastKey) {
+              this._forecast = null;
+            }
+          });
+      }
+      this._forecastKey = forecastKey;
+    }
+
+    if (this._chartPropsDeps[0] !== this._history || this._chartPropsDeps[1] !== this._forecast) {
+      if (this._history === null || this._forecast === null) {
+        this._chartYs = null;
+        this._chartDashedStartIndex = null;
+        this._chartXLabels = null;
+        this._chartLineLabels = null;
+      } else {
+        this._chartLineLabels = Array.from(new Set(
+          this._history.groups.concat(this._forecast.groups)
+        ));
+        this._chartYs = this._chartLineLabels.map((group) => {
+          const historyG = this._history!.groups.indexOf(group);
+          const forecastG = this._forecast!.groups.indexOf(group);
+          const historyGroupY = historyG >= 0
+            ? this._history!.values[historyG]
+            : this._history!.timeSpans.map(() => 0);
+          const forecastGroupY = forecastG >= 0
+            ? this._forecast!.values[forecastG]
+            : this._forecast!.timeSpans.map(() => 0);
+          return historyGroupY.concat(forecastGroupY);
+        });
+        this._chartDashedStartIndex = this._history.timeSpans.length - 1;
+        this._chartXLabels = this._history.timeSpans.concat(this._forecast.timeSpans)
+          .map(([, endTime]) => endTime);
+      }
+      this._chartPropsDeps = [this._history, this._forecast];
     }
   }
 
@@ -211,65 +351,52 @@ export class ExpendableInventoriesPage extends LitElement {
       <div class="${classes.options}">
 
         ${this._renderChipOptions({
-          title: 'Filter - Past Days',
+          title: 'Past Days',
           items: pastDaysChoices,
-          selectItem: (days) => days === this._selectedPastDays,
-          formatItem: (day) => html`${day} Days`,
-          onClick: (day) => this._onPastDaysChipClick(day)
+          selectItem: (item) => item === this._selectedPastDays,
+          formatItem: (item) => html`${item} Days`,
+          onClick: (item) => this._onPastDaysChipClick(item)
         })}
 
         ${this._renderChipOptions({
-          title: 'Filter - Inventory Type',
-          items: this._types === null ? emptyArray : [
+          title: 'Inventory Type',
+          items: [
             {
               typeId: null,
               typeName: 'All'
             },
-            ...this._types
+            ...this._types ?? []
           ],
-          selectItem: (type) => type.typeId === null
+          selectItem: (item) => item.typeId === null
             ? this._selectedTypeIds !== null && this._selectedTypeIds.length === 0
-            : this._selectedTypeIds !== null && this._selectedTypeIds.includes(type.typeId),
-          formatItem: (type) => type.typeName,
-          onClick: (type) => this._onTypeChipClick(type.typeId)
+            : this._selectedTypeIds !== null && this._selectedTypeIds.includes(item.typeId),
+          formatItem: (item) => item.typeName,
+          onClick: (item) => this._onTypeChipClick(item.typeId)
         })}
 
         ${this._renderChipOptions({
-          title: 'Quantity History - Group By',
-          items: [
-            {
-              type: null,
-              name: 'None'
-            },
-            ...quantityHistoryGroupByChoices
-          ],
-          selectItem: (choice) => this._selectedQuantityHistoryGroupBy === choice.type,
-          formatItem: (choice) => choice.name,
-          onClick: (choice) => this._onQuantityHistoryGroupByChipClick(choice.type)
+          title: 'Group By',
+          items: groupByChoices,
+          selectItem: (item) => this._selectedGroupBy === item.type,
+          formatItem: (item) => item.name,
+          onClick: (item) => this._onGroupByChipClick(item.type)
         })}
 
         ${this._renderChipOptions({
-          title: 'Access History - Group By',
-          items: [
-            {
-              type: null,
-              name: 'None'
-            },
-            ...accessHistoryGroupByChoices
-          ],
-          selectItem: (choice) => this._selectedAccessHistoryGroupBy === choice.type,
-          formatItem: (choice) => choice.name,
-          onClick: (choice) => this._onAccessHistoryGroupByChipClick(choice.type)
+          title: 'Count Type',
+          items: countTypeChoices,
+          selectItem: (item) => item.type === this._selectedCountType,
+          formatItem: (item) => item.name,
+          onClick: (item) => this._onCountTypeChipClick(item.type)
         })}
 
         ${this._renderChipOptions({
-          title: 'Access History - Count Type',
-          items: accessHistoryCountTypeChoices,
-          selectItem: (choice) => choice.type === this._selectedAccessHistoryCountType,
-          formatItem: (choice) => choice.name,
-          onClick: (choice) => this._onAccessHistoryCountTypeChipClick(choice.type)
+          title: 'Chart Style',
+          items: chartStyleChoices,
+          selectItem: (item) => item.type === this._selectedChartStyle,
+          formatItem: (item) => item.name,
+          onClick: (item) => this._onChartStyleChipClick(item.type)
         })}
-
       </div>
     `;
     /* eslint-enable @typescript-eslint/indent */
@@ -304,73 +431,55 @@ export class ExpendableInventoriesPage extends LitElement {
   private _renderLineCharts(): TemplateResult {
     return html`
       <div class="${classes.chartCards}">
-
         <inno-chart-card>
-          <inno-expendable-inventory-quantity-history-chart
+          <inno-line-chart-2
             class="${classes.lineChart}"
-            .expendableInventoryService="${this.expendableInventoryService}"
-            .fromTime="${this._selectedFromTime}"
-            .toTime="${this._selectedToTime}"
-            .timeStepMs="${this._selectedTimeStepMs}"
-            .typeIds="${this._selectedTypeIds}"
-            .groupBy="${this._selectedQuantityHistoryGroupBy}"
-          ></inno-expendable-inventory-quantity-history-chart>
+            .ys="${this._chartYs}"
+            .dashedStartIndex="${this._chartDashedStartIndex}"
+            .xLabels="${this._chartXLabels}"
+            .lineLabels="${this._chartLineLabels}"
+            .formatXLabel="${this._formatLineChartLabel}"
+            .stacked="${this._selectedChartStyle === 'stacked'}"
+            .fill="${this._selectedChartStyle === 'stacked'}"
+          >
+            <span slot="title">Space Member Count History</span>
+          </inno-line-chart-2>
         </inno-chart-card>
-
-        <inno-chart-card>
-          <inno-expendable-inventory-access-history-chart
-            class="${classes.lineChart}"
-            .expendableInventoryService="${this.expendableInventoryService}"
-            .fromTime="${this._selectedFromTime}"
-            .toTime="${this._selectedToTime}"
-            .timeStepMs="${this._selectedTimeStepMs}"
-            .typeIds="${this._selectedTypeIds}"
-            .groupBy="${this._selectedAccessHistoryGroupBy}"
-            .countType="${this._selectedAccessHistoryCountType}"
-          ></inno-expendable-inventory-access-history-chart>
-        </inno-chart-card>
-
       </div>
     `;
   }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private _formatLineChartLabel(time: Date, i: number): string {
+    return formatDate(time, 'd/M');
+  }
+
 
   private _onPastDaysChipClick(day: number): void {
     this._selectedPastDays = day;
   }
 
   private _onTypeChipClick(typeId: string | null): void {
-    if (this._selectedTypeIds !== null) {
-      if (typeId === null) {
-        this._selectedTypeIds = emptyArray;
-      } else {
-        this._selectedTypeIds = this._toggleArray(this._selectedTypeIds, typeId);
-      }
+    if (typeId === null) {
+      this._selectedTypeIds = null;
+    } else {
+      this._selectedTypeIds = toggleNullableArray(this._selectedTypeIds, typeId);
     }
   }
 
-  private _onQuantityHistoryGroupByChipClick(
-    groupBy: ExpendableInventoryQuantityHistoryChart['groupBy']
+  private _onGroupByChipClick(
+    groupBy: ExpendableInventoryQuantityHistoryGroupBy
   ): void {
-    this._selectedQuantityHistoryGroupBy = groupBy;
+    this._selectedGroupBy = groupBy;
   }
 
-  private _onAccessHistoryGroupByChipClick(
-    groupBy: ExpendableInventoryAccessHistoryChart['groupBy']
+  private _onCountTypeChipClick(
+    type: ExpendableInventoryQuantityHistoryCountType
   ): void {
-    this._selectedAccessHistoryGroupBy = groupBy;
+    this._selectedCountType = type;
   }
 
-  private _onAccessHistoryCountTypeChipClick(
-    type: ExpendableInventoryAccessHistoryChart['countType']
-  ): void {
-    this._selectedAccessHistoryCountType = type;
-  }
-
-  private _toggleArray<T>(array: ReadonlyArray<T>, item: T): ReadonlyArray<T> {
-    const index = array.indexOf(item);
-    if (index >= 0) {
-      return [...array.slice(0, index), ...array.slice(index + 1)];
-    }
-    return [...array, item];
+  private _onChartStyleChipClick(groupBy: ChartStyle): void {
+    this._selectedChartStyle = groupBy;
   }
 }

@@ -1,7 +1,7 @@
-name: GetQuantityHistory
+name: GetQuantityForecast
 
 method: post
-path: /api/expendable-inventories/quantity-history
+path: /api/expendable-inventories/quantity-forecast
 
 authentication:
   type: bearer
@@ -12,13 +12,10 @@ requestBody:
     type: object
     required:
       - fromTime
-      - toTime
       - timeStepMs
     additionalProperties: false
     properties:
       fromTime:
-        type: date
-      toTime:
         type: date
       timeStepMs:
         type: integer

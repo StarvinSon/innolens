@@ -1,4 +1,4 @@
-name: PostTypes
+name: ImportTypes
 
 method: post
 path: /api/expendable-inventories/types

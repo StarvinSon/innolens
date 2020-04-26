@@ -118,26 +118,28 @@ export class SpaceService {
   }
 
   public async importSpaces(spaces: ReadonlyArray<Omit<Space, '_id' | 'currentMemberIds' | 'versionId'>>): Promise<void> {
-    await this._spaceCollection
-      .bulkWrite(
-        spaces.map((space) => ({
-          updateOne: {
-            filter: { spaceId: space.spaceId },
-            update: {
-              $set: {
-                spaceName: space.spaceName,
-                spaceCapacity: space.spaceCapacity,
-                versionId: new ObjectId()
+    if (spaces.length > 0) {
+      await this._spaceCollection
+        .bulkWrite(
+          spaces.map((space) => ({
+            updateOne: {
+              filter: { spaceId: space.spaceId },
+              update: {
+                $set: {
+                  spaceName: space.spaceName,
+                  spaceCapacity: space.spaceCapacity,
+                  versionId: new ObjectId()
+                },
+                $setOnInsert: {
+                  currentMemberIds: []
+                }
               },
-              $setOnInsert: {
-                currentMemberIds: []
-              }
-            },
-            upsert: true
-          }
-        })),
-        { ordered: false }
-      );
+              upsert: true
+            }
+          })),
+          { ordered: false }
+        );
+    }
   }
 
   public async getSpaces(): Promise<Array<Space>> {
@@ -251,22 +253,30 @@ export class SpaceService {
           versionId: new ObjectId()
         }
       }),
-      this._memberRecordCollection.bulkWrite(
-        memberRecords.map((memberRecord) => ({
-          insertOne: {
-            document: memberRecord
-          }
-        })),
-        { ordered: true }
-      ),
-      this._accessRecordCollection.bulkWrite(
-        accessRecords.map((accessRecord) => ({
-          insertOne: {
-            document: accessRecord
-          }
-        })),
-        { ordered: true }
-      )
+      (async () => {
+        if (memberRecords.length > 0) {
+          await this._memberRecordCollection.bulkWrite(
+            memberRecords.map((memberRecord) => ({
+              insertOne: {
+                document: memberRecord
+              }
+            })),
+            { ordered: true }
+          );
+        }
+      })(),
+      (async () => {
+        if (accessRecords.length > 0) {
+          await this._accessRecordCollection.bulkWrite(
+            accessRecords.map((accessRecord) => ({
+              insertOne: {
+                document: accessRecord
+              }
+            })),
+            { ordered: true }
+          );
+        }
+      })()
     ]);
   }
 

@@ -238,11 +238,13 @@ export class MachineService {
     }
     await this._machineAccessRecordCollection.deleteMany(deleteFilterQuery);
 
-    await this._machineAccessRecordCollection.insertMany(records.map((record) => ({
-      ...record,
-      typeId,
-      instanceId
-    })));
+    if (records.length > 0) {
+      await this._machineAccessRecordCollection.insertMany(records.map((record) => ({
+        ...record,
+        typeId,
+        instanceId
+      })));
+    }
   }
 
 

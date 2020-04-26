@@ -34,35 +34,6 @@ def get_expendable_inventory_type_df(world: Object) -> pd.DataFrame:
   assert df.notna().all(axis=None)
   return df
 
-
-def get_expendable_inventory_quantity_set_record_dfs(world: Object) -> Mapping[str, pd.DataFrame]:
-
-  def iterate_entries() -> Iterator[Tuple[str, pd.DataFrame]]:
-    type_ids: MutableSet[str] = set()
-    for inventory in world.find_components(ExpendableInventory, recursive=True):
-      if inventory.type_id in type_ids:
-        raise Exception(f'Duplicated expendable inventory type id {inventory.type_id}')
-      type_ids.add(inventory.type_id)
-
-      rows = list(
-        {
-          'time': time.astimezone(hk_timezone).isoformat(),
-          'quantity': quantity
-        }
-        for time, quantity in inventory.quantity_set_log
-      )
-      df = pd.DataFrame({
-        name: pd.Series((row[name] for row in rows), dtype=dtype)
-        for name, dtype in {
-          'time': pd.StringDtype(),
-          'quantity': pd.Int32Dtype()
-        }.items()
-      })
-      assert df.notna().all(axis=None)
-      yield (inventory.type_id, df)
-
-  return dict(iterate_entries())
-
 def get_expendable_inventory_access_record_dfs(world: Object) -> Mapping[str, pd.DataFrame]:
 
   def iterate_entries() -> Iterator[Tuple[str, pd.DataFrame]]:
@@ -74,18 +45,22 @@ def get_expendable_inventory_access_record_dfs(world: Object) -> Mapping[str, pd
 
       rows = list(
         {
+          'action': action,
           'time': time.astimezone(hk_timezone).isoformat(),
+          'quantity': quantity,
           'member_id': member_id,
-          'quantity': quantity
+          'take_quantity': take_quantity
         }
-        for time, member_id, quantity in inventory.access_log
+        for action, time, quantity, member_id, take_quantity in inventory.access_log
       )
       df = pd.DataFrame({
         name: pd.Series((row[name] for row in rows), dtype=dtype)
         for name, dtype in {
+          'action': pd.CategoricalDtype(['set', 'take']),
           'time': pd.StringDtype(),
+          'quantity': pd.Int32Dtype(),
           'member_id': pd.StringDtype(),
-          'quantity': pd.Int32Dtype()
+          'take_quantity': pd.Int32Dtype()
         }.items()
       })
       assert df.notna().all(axis=None)

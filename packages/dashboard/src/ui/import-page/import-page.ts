@@ -7,6 +7,7 @@ import { classMap } from 'lit-html/directives/class-map';
 
 import '../button';
 import '../datetime-input'; // eslint-disable-line import/no-duplicates
+import { ExpendableInventoryService } from '../../services/expendable-inventory';
 import { MachineService } from '../../services/machine';
 import { MemberService } from '../../services/member';
 import { ReusableInventoryService } from '../../services/reusable-inventory';
@@ -18,6 +19,7 @@ import { css, classes } from './import-page.scss';
 
 
 const formIds = [
+  'god',
   'members',
   'spaces',
   'spaceAccessRecords',
@@ -62,6 +64,37 @@ export class ImportPage extends LitElement {
 
   @injectableProperty(ReusableInventoryService)
   public reusableInventoryService: ReusableInventoryService | null = null;
+
+  @injectableProperty(ExpendableInventoryService)
+  public expendableInventoryService: ExpendableInventoryService | null = null;
+
+
+  @property({ attribute: false })
+  private _selectedGodFiles: {
+    readonly members: File | null;
+    readonly spaces: File | null;
+    readonly spaceAccessRecords: ReadonlyArray<readonly [string, File]>;
+    readonly machineTypes: File | null;
+    readonly machineInstances: ReadonlyArray<readonly [string, File]>;
+    readonly machineAccessRecords: ReadonlyArray<readonly [string, string, File]>;
+    readonly reusableInventoryTypes: File | null;
+    readonly reusableInventoryInstances: ReadonlyArray<readonly [string, File]>;
+    readonly reusableInventoryAccessRecords: ReadonlyArray<readonly [string, string, File]>;
+    readonly expendableInventoryTypes: File | null;
+    readonly expendableInventoryAccessRecords: ReadonlyArray<readonly [string, File]>;
+  } = {
+    members: null,
+    spaces: null,
+    spaceAccessRecords: [],
+    machineTypes: null,
+    machineInstances: [],
+    machineAccessRecords: [],
+    reusableInventoryTypes: null,
+    reusableInventoryInstances: [],
+    reusableInventoryAccessRecords: [],
+    expendableInventoryTypes: null,
+    expendableInventoryAccessRecords: []
+  };
 
 
   @property({ attribute: false })
@@ -116,6 +149,7 @@ export class ImportPage extends LitElement {
   protected render(): TemplateResult {
     return html`
       <div class="${classes.content}">
+        ${this._renderGodForm()}
         ${this._renderMembersForm()}
         ${this._renderSpacesForm()}
         ${this._renderSpaceAccessRecordsForm()}
@@ -127,6 +161,97 @@ export class ImportPage extends LitElement {
         ${this._renderReusableInventoryInstanceAccessRecordsForm()}
       </div>
     `;
+  }
+
+  private _renderGodForm(): TemplateResult {
+    const state = this._getFormState('god');
+    /* eslint-disable @typescript-eslint/indent */
+    return html`
+      <div class="${classes.card}">
+        <h4 class="${classes.card_title}">God</h4>
+        <form
+          class="${classes.form} ${classes.card_form}"
+          @submit="${this._onGodFormSubmit}">
+          <label
+            class="${classes.form_label}"
+            for="file-input">
+            Simulation Result Folder
+          </label>
+          <input
+            class="${classes.form_fileInput}"
+            id="folder-input"
+            name="file"
+            type="file"
+            webkitDirectory
+            required
+            @change="${this._onGodFormFolderInputChange}">
+          <div>
+            <p>Members:</p>
+
+            <p>Spaces:</p>
+            <p>Space Access Records:<br>
+              ${this._selectedGodFiles.spaceAccessRecords.map(([spaceId]) => html`
+                - ${spaceId}<br>
+              `)}
+            </p>
+
+            <p>Machine Types:</p>
+            <p>Machine Instances:<br>
+              ${this._selectedGodFiles.machineInstances.map(([typeId]) => html`
+                - ${typeId}<br>
+              `)}
+            </p>
+            <p>Machine Access Records:<br>
+              ${this._selectedGodFiles.machineAccessRecords.map(([typeId, instanceId]) => html`
+                - ${typeId} (${instanceId})<br>
+              `)}
+            </p>
+
+            <p>Reusable Inventory Types:</p>
+            <p>Reusable Inventory Instances:<br>
+              ${this._selectedGodFiles.reusableInventoryInstances.map(([typeId]) => html`
+                - ${typeId}<br>
+              `)}
+            </p>
+            <p>Reusable Inventory Access Records:<br>
+              ${this._selectedGodFiles.reusableInventoryAccessRecords.map(([typeId, instanceId]) => html`
+                - ${typeId} (${instanceId})<br>
+              `)}
+            </p>
+
+            <p>Expendable Inventory Types:</p>
+            <p>Expendable Inventory Instances:<br>
+              ${this._selectedGodFiles.expendableInventoryAccessRecords.map(([typeId]) => html`
+                - ${typeId}<br>
+              `)}
+            </p>
+          </div>
+          <input
+            type="submit"
+            hidden>
+          <inno-button
+            class="${classes.form_submitButton}"
+            theme="raised"
+            @click="${this._onSubmitButtonClick}">
+            Import
+          </inno-button>
+        </form>
+        <pre
+          class="${classMap({
+            [classes.card_message]: true,
+            [classes.card_message_$hide]: state.type === 'idle'
+          })}">${
+            state.type === 'successful'
+              ? 'Successful!'
+              : state.type === 'failed'
+                ? state.message
+                : state.type === 'processing'
+                  ? 'Processing'
+                  : nothing
+          }</pre>
+      </div>
+    `;
+    /* eslint-enable @typescript-eslint/indent */
   }
 
   private _renderMembersForm(): TemplateResult {
@@ -711,6 +836,136 @@ export class ImportPage extends LitElement {
     if (submitInput === undefined) return;
 
     submitInput.click();
+  }
+
+  private _onGodFormFolderInputChange(event: Event): void {
+    const input = event.currentTarget as HTMLInputElement;
+    const files = Array.from(input.files!);
+
+    const godFiles: {
+      members: File | null;
+      spaces: File | null;
+      spaceAccessRecords: Array<readonly [string, File]>;
+      machineTypes: File | null;
+      machineInstances: Array<readonly [string, File]>;
+      machineAccessRecords: Array<readonly [string, string, File]>;
+      reusableInventoryTypes: File | null;
+      reusableInventoryInstances: Array<readonly [string, File]>;
+      reusableInventoryAccessRecords: Array<readonly [string, string, File]>;
+      expendableInventoryTypes: File | null;
+      expendableInventoryQuantitySetRecords: Array<readonly [string, File]>;
+      expendableInventoryAccessRecords: Array<readonly [string, File]>;
+    } = {
+      members: null,
+      spaces: null,
+      spaceAccessRecords: [],
+      machineTypes: null,
+      machineInstances: [],
+      machineAccessRecords: [],
+      reusableInventoryTypes: null,
+      reusableInventoryInstances: [],
+      reusableInventoryAccessRecords: [],
+      expendableInventoryTypes: null,
+      expendableInventoryQuantitySetRecords: [],
+      expendableInventoryAccessRecords: []
+    };
+
+    let match: RegExpMatchArray | null;
+    for (const file of files) {
+      const path = file.webkitRelativePath.slice(file.webkitRelativePath.indexOf('/') + 1);
+
+      if (path === 'members.csv') {
+        godFiles.members = file;
+
+      } else if (path === 'spaces.csv') {
+        godFiles.spaces = file;
+      } else if ((match = /^space_access_records\/([^/]+)\.csv$/.exec(path)) !== null) {
+        godFiles.spaceAccessRecords.push([match[1], file]);
+
+      } else if (path === 'machine_types.csv') {
+        godFiles.machineTypes = file;
+      } else if ((match = /^machine_instances\/([^/]+)\.csv$/.exec(path)) !== null) {
+        godFiles.machineInstances.push([match[1], file]);
+      } else if ((match = /^machine_access_records\/([^/]+)\/([^/]+)\.csv$/.exec(path)) !== null) {
+        godFiles.machineAccessRecords.push([match[1], match[2], file]);
+
+      } else if (path === 'reusable_inventory_types.csv') {
+        godFiles.reusableInventoryTypes = file;
+      } else if ((match = /^reusable_inventory_instances\/([^/]+)\.csv$/.exec(path)) !== null) {
+        godFiles.reusableInventoryInstances.push([match[1], file]);
+      } else if ((match = /^reusable_inventory_access_records\/([^/]+)\/([^/]+)\.csv$/.exec(path)) !== null) {
+        godFiles.reusableInventoryAccessRecords.push([match[1], match[2], file]);
+
+      } else if (path === 'expendable_inventory_types.csv') {
+        godFiles.expendableInventoryTypes = file;
+      } else if ((match = /^expendable_inventory_access_records\/([^/]+)\.csv$/.exec(path)) !== null) {
+        godFiles.expendableInventoryAccessRecords.push([match[1], file]);
+      }
+    }
+
+    this._selectedGodFiles = godFiles;
+  }
+
+  private _onGodFormSubmit(event: Event): void {
+    event.preventDefault();
+
+    const {
+      memberService,
+      spaceService,
+      machineService,
+      reusableInventoryService,
+      expendableInventoryService
+    } = this;
+
+    if (
+      memberService === null || spaceService === null || machineService === null
+      || reusableInventoryService === null || expendableInventoryService === null
+    ) {
+      return;
+    }
+    const godFiles = this._selectedGodFiles;
+
+    this._performFormTask('god', async () => {
+      if (godFiles.members !== null) {
+        await memberService.importMembers(godFiles.members);
+      }
+
+      if (godFiles.spaces !== null) {
+        await spaceService.importSpaces(godFiles.spaces);
+      }
+      await Promise.all(godFiles.spaceAccessRecords.map(async ([spaceId, file]) => {
+        await spaceService.importAccessRecords(spaceId, null, file);
+      }));
+
+      if (godFiles.machineTypes !== null) {
+        await machineService.importTypes(godFiles.machineTypes);
+      }
+      await Promise.all(godFiles.machineInstances.map(async ([typeId, file]) => {
+        await machineService.importInstances(typeId, file);
+      }));
+      await Promise.all(godFiles.machineAccessRecords.map(async ([typeId, instanceId, file]) => {
+        await machineService.importInstanceAccessRecords(typeId, instanceId, null, null, file);
+      }));
+
+      if (godFiles.reusableInventoryTypes !== null) {
+        await reusableInventoryService.importTypes(godFiles.reusableInventoryTypes);
+      }
+      await Promise.all(godFiles.reusableInventoryInstances.map(async ([typeId, file]) => {
+        await reusableInventoryService.importInstances(typeId, file);
+      }));
+      // eslint-disable-next-line max-len
+      await Promise.all(godFiles.reusableInventoryAccessRecords.map(async ([typeId, instanceId, file]) => {
+        await reusableInventoryService
+          .importInstanceAccessRecords(typeId, instanceId, null, null, file);
+      }));
+
+      if (godFiles.expendableInventoryTypes !== null) {
+        await expendableInventoryService.importTypes(godFiles.expendableInventoryTypes);
+      }
+      await Promise.all(godFiles.expendableInventoryAccessRecords.map(async ([typeId, file]) => {
+        await expendableInventoryService.importAccessRecords(typeId, null, file);
+      }));
+    });
   }
 
   private _onMembersDataFormSubmit(event: Event): void {
