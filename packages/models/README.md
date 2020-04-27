@@ -40,6 +40,9 @@ Train:
 # For history forecast (old) (**not working**)
 python -m innolens_models history_forecast train --checkpoint-dir ./checkpoints/history_forecast --training-data ./preprocessed/history_forecast/training.csv --log-dir ./logs/history_forecast --ui
 
+# For access causality
+python -m innolens_models access_causality train --checkpoint-dir ./checkpoints/access_causality --training-data ./access_causality_sample_train.json --log-dir ./logs/access_causality --ui
+
 # For history forecast
 python -m innolens_models history_forecast train --checkpoint-dir ./checkpoints/history_forecast --training-data ./history-train.json --log-dir ./logs/history_forecast --ui
 
@@ -52,6 +55,9 @@ python -m innolens_models user_count train --model-dir ./tensorflow_models/user_
 
 Evaluate:
 ```shell
+# For access causality
+python -m innolens_models access_causality train --checkpoint-dir ./checkpoints/access_causality --evaluation-data ./access_causality_sample_train.json --log-dir ./logs/access_causality --ui
+
 # For history forecast
 python -m innolens_models history_forecast train --checkpoint-dir ./checkpoints/history_forecast --evaluation-data ./preprocessed/history_forecast/evaluation.csv --log-dir ./logs/history_forecast --ui
 

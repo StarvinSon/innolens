@@ -1,0 +1,51 @@
+name: GetFeatureHistory
+
+method: post
+path: /api/access-causality/feature-history
+
+authentication:
+  type: bearer
+
+requestBody:
+  contentType: application/json
+  schema:
+    type: object
+    required:
+      - fromTime
+      - toTime
+    additionalProperties: false
+    properties:
+      fromTime:
+        type: date
+      toTime:
+        type: date
+      timeStepMs:
+        type: integer
+
+responseBody:
+  data:
+    schema:
+      type: object
+      required:
+        - timeSpans
+        - features
+        - values
+      additionalProperties: false
+      properties:
+        timeSpans:
+          type: array
+          items:
+            type: array
+            items:
+              - type: date
+              - type: date
+        features:
+          type: array
+          items:
+            type: string
+        values:
+          type: array
+          items:
+            type: array
+            items:
+              type: number

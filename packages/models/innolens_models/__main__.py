@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 
 # from .models.access_record import AccessRecordCli
 # from .models.user_count import UserCountCli
+from .models.access_causality import AccessCausalityCli
 from .models.history_forecast import HistoryForecastCli
 from .models.history_cluster import HistoryClusterCli
 from .server import ServerCli
@@ -21,6 +22,7 @@ subparsers = parser.add_subparsers(
 for sub_cli in (
   # AccessRecordCli(),
   # UserCountCli(),
+  AccessCausalityCli(),
   HistoryForecastCli(),
   HistoryClusterCli(),
   ServerCli()

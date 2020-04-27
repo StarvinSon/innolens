@@ -9,6 +9,7 @@ from .member import Member
 from .general_user import GeneralUser
 from .inno_lens import InnoLensMember
 from .comp3356_robotics import COMP3356RoboticsMember
+from .comp1117 import COMP1117Classmate
 
 from ..engine.object import Object
 from ..utils.random.time import randtime_nd
@@ -16,9 +17,32 @@ from ..utils.time import hk_timezone
 
 
 def add_users(container: Object) -> None:
-  add_general_users(container)
-  add_inno_lens_members(container)
-  add_comp3356_robotics_members(container)
+  add_comp1117_classmates(container)
+  # add_general_users(container)
+  # add_inno_lens_members(container)
+  # add_comp3356_robotics_members(container)
+
+def add_comp1117_classmates(container: Object) -> None:
+  for _ in range(120):
+    obj = container.engine.create_object()
+    member = obj.add_component(Member)
+    member.randomize_fields(
+      department_choices=['Computer Science', 'Electrical and Electronic Engineering'],
+      type_of_study_choices=['Undergraduate'],
+      study_programme_choices=['JS6963'],
+      year_of_study_choices=[2, 3, 4],
+      affiliated_student_interest_groups_choices=['COMP1117'],
+      membership_start_time=randtime_nd(
+        lower=datetime(2020, 1, 1, tzinfo=hk_timezone),
+        upper=datetime(2020, 1, 20, tzinfo=hk_timezone),
+        step=timedelta(days=1),
+        mean=datetime(2020, 1, 5, tzinfo=hk_timezone),
+        stddev=timedelta(days=3)
+      ),
+      membership_end_time=datetime(2020, 6, 1, tzinfo=hk_timezone)
+    )
+    obj.add_component(COMP1117Classmate)
+    container.add_object(obj)
 
 def add_general_users(container: Object) -> None:
   for _ in range(420):

@@ -61,7 +61,7 @@ export const SpaceMemberRecordCollection = decorate(
       },
       indexes: [
         {
-          key: { spaceId: 1, time: 1, _id: 1 }
+          key: { time: 1, _id: 1 }
         }
       ]
     })

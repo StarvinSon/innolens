@@ -6,6 +6,7 @@ import {
 import KoaRouter from '@koa/router';
 import { DefaultState, DefaultContext } from 'koa';
 
+import { AccessCausalityController } from '../controllers/access-causality';
 import { ExpendableInventoryController } from '../controllers/expendable-inventory';
 import { FileController } from '../controllers/file';
 import { MachineController } from '../controllers/machine';
@@ -38,7 +39,8 @@ export const Router = decorate(
     reusableInventory: ReusableInventoryController,
     expendableInventory: ExpendableInventoryController,
     static: StaticController,
-    memberCluster: MemberClusterController
+    memberCluster: MemberClusterController,
+    accessCausality: AccessCausalityController
   }),
   singleton(),
   (_controllers: {
@@ -50,7 +52,8 @@ export const Router = decorate(
     machine: MachineController,
     reusableInventory: ReusableInventoryController,
     expendableInventory: ExpendableInventoryController,
-    memberCluster: MemberClusterController
+    memberCluster: MemberClusterController,
+    accessCausality: AccessCausalityController
   }): Router => {
     const controllers = bindControllerMethods(_controllers);
     const router: Router = new KoaRouter();

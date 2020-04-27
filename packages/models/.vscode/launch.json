@@ -5,6 +5,32 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Train Access Causality Model",
+      "type": "python",
+      "request": "launch",
+      "module": "innolens_models",
+      "args": [
+        "access_causality", "train",
+        "--checkpoint-dir", "${workspaceFolder}/checkpoints/access_causality",
+        "--training-data", "${workspaceFolder}/access_causality_feature_history.json",
+        "--log-dir", "${workspaceFolder}/logs/access_causality",
+        "--ui"
+      ]
+    },
+    {
+      "name": "Evaluate Access Causality Model",
+      "type": "python",
+      "request": "launch",
+      "module": "innolens_models",
+      "args": [
+        "access_causality", "train",
+        "--checkpoint-dir", "${workspaceFolder}/checkpoints/access_causality",
+        "--evaluation-data", "${workspaceFolder}/access_causality_feature_history.json",
+        "--log-dir", "${workspaceFolder}/logs/access_causality",
+        "--ui"
+      ]
+    },
+    {
       "name": "Train History Forecast Model",
       "type": "python",
       "request": "launch",
