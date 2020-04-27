@@ -12,7 +12,7 @@
       "args": [
         "access_causality", "train",
         "--checkpoint-dir", "${workspaceFolder}/checkpoints/access_causality",
-        "--training-data", "${workspaceFolder}/access_causality_feature_history.json",
+        "--training-data", "${workspaceFolder}/access_causality_sample_train.json",
         "--log-dir", "${workspaceFolder}/logs/access_causality",
         "--ui"
       ]
@@ -25,7 +25,7 @@
       "args": [
         "access_causality", "train",
         "--checkpoint-dir", "${workspaceFolder}/checkpoints/access_causality",
-        "--evaluation-data", "${workspaceFolder}/access_causality_feature_history.json",
+        "--evaluation-data", "${workspaceFolder}/access_causality_sample_train.json",
         "--log-dir", "${workspaceFolder}/logs/access_causality",
         "--ui"
       ]
@@ -38,7 +38,7 @@
       "args": [
         "history_forecast", "train",
         "--checkpoint-dir", "${workspaceFolder}/checkpoints/history_forecast",
-        "--training-data", "${workspaceFolder}/history-train.json",
+        "--training-data", "${workspaceFolder}/history_forecast_sample_train.json",
         "--log-dir", "${workspaceFolder}/logs/history_forecast",
         "--ui"
       ]
@@ -51,7 +51,7 @@
       "args": [
         "history_forecast", "train",
         "--checkpoint-dir", "${workspaceFolder}/checkpoints/history_forecast",
-        "--evaluation-data", "${workspaceFolder}/preprocessed/history_forecast/evaluation.csv",
+        "--evaluation-data", "${workspaceFolder}/history_forecast_sample_train.json",
         "--log-dir", "${workspaceFolder}/logs/history_forecast",
         "--ui"
       ]
