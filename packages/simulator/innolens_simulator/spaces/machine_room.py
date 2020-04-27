@@ -19,6 +19,8 @@ from ..reusable_inventories.hand_tool import HandTool
 from ..reusable_inventories.vacuum_cleaner import VacuumCleaner
 
 from ..expendable_inventories.wood_plank import WoodPlank
+from ..expendable_inventories.electric_wire import ElectricWire
+from ..expendable_inventories.foam_panel import FoamPanel
 
 from .space import Space
 
@@ -28,6 +30,8 @@ class MachineRoom(Space):
   space_name = 'Machine Room'
 
   __wood_plank: WoodPlank
+  __electric_wire: ElectricWire
+  __foam_panel: FoamPanel
 
   def __init__(self, attached_object: Object):
     super().__init__(attached_object)
@@ -48,6 +52,9 @@ class MachineRoom(Space):
     self.__add_vacuum_cleaners()
 
     self.__add_wood_plank()
+    self.__add_electric_wire()
+    self.__add_foam_panel()
+
 
   def __add_computers(self) -> None:
     for i in range(2):
@@ -279,6 +286,16 @@ class MachineRoom(Space):
     self.__wood_plank = plank_obj.add_component(WoodPlank)
     self.attached_object.add_object(plank_obj)
 
+  def __add_electric_wire(self) -> None:
+    wire_obj = self.engine.create_object()
+    self.__electric_wire = wire_obj.add_component(ElectricWire)
+    self.attached_object.add_object(wire_obj)
+
+  def __add_foam_panel(self) -> None:
+    foam_obj = self.engine.create_object()
+    self.__foam_panel = foam_obj.add_component(FoamPanel)
+    self.attached_object.add_object(foam_obj)
+
   def _on_next_tick(self) -> None:
     curr_time = self.engine.clock.current_time
 
@@ -289,3 +306,15 @@ class MachineRoom(Space):
       and curr_time.minute == 0
     ):
       self.__wood_plank.set_quantity(100)
+    elif (
+      curr_time.weekday() == 1
+      and curr_time.hour == 0
+      and curr_time.minute == 0
+    ):
+      self.__electric_wire.set_quantity(200)
+    elif (
+      curr_time.weekday() == 2
+      and curr_time.hour == 0
+      and curr_time.minute == 0
+    ):
+      self.__foam_panel.set_quantity(50)
