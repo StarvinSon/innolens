@@ -44,7 +44,7 @@ python -m innolens_models history_forecast train --checkpoint-dir ./checkpoints/
 python -m innolens_models access_causality train --checkpoint-dir ./checkpoints/access_causality --training-data ./access_causality_sample_train.json --log-dir ./logs/access_causality --ui
 
 # For history forecast
-python -m innolens_models history_forecast train --checkpoint-dir ./checkpoints/history_forecast --training-data ./history-train.json --log-dir ./logs/history_forecast --ui
+python -m innolens_models history_forecast train --checkpoint-dir ./checkpoints/history_forecast --training-data ./history_forecast_sample_train.json --log-dir ./logs/history_forecast --ui
 
 # For access record
 python -m innolens_models access_record train --model-dir ./tensorflow_models/access_record_dnn_0 --training-data ./preprocessed/inno_wing_access_records_training.csv --evaluation-data ./preprocessed/inno_wing_access_records_evaluation.csv --evaluation-prediction ./access_record_evaluation_prediction.csv

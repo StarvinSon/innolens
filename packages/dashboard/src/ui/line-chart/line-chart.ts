@@ -79,8 +79,12 @@ export class LineChart extends LitElement {
   private _getRenderData(): Exclude<LineChart['_renderDataCache'], null> {
     const { data, predictionData, showArea } = this;
 
-    if (this._renderDataCache !== null && this._renderDataCache.data === data) {
-      return this._renderDataCache;
+    if (
+      this._renderDataCache !== null &&
+      this._renderDataCache.data === data &&
+      this._renderDataCache.predictionData === predictionData
+    ) {
+          return this._renderDataCache;
     }
 
     let _data: LineChartData<unknown> | null = data;
@@ -218,7 +222,7 @@ export class LineChart extends LitElement {
     const array = [];
     for (let i = 0; i < ticks; i += 1) {
       const [, scale] = this._renderDataCache?.iToX!.domain();
-      const num = Math.floor((scale * i) / ticks);
+      const num = Math.ceil((scale * i) / ticks);
       array.push(num);
     }
 

@@ -1,5 +1,5 @@
 import {
-  format as formatDate, startOfDay, addHours, startOfHour, getHours
+  format as formatDate, startOfHour, subHours
 } from 'date-fns';
 import {
   customElement, LitElement, TemplateResult, html, property, PropertyValues
@@ -7,25 +7,11 @@ import {
 
 import '../gauge';
 import {
-  SpaceService, Space, SpaceMemberCountHistory
+  SpaceService, Space, SpaceMemberCountHistory, SpaceMemberCountForecast
 } from '../../services/space';
+import { generateKey } from '../../utils/key';
 
 import { css, classes } from './user-spaces-page.scss';
-
-interface SpaceCountPrediction {
-  readonly groups: ReadonlyArray<string>;
-  readonly records: ReadonlyArray<SpaceCountPredictionRecord>;
-}
-
-interface SpaceCountPredictionRecord {
-  readonly startTime: Date;
-  readonly endTime: Date;
-  readonly counts: SpaceCountPredictionRecordValues;
-}
-
-interface SpaceCountPredictionRecordValues {
-  readonly [group: string]: number;
-}
 
 const TAG_NAME = 'inno-user-spaces-page';
 
@@ -48,8 +34,10 @@ export class UserSpacesPage extends LitElement {
   @property({ attribute: false })
   private _countHistory: ReadonlyArray<SpaceMemberCountHistory> | null = null;
 
+  private _forecastKey: string | null = null;
+
   @property({ attribute: false })
-  private _countPrediction: ReadonlyArray<SpaceCountPrediction> | null = null;
+  private _forecast: ReadonlyArray<SpaceMemberCountForecast> | null = null;
 
   @property({ attribute: false })
   private _lineChartData: import('../line-chart').LineChartData<Date> | null = null;
@@ -63,7 +51,7 @@ export class UserSpacesPage extends LitElement {
   private _lineChartDataDeps: readonly [ReadonlyArray<SpaceMemberCountHistory> | null] = [null];
 
   private _lineChartPredictionDataDeps: readonly [
-    ReadonlyArray<SpaceCountPrediction> | null
+    ReadonlyArray<SpaceMemberCountForecast> | null
   ] = [null];
 
   private _gaugeDataDeps: readonly [ReadonlyArray<SpaceMemberCountHistory> | null] = [null];
@@ -83,9 +71,9 @@ export class UserSpacesPage extends LitElement {
       const spaceCountPromises = this.spaces.map(
         async (space): Promise<SpaceMemberCountHistory> =>
           this.spaceService!.fetchMemberCountHistory(
-            startOfDay(current),
+            subHours(startOfHour(current), 20),
             startOfHour(current),
-            3600000,
+            1800000,
             [space.spaceId],
             'uniqueStay',
             null
@@ -95,16 +83,35 @@ export class UserSpacesPage extends LitElement {
         this._countHistory = spaceData;
       });
 
-      // Hard coded predictions
-      const time = startOfHour(new Date());
-      this._countPrediction = this.spaces.map(() => ({
-        groups: ['total'],
-        records: [...Array(25 - getHours(time))].map((_, i) => ({
-          startTime: addHours(time, i),
-          endTime: addHours(time, i + 1),
-          counts: { total: Math.cos(i / 4 + Math.random()) / 2 + 4 }
-        }))
-      }));
+      const forecastKey = generateKey({
+        fromTime: startOfHour(current).toISOString(),
+        timeStepMs: '1800000',
+        spaceIds: this.spaces.map((space) => space.spaceId).map(encodeURIComponent).join(','),
+        countType: 'uniqueStay'
+      });
+      if (this._forecastKey !== forecastKey) {
+        const forecastPromises = this.spaces.map(
+          async (space): Promise<SpaceMemberCountForecast> =>
+            this.spaceService!.fetchMemberCountForecast({
+              fromTime: startOfHour(current),
+              timeStepMs: 1800000,
+              filterSpaceIds: [space.spaceId],
+              countType: 'uniqueStay'
+            })
+        );
+        Promise.all(forecastPromises)
+          .then((forecastData) => {
+            this._forecast = forecastData;
+          })
+          .catch((err) => {
+            console.error(err);
+            if (this._forecastKey === forecastKey) {
+              this._forecast = null;
+            }
+          });
+
+        this._forecastKey = forecastKey;
+      }
 
       this._dataFetched = true;
     }
@@ -114,13 +121,12 @@ export class UserSpacesPage extends LitElement {
         this._lineChartData = null;
       } else {
         this._lineChartData = {
-          lines: this._countHistory.map((history, i) => {
-            const { spaceName, spaceCapacity } = this.spaces![i];
-            return {
-              name: spaceName,
-              values: history.records.map((record) => record.counts.total / spaceCapacity)
-            };
-          }),
+          lines: this._countHistory.map((history, i) => ({
+            name: this.spaces![i].spaceName,
+            values: history.records.map(
+              (record) => record.counts.total / this.spaces![i].spaceCapacity
+            )
+          })),
           labels: this._countHistory[0].records.map((record) => record.startTime),
           formatLabel: (time) => formatDate(time, 'HH:mm')
         };
@@ -128,23 +134,22 @@ export class UserSpacesPage extends LitElement {
       this._lineChartDataDeps = [this._countHistory];
     }
 
-    if (this._lineChartPredictionDataDeps[0] !== this._countPrediction) {
-      if (this._countPrediction === null) {
+    if (this._lineChartPredictionDataDeps[0] !== this._forecast) {
+      if (this._forecast === null) {
         this._lineChartPredictionData = null;
       } else {
         this._lineChartPredictionData = {
-          lines: this._countPrediction.map((history, i) => {
-            const { spaceName, spaceCapacity } = this.spaces![i];
-            return {
-              name: spaceName,
-              values: history.records.map((record) => record.counts.total / spaceCapacity)
-            };
-          }),
-          labels: this._countPrediction[0].records.map((record) => record.startTime),
+          lines: this._forecast.map((forecast, i) => ({
+            name: this.spaces![i].spaceName,
+            values: forecast.values[0].slice(0, 8).map(
+              (value) => value / this.spaces![i].spaceCapacity
+            )
+          })),
+          labels: this._forecast[0].timeSpans.slice(0, 8).map((timeSpan) => timeSpan[0]),
           formatLabel: (time) => formatDate(time, 'HH:mm')
         };
       }
-      this._lineChartPredictionDataDeps = [this._countPrediction];
+      this._lineChartPredictionDataDeps = [this._forecast];
     }
 
     if (this._gaugeDataDeps[0] !== this._countHistory) {
@@ -178,7 +183,7 @@ export class UserSpacesPage extends LitElement {
           class="${classes.lineChart}"
           .data="${this._lineChartData}"
           .predictionData="${this._lineChartPredictionData}"
-          .labels="${8}"
+          .labels="${12}"
           showPercentage
         >
           <span slot="title">Utilization rate of spaces</span>
