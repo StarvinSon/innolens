@@ -179,8 +179,8 @@ class HistoryForecastModel:
     with open(path) as file:
       data = json.load(file)
     df = pd.DataFrame({
-      group: pd.Series(data['values'][group], dtype=np.int32)
-      for group in data['groups']
+      group: pd.Series(data['values'][g], dtype=np.int32)
+      for g, group in enumerate(data['groups'])
     })
     assert df.notna().all(None)
     return df
