@@ -5,6 +5,7 @@ from typing import Any
 from flask import Flask, request
 import numpy as np
 
+from ..models.correlation.model import CorrelationModel
 from ..models.history_cluster.model import HistoryClusterModel
 from ..models.history_forecast.model import HistoryForecastModel
 
@@ -15,12 +16,26 @@ def create_app(
 ) -> Flask:
   app = Flask(__name__)
 
+  correlationModel = CorrelationModel()
   clusterModel = HistoryClusterModel()
   forecastModel = HistoryForecastModel(checkpoint_dir_path=forecast_chkpt_dir_path)
 
   @app.route('/')
   def get_index() -> str:
     return 'InnoLens Python Server'
+
+  @app.route('/correlate', methods=('POST',))
+  def post_correlation() -> Any:
+    data = request.json
+
+    X = np.array(data[0])
+    Y = np.array(data[1])
+
+    Z = correlationModel.correlate(X, Y, show_ui='ui' in request.args)
+
+    return {
+      'data': Z
+    }
 
   @app.route('/cluster', methods=('POST',))
   def post_cluster() -> Any:

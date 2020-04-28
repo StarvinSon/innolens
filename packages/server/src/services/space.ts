@@ -1,5 +1,5 @@
 import { singleton, injectableConstructor } from '@innolens/resolver/node';
-import { subWeeks } from 'date-fns';
+import { subWeeks, addDays } from 'date-fns';
 import { ObjectId } from 'mongodb';
 
 import { MemberCollection } from '../db/member';
@@ -8,6 +8,7 @@ import { SpaceAccessRecordCollection, SpaceAccessRecord } from '../db/space-acce
 import { SpaceMemberRecordCollection, SpaceMemberRecord } from '../db/space-member-record';
 import { raceSettled } from '../utils/promise';
 
+import { CorrelationService, CorrelationResult } from './correlation';
 import { HistoryForecastService } from './history-forecast';
 import { timeSpanRange, timeSpanRepeat } from './time';
 
@@ -91,6 +92,7 @@ export type SpaceMemberCountForecast = SpaceMemberCountHistory2;
   spaceMemberRecordCollection: SpaceMemberRecordCollection,
   spaceAccessRecordCollection: SpaceAccessRecordCollection,
   memberCollection: MemberCollection,
+  correlationService: CorrelationService,
   historyForecastService: HistoryForecastService
 })
 @singleton()
@@ -99,6 +101,7 @@ export class SpaceService {
   private readonly _memberRecordCollection: SpaceMemberRecordCollection;
   private readonly _accessRecordCollection: SpaceAccessRecordCollection;
   private readonly _memberCollection: MemberCollection;
+  private readonly _correlationService: CorrelationService;
   private readonly _historyForecastService: HistoryForecastService;
 
   public constructor(deps: {
@@ -106,6 +109,7 @@ export class SpaceService {
     spaceMemberRecordCollection: SpaceMemberRecordCollection,
     spaceAccessRecordCollection: SpaceAccessRecordCollection,
     memberCollection: MemberCollection,
+    correlationService: CorrelationService,
     historyForecastService: HistoryForecastService
   }) {
     ({
@@ -113,6 +117,7 @@ export class SpaceService {
       spaceMemberRecordCollection: this._memberRecordCollection,
       spaceAccessRecordCollection: this._accessRecordCollection,
       memberCollection: this._memberCollection,
+      correlationService: this._correlationService,
       historyForecastService: this._historyForecastService
     } = deps);
   }
@@ -796,5 +801,29 @@ export class SpaceService {
       timeSpans: forecastTimeSpans,
       values: predictions
     };
+  }
+
+  public async getCorrelation(opts: {
+    readonly fromTime: Date;
+    readonly timeStepMs: number;
+    readonly filterSpaceIds: ReadonlyArray<string>;
+    readonly filterMemberIds: ReadonlyArray<string> | null;
+    readonly countType: SpaceCountHistoryCountType;
+  }): Promise<CorrelationResult> {
+    const historyToTime = addDays(opts.fromTime, 14);
+    const historyPromises = opts.filterSpaceIds.map((spaceId) => this.getMemberCountHistory2({
+      ...opts,
+      toTime: historyToTime,
+      filterSpaceIds: [spaceId],
+      groupBy: null
+    }));
+    const histories = await Promise.all(historyPromises);
+
+    const correlation = await this._correlationService.correlate([
+      histories[0].values[0],
+      histories[1].values[0]
+    ]);
+
+    return correlation;
   }
 }

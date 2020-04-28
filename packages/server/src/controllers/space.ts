@@ -204,4 +204,23 @@ export class SpaceController extends FileController(SpaceControllerGlue) {
       throw err;
     }
   }
+
+  protected async handleGetCorrelation(
+    ctx: SpaceControllerGlue.GetCorrelationContext
+  ): Promise<void> {
+    try {
+      ctx.responseBodyData = await this._spaceService.getCorrelation({
+        fromTime: ctx.requestBody.fromTime,
+        timeStepMs: ctx.requestBody.timeStepMs ?? (2 * 60 * 60 * 1000),
+        filterSpaceIds: ctx.requestBody.filterSpaceIds,
+        filterMemberIds: ctx.requestBody.filterMemberIds ?? null,
+        countType: ctx.requestBody.countType ?? 'uniqueStay'
+      });
+    } catch (err) {
+      if (err instanceof SpaceNotFoundError) {
+        throw createHttpError(BAD_REQUEST, err);
+      }
+      throw err;
+    }
+  }
 }
