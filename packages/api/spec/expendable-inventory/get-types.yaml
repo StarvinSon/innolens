@@ -16,8 +16,11 @@ responseBody:
         required:
           - typeId
           - typeName
+          - typeCapacity
         properties:
           typeId:
             type: string
           typeName:
             type: string
+          typeCapacity:
+            type: integer

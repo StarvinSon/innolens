@@ -13,6 +13,7 @@ from ..users.member import Member
 class ExpendableInventory(Component):
   type_id: ClassVar[str] = ''
   type_name: ClassVar[str] = ''
+  type_capacity: ClassVar[int] = 100
 
   __access_log: Final[MutableSequence[Tuple[Literal['set', 'take'], datetime, int, str, int]]]
   '''

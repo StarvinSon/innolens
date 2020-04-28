@@ -55,7 +55,8 @@ export class ExpendableInventoryController extends FileController(ExpendableInve
     const spaces = await this._expendableInventoryService.getTypes();
     ctx.responseBodyData = spaces.map((type) => ({
       typeId: type.typeId,
-      typeName: type.typeName
+      typeName: type.typeName,
+      typeCapacity: type.typeCapacity
     }));
   }
 
@@ -64,15 +65,16 @@ export class ExpendableInventoryController extends FileController(ExpendableInve
   ): Promise<void> {
     const fileStream = this.getFile(ctx.authentication.token, ctx.requestBody.fileId);
 
-    const records: Array<Pick<ExpendableInventoryType, 'typeId' | 'typeName'>> = [];
+    const records: Array<Pick<ExpendableInventoryType, 'typeId' | 'typeName' | 'typeCapacity'>> = [];
     const csvRecordStream = fileStream.pipe(csvParse({ columns: true }));
     for await (const csvRecord of csvRecordStream) {
       const record = decodeCsvRecord(
         csvRecord,
-        ['type_id', 'type_name'],
+        ['type_id', 'type_name', 'type_capacity'],
         {
           type_id: decodeCsvString,
-          type_name: decodeCsvString
+          type_name: decodeCsvString,
+          type_capacity: decodeCsvInteger
         }
       );
       if (record === undefined) {
@@ -80,7 +82,8 @@ export class ExpendableInventoryController extends FileController(ExpendableInve
       }
       records.push({
         typeId: record.type_id,
-        typeName: record.type_name
+        typeName: record.type_name,
+        typeCapacity: record.type_capacity
       });
     }
 

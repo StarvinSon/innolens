@@ -20,7 +20,8 @@ def get_expendable_inventory_type_df(world: Object) -> pd.DataFrame:
       type_ids.add(inventory.type_id)
       yield {
         'type_id': inventory.type_id,
-        'type_name': inventory.type_name
+        'type_name': inventory.type_name,
+        'type_capacity': inventory.type_capacity
       }
 
   rows = list(iterate_rows())
@@ -28,7 +29,8 @@ def get_expendable_inventory_type_df(world: Object) -> pd.DataFrame:
     name: pd.Series((row[name] for row in rows), dtype=dtype)
     for name, dtype in {
       'type_id': pd.StringDtype(),
-      'type_name': pd.StringDtype()
+      'type_name': pd.StringDtype(),
+      'type_capacity': pd.Int16Dtype()
     }.items()
   })
   assert df.notna().all(axis=None)

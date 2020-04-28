@@ -101,7 +101,7 @@ export class ExpendableInventoryService {
   }
 
 
-  public async importTypes(types: ReadonlyArray<Pick<ExpendableInventoryType, 'typeId' | 'typeName'>>): Promise<void> {
+  public async importTypes(types: ReadonlyArray<Pick<ExpendableInventoryType, 'typeId' | 'typeName' | 'typeCapacity'>>): Promise<void> {
     if (types.length === 0) return;
     await this._typeCollection
       .bulkWrite(
@@ -113,6 +113,7 @@ export class ExpendableInventoryService {
             update: {
               $set: {
                 typeName: type.typeName,
+                typeCapacity: type.typeCapacity,
                 versionId: new ObjectId()
               },
               $setOnInsert: {

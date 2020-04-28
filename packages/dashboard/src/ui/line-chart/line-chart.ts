@@ -77,14 +77,16 @@ export class LineChart extends LitElement {
   } | null = null;
 
   private _getRenderData(): Exclude<LineChart['_renderDataCache'], null> {
-    const { data, predictionData, showArea } = this;
+    const {
+      data, predictionData, showArea, showPercentage
+    } = this;
 
     if (
-      this._renderDataCache !== null &&
-      this._renderDataCache.data === data &&
-      this._renderDataCache.predictionData === predictionData
+      this._renderDataCache !== null
+      && this._renderDataCache.data === data
+      && this._renderDataCache.predictionData === predictionData
     ) {
-          return this._renderDataCache;
+      return this._renderDataCache;
     }
 
     let _data: LineChartData<unknown> | null = data;
@@ -115,7 +117,7 @@ export class LineChart extends LitElement {
           : max(data.lines.flatMap((l) => l.values))!;
 
       vToY = scaleLinear()
-        .domain([0, vMax])
+        .domain([0, showPercentage ? max([vMax, 1])! : vMax])
         .range([1, 0]);
 
       computePath = line<number>()
