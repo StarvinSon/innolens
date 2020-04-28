@@ -12,7 +12,10 @@ export interface ReusableInventoryInstance {
   readonly typeId: string;
   readonly instanceId: string;
   readonly instanceName: string;
+  readonly currentMemberIds: ReadonlyArray<string>;
+  readonly versionId: ObjectId;
 }
+
 
 // eslint-disable-next-line max-len
 export interface ReusableInventoryInstanceCollection extends Collection<ReusableInventoryInstance> {}
@@ -33,7 +36,9 @@ export const ReusableInventoryInstanceCollection = decorate(
             '_id',
             'typeId',
             'instanceId',
-            'instanceName'
+            'instanceName',
+            'currentMemberIds',
+            'versionId'
           ],
           properties: {
             _id: {
@@ -47,6 +52,15 @@ export const ReusableInventoryInstanceCollection = decorate(
             },
             instanceName: {
               bsonType: 'string'
+            },
+            currentMemberIds: {
+              bsonType: 'array',
+              items: {
+                type: 'string'
+              }
+            },
+            versionId: {
+              bsonType: 'objectId'
             }
           }
         }

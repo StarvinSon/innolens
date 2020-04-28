@@ -17,7 +17,6 @@ from ..spaces.common_makerspace_area_2 import CommonMakerspaceArea2
 from ..spaces.digital_learning_lab import DigitalLearningLab
 from ..spaces.open_event_area import OpenEventArea
 
-from ..machines import Machine
 from ..machines.computer import Computer
 
 from ..utils.time import time_equals, hk_timezone
@@ -87,7 +86,7 @@ class GeneralUser(Component):
     self.__open_event_area = open_event_area
 
     self.__spaces = [brainstorming_area, common_makerspace_area_1, common_makerspace_area_2, digital_learning_lab, open_event_area]
-    
+
     computers = list(digital_learning_lab.attached_object.find_components(Computer, recursive=True))
     assert computers is not None
     self.__computers = computers
@@ -118,7 +117,7 @@ class GeneralUser(Component):
         or time_equals(shifted_time, weekday=3, hour=9, minute=0) # Thr 9:00
         or time_equals(shifted_time, weekday=3, hour=13, minute=0) # Thr 13:00
         or time_equals(shifted_time, weekday=3, hour=17, minute=0) # Thr 17:00
-        
+
         or time_equals(shifted_time, weekday=4, hour=9, minute=0) # Fri 9:00
         or time_equals(shifted_time, weekday=4, hour=13, minute=0) # Fri 13:00
         or time_equals(shifted_time, weekday=4, hour=17, minute=0) # Fri 17:00

@@ -13,6 +13,7 @@ export interface ReusableInventoryType {
   readonly typeName: string;
 }
 
+
 export interface ReusableInventoryTypeCollection extends Collection<ReusableInventoryType> {}
 
 export const ReusableInventoryTypeCollection = decorate(

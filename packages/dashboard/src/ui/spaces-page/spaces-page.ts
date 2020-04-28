@@ -40,36 +40,6 @@ const pastDaysChoices: ReadonlyArray<number> = [
   360
 ];
 
-const countTypeChoices: ReadonlyArray<{
-  readonly type: SpaceMemberCountHistoryCountType;
-  readonly name: string;
-}> = [
-  {
-    type: 'enter',
-    name: 'Enter'
-  },
-  {
-    type: 'exit',
-    name: 'Exit'
-  },
-  {
-    type: 'stay',
-    name: 'Stay'
-  },
-  {
-    type: 'uniqueEnter',
-    name: 'Unique Enter'
-  },
-  {
-    type: 'uniqueExit',
-    name: 'Unique Exit'
-  },
-  {
-    type: 'uniqueStay',
-    name: 'Unique Stay'
-  }
-];
-
 const groupByChoices: ReadonlyArray<{
   readonly type: SpaceMemberCountHistoryGroupBy | null;
   readonly name: string;
@@ -101,6 +71,36 @@ const groupByChoices: ReadonlyArray<{
   {
     type: 'space',
     name: 'Space'
+  }
+];
+
+const countTypeChoices: ReadonlyArray<{
+  readonly type: SpaceMemberCountHistoryCountType;
+  readonly name: string;
+}> = [
+  {
+    type: 'enter',
+    name: 'Enter'
+  },
+  {
+    type: 'exit',
+    name: 'Exit'
+  },
+  {
+    type: 'stay',
+    name: 'Stay'
+  },
+  {
+    type: 'uniqueEnter',
+    name: 'Unique Enter'
+  },
+  {
+    type: 'uniqueExit',
+    name: 'Unique Exit'
+  },
+  {
+    type: 'uniqueStay',
+    name: 'Unique Stay'
   }
 ];
 

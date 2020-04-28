@@ -7,25 +7,26 @@ import { ObjectId, Collection } from 'mongodb';
 import { Db } from './db';
 
 
-export interface ReusableInventoryAccessRecord {
+export interface ReusableInventoryMemberRecord {
   readonly _id: ObjectId;
   readonly typeId: string;
   readonly instanceId: string;
-  readonly memberId: string;
   readonly time: Date;
   readonly action: 'acquire' | 'release';
+  readonly actionMemberId: string;
+  readonly memberIds: ReadonlyArray<string>;
 }
 
 
 // eslint-disable-next-line max-len
-export interface ReusableInventoryAccessRecordCollection extends Collection<ReusableInventoryAccessRecord> {}
+export interface ReusableInventoryMemberRecordCollection extends Collection<ReusableInventoryMemberRecord> {}
 
-export const ReusableInventoryAccessRecordCollection = decorate(
-  name('ReusableInventoryAccessRecordCollection'),
+export const ReusableInventoryMemberRecordCollection = decorate(
+  name('ReusableInventoryMemberRecordCollection'),
   injectableFactory(Db),
   singleton(),
-  async (db: Db): Promise<ReusableInventoryAccessRecordCollection> =>
-    db.defineCollection('reusableInventoryAccessRecords', {
+  async (db: Db): Promise<ReusableInventoryMemberRecordCollection> =>
+    db.defineCollection('reusableInventoryMemberRecords', {
       validationLevel: 'strict',
       validationAction: 'error',
       validator: {
@@ -36,18 +37,16 @@ export const ReusableInventoryAccessRecordCollection = decorate(
             '_id',
             'typeId',
             'instanceId',
-            'memberId',
             'time',
-            'action'
+            'action',
+            'actionMemberId',
+            'memberIds'
           ],
           properties: {
             _id: {
               bsonType: 'objectId'
             },
             typeId: {
-              bsonType: 'string'
-            },
-            memberId: {
               bsonType: 'string'
             },
             instanceId: {
@@ -58,13 +57,33 @@ export const ReusableInventoryAccessRecordCollection = decorate(
             },
             action: {
               enum: ['acquire', 'release']
+            },
+            actionMemberId: {
+              bsonType: 'string'
+            },
+            memberIds: {
+              bsonType: 'array',
+              items: {
+                type: 'string'
+              }
             }
           }
         }
       },
       indexes: [
         {
-          key: { typeId: 1, instanceId: 1, time: 1 }
+          key: {
+            time: 1,
+            _id: 1
+          }
+        },
+        {
+          key: {
+            typeId: 1,
+            instanceId: 1,
+            time: 1,
+            _id: 1
+          }
         }
       ]
     })

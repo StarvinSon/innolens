@@ -1,16 +1,17 @@
 import { singleton, injectableConstructor } from '@innolens/resolver/node';
-import { subDays, subHours, addHours } from 'date-fns';
-import { FilterQuery, QuerySelector } from 'mongodb';
+import { ObjectId } from 'mongodb';
 
-import { TypedAggregationCursor } from '../db/cursor';
 import { MemberCollection } from '../db/member';
-import { ReusableInventoryAccessRecord, ReusableInventoryAccessRecordCollection } from '../db/reusable-inventory-access-record';
 import { ReusableInventoryInstanceCollection, ReusableInventoryInstance } from '../db/reusable-inventory-instance';
+import { ReusableInventoryMemberRecord, ReusableInventoryMemberRecordCollection } from '../db/reusable-inventory-member-record';
 import { ReusableInventoryType, ReusableInventoryTypeCollection } from '../db/reusable-inventory-type';
-import { Writable } from '../utils/object';
-import { raceSettled } from '../utils/promise';
+import {
+  setMap2, copyMap2, getMap2,
+  ReadonlyMap2, Map2
+} from '../utils/map';
 
-import { Member } from './member';
+import { HistoryForecastService } from './history-forecast';
+import { timeSpanRange } from './time';
 
 
 export class ReusableInventoryTypeNotFoundError extends Error {
@@ -26,137 +27,124 @@ export class ReusableInventoryInstanceNotFoundError extends Error {
 }
 
 
-export { ReusableInventoryType, ReusableInventoryInstance, ReusableInventoryAccessRecord };
+export {
+  ReusableInventoryType,
+  ReusableInventoryInstance,
+  ReusableInventoryMemberRecord
+};
 
-export const reusableInventoryMemberCountHistoryGroupBys = [
-  'department',
-  'typeOfStudy',
-  'studyProgramme',
-  'yearOfStudy',
-  'affiliatedStudentInterestGroup'
-] as const;
+
+export interface ReusableInventoryImportInstanceAccessRecord {
+  readonly time: Date;
+  readonly action: 'acquire' | 'release';
+  readonly memberId: string;
+}
+
 
 export type ReusableInventoryMemberCountHistoryGroupBy =
-  (typeof reusableInventoryMemberCountHistoryGroupBys)[number];
+  null
+  | 'type'
+  | 'instance'
+  | 'member'
+  | 'department'
+  | 'typeOfStudy'
+  | 'studyProgramme'
+  | 'yearOfStudy'
+  | 'affiliatedStudentInterestGroup';
 
-export const reusableInventoryMemberCountHistoryCountTypes = [
-  'acquireCounts',
-  'uniqueAcquireCounts',
-  'releaseCounts',
-  'uniqueReleaseCounts',
-  'useCounts',
-  'uniqueUseCounts'
-] as const;
-
-export type ReusableInventoryMemberCountHistoryCountTypes =
-  (typeof reusableInventoryMemberCountHistoryCountTypes)[number];
+export type ReusableInventoryMemberCountHistoryCountType =
+  'acquire'
+  | 'uniqueAcquire'
+  | 'release'
+  | 'uniqueRelease'
+  | 'use'
+  | 'uniqueUse';
 
 export interface ReusableInventoryMemberCountHistory {
+  readonly timeSpans: ReadonlyArray<readonly [Date, Date]>;
   readonly groups: ReadonlyArray<string>;
-  readonly records: ReadonlyArray<ReusableInventoryMemberCountRecord>;
+  readonly values: ReadonlyArray<ReadonlyArray<number>>;
 }
 
-export interface ReusableInventoryMemberCountRecord {
-  readonly periodStartTime: Date;
-  readonly periodEndTime: Date;
-  readonly counts: {
-    readonly [group: string]: number;
-  };
-}
+
+export type ReusableInventoryMemberCountForecastGroupBy =
+  ReusableInventoryMemberCountHistoryGroupBy;
+
+export type ReusableInventoryMemberCountForecastCountType =
+  ReusableInventoryMemberCountHistoryCountType;
+
+export type ReusableInventoryMemberCountForecast =
+  ReusableInventoryMemberCountHistory;
+
 
 @injectableConstructor({
   reusableInventoryTypeCollection: ReusableInventoryTypeCollection,
   reusableInventoryInstanceCollection: ReusableInventoryInstanceCollection,
-  reusableInventoryAccessRecordCollection: ReusableInventoryAccessRecordCollection,
-  memberCollection: MemberCollection
+  reusableInventoryMemberRecordCollection: ReusableInventoryMemberRecordCollection,
+  memberCollection: MemberCollection,
+  historyForecastService: HistoryForecastService
 })
 @singleton()
 export class ReusableInventoryService {
-  private readonly _reusableInventoryTypeCollection: ReusableInventoryTypeCollection;
-  private readonly _reusableInventoryInstanceCollection: ReusableInventoryInstanceCollection;
-  // eslint-disable-next-line max-len
-  private readonly _reusableInventoryAccessRecordCollection: ReusableInventoryAccessRecordCollection;
+  private readonly _typeCollection: ReusableInventoryTypeCollection;
+  private readonly _instanceCollection: ReusableInventoryInstanceCollection;
+  private readonly _memberRecordCollection: ReusableInventoryMemberRecordCollection;
+
   private readonly _memberCollection: MemberCollection;
+  private readonly _historyForecastService: HistoryForecastService;
 
   public constructor(deps: {
     reusableInventoryTypeCollection: ReusableInventoryTypeCollection;
     reusableInventoryInstanceCollection: ReusableInventoryInstanceCollection;
-    reusableInventoryAccessRecordCollection: ReusableInventoryAccessRecordCollection;
+    reusableInventoryMemberRecordCollection: ReusableInventoryMemberRecordCollection;
     memberCollection: MemberCollection;
+    historyForecastService: HistoryForecastService;
   }) {
     ({
-      reusableInventoryTypeCollection: this._reusableInventoryTypeCollection,
-      reusableInventoryInstanceCollection: this._reusableInventoryInstanceCollection,
-      reusableInventoryAccessRecordCollection: this._reusableInventoryAccessRecordCollection,
-      memberCollection: this._memberCollection
+      reusableInventoryTypeCollection: this._typeCollection,
+      reusableInventoryInstanceCollection: this._instanceCollection,
+      reusableInventoryMemberRecordCollection: this._memberRecordCollection,
+      memberCollection: this._memberCollection,
+      historyForecastService: this._historyForecastService
     } = deps);
   }
 
 
-  public async importTypes(types: ReadonlyArray<Omit<ReusableInventoryType, '_id'>>): Promise<void> {
-    if (types.length === 0) return;
-    await this._reusableInventoryTypeCollection
-      .bulkWrite(
-        types.map((type) => ({
-          replaceOne: {
-            filter: {
-              typeId: type.typeId
-            },
-            replacement: type,
-            upsert: true
-          }
-        })),
-        { ordered: false }
-      );
-  }
-
   public async getTypes(): Promise<Array<ReusableInventoryType>> {
-    return this._reusableInventoryTypeCollection.find({}).toArray();
+    return this._typeCollection.find({}).toArray();
   }
 
   private async _hasType(typeId: string): Promise<boolean> {
-    const count = await this._reusableInventoryTypeCollection
+    const count = await this._typeCollection
       .countDocuments({ typeId }, { limit: 1 });
     return count >= 1;
   }
 
-  private async _hasAllTypes(typeIds: ReadonlyArray<string>): Promise<boolean> {
-    const promises = new Set(typeIds.map(async (id) => this._hasType(id)));
-    while (promises.size > 0) {
-      // eslint-disable-next-line no-await-in-loop
-      const result = await raceSettled(promises);
-      promises.delete(result.promise);
-      if (result.status === 'rejected') {
-        throw result.reason;
+  private async _hasAllTypes(typeIds: ReadonlyArray<string>): Promise<ReadonlyArray<string>> {
+    const matchedTypes = await this._typeCollection.find({
+      typeId: {
+        $in: typeIds.slice()
       }
-      if (!result.value) {
-        return false;
-      }
-    }
-    return true;
+    }).toArray();
+    const matchedTypeIds = new Set(matchedTypes.map((type) => type.typeId));
+    return typeIds.filter((typeId) => !matchedTypeIds.has(typeId));
   }
 
-
-  public async importInstances(
-    typeId: string,
-    instances: ReadonlyArray<Omit<ReusableInventoryInstance, '_id' | 'typeId'>>
+  public async importTypes(
+    types: ReadonlyArray<Pick<ReusableInventoryType, 'typeId' | 'typeName'>>
   ): Promise<void> {
-    if (!await this._hasType(typeId)) {
-      throw new ReusableInventoryTypeNotFoundError([typeId]);
-    }
-
-    if (instances.length === 0) return;
-    await this._reusableInventoryInstanceCollection
+    if (types.length === 0) return;
+    await this._typeCollection
       .bulkWrite(
-        instances.map((instance) => ({
-          replaceOne: {
+        types.map((type) => ({
+          updateOne: {
             filter: {
-              typeId,
-              instanceId: instance.instanceId
+              typeId: type.typeId
             },
-            replacement: {
-              ...instance,
-              typeId
+            update: {
+              $set: {
+                typeName: type.typeName
+              }
             },
             upsert: true
           }
@@ -165,12 +153,13 @@ export class ReusableInventoryService {
       );
   }
 
-  public async getInstances(typeId: string): Promise<Array<ReusableInventoryInstance>> {
-    return this._reusableInventoryInstanceCollection.find({ typeId }).toArray();
+
+  public async getInstances(typeId: string): Promise<ReadonlyArray<ReusableInventoryInstance>> {
+    return this._instanceCollection.find({ typeId }).toArray();
   }
 
   private async _hasInstance(typeId: string, instanceId: string): Promise<boolean> {
-    const count = await this._reusableInventoryInstanceCollection
+    const count = await this._instanceCollection
       .countDocuments({ typeId, instanceId }, { limit: 1 });
     return count >= 1;
   }
@@ -178,295 +167,534 @@ export class ReusableInventoryService {
   private async _hasAllInstances(
     typeId: string,
     instanceIds: ReadonlyArray<string>
-  ): Promise<boolean> {
-    const promises = new Set(instanceIds
-      .map(async (id) => this._hasInstance(typeId, id)));
-    while (promises.size > 0) {
-      // eslint-disable-next-line no-await-in-loop
-      const result = await raceSettled(promises);
-      promises.delete(result.promise);
-      if (result.status === 'rejected') {
-        throw result.reason;
+  ): Promise<ReadonlyArray<string>> {
+    const matchedTypes = await this._instanceCollection.find({
+      typeId,
+      instanceId: {
+        $in: instanceIds.slice()
       }
-      if (!result.value) {
-        return false;
-      }
-    }
-    return true;
+    }).toArray();
+    const matchedInstanceIds = new Set(matchedTypes.map((instance) => instance.instanceId));
+    return instanceIds.filter((instanceId) => !matchedInstanceIds.has(instanceId));
   }
 
-  public async importAccessRecords(
+  public async importInstances(
     typeId: string,
-    instanceId: string,
-    deleteFromTime: Date | null,
-    deleteToTime: Date | null,
-    records: ReadonlyArray<Omit<ReusableInventoryAccessRecord, '_id' | 'typeId' | 'instanceId'>>
+    instances: ReadonlyArray<Pick<ReusableInventoryInstance, 'instanceId' | 'instanceName'>>
   ): Promise<void> {
-    if (!await this._hasInstance(typeId, instanceId)) {
+    if (!await this._hasType(typeId)) {
       throw new ReusableInventoryTypeNotFoundError([typeId]);
     }
 
-    const deleteFilterQuery: FilterQuery<Writable<ReusableInventoryAccessRecord>> = {
-      typeId,
-      instanceId
-    };
-    if (deleteFromTime !== null || deleteToTime !== null) {
-      const timeQuerySelector: QuerySelector<Date> = {};
-      if (deleteFromTime !== null) timeQuerySelector.$gte = deleteFromTime;
-      if (deleteToTime !== null) timeQuerySelector.$lt = deleteToTime;
-      deleteFilterQuery.time = timeQuerySelector;
-    }
-    await this._reusableInventoryAccessRecordCollection.deleteMany(deleteFilterQuery);
-
-    if (records.length > 0) {
-      await this._reusableInventoryAccessRecordCollection.insertMany(records.map((record) => ({
-        ...record,
-        typeId,
-        instanceId
-      })));
-    }
+    if (instances.length === 0) return;
+    await this._instanceCollection
+      .bulkWrite(
+        instances.map((instance) => ({
+          updateOne: {
+            filter: {
+              typeId,
+              instanceId: instance.instanceId
+            },
+            update: {
+              $set: {
+                instanceName: instance.instanceName,
+                currentMemberIds: [],
+                versionId: new ObjectId()
+              }
+            },
+            upsert: true
+          }
+        })),
+        { ordered: false }
+      );
   }
 
-
-  public async getMemberCountHistory(
-    pastHours: number,
-    typeIds: ReadonlyArray<string> | null,
-    instanceIds: ReadonlyArray<string> | null,
-    groupBy: ReusableInventoryMemberCountHistoryGroupBy | null,
-    countTypes: ReusableInventoryMemberCountHistoryCountTypes
-  ): Promise<ReusableInventoryMemberCountHistory> {
-    if (
-      (typeIds === null || typeIds.length > 1)
-      && instanceIds !== null
-    ) {
-      throw new TypeError('Invalid combination of arguments');
+  public async importInstanceAccessRecords(
+    typeId: string,
+    instanceId: string,
+    deleteFromTime: Date | null,
+    importRecords: ReadonlyArray<ReusableInventoryImportInstanceAccessRecord>
+  ): Promise<void> {
+    if (!await this._hasInstance(typeId, instanceId)) {
+      throw new ReusableInventoryInstanceNotFoundError(typeId, [instanceId]);
     }
 
-    const endTime = new Date();
-    const startTime = subHours(endTime, pastHours);
-
-    if (typeIds !== null && !await this._hasAllTypes(typeIds)) {
-      throw new ReusableInventoryTypeNotFoundError(typeIds);
-    }
-    if (
-      typeIds !== null && instanceIds !== null
-      && !await this._hasAllInstances(typeIds[0], instanceIds)
-    ) {
-      throw new ReusableInventoryInstanceNotFoundError(typeIds[0], instanceIds);
-    }
-
-    type Record = ReusableInventoryAccessRecord & { readonly member?: Member };
-    type RecordCursor = TypedAggregationCursor<Record>;
-    const cursor: RecordCursor = this._reusableInventoryAccessRecordCollection.aggregate([
-      {
-        $match: {
-          ...typeIds === null ? {} : {
-            typeId: {
-              $in: typeIds
-            }
-          },
-          ...instanceIds === null ? {} : {
-            instanceId: {
-              $in: instanceIds
-            }
-          },
-          time: {
-            $gte: subDays(startTime, 1),
-            $lt: endTime
-          }
-        }
-      },
-      {
-        $sort: {
-          time: 1
-        }
-      },
-      {
-        $lookup: {
-          from: this._memberCollection.collectionName,
-          localField: 'memberId',
-          foreignField: 'memberId',
-          as: 'member'
-        }
-      },
-      {
-        $unwind: {
-          path: '$member',
-          preserveNullAndEmptyArrays: true
+    await this._memberRecordCollection.deleteMany({
+      typeId,
+      instanceId,
+      ...deleteFromTime === null ? {} : {
+        time: {
+          $gte: deleteFromTime
         }
       }
-    ]);
+    });
 
-    // Get spans
-    interface Span {
-      readonly acquireTime: Date | null;
-      readonly releaseTime: Date | null;
-      readonly member: Member;
-    }
-    const acquiredMemberInfos = new Map<string, {
-      readonly enterTime: Date;
-      readonly member: Member | null;
-    }>();
-    const exitedMemberIds = new Set<string>();
-    let spans: Array<Span> = [];
-    for await (const record of cursor) {
-      switch (record.action) {
+    const latestMemberRecord = await this._memberRecordCollection.findOne({
+      typeId,
+      instanceId
+    }, {
+      sort: {
+        time: -1,
+        _id: -1
+      }
+    });
+
+    let latestMemberIds = latestMemberRecord === null ? [] : latestMemberRecord.memberIds;
+    const memberRecords: Array<Omit<ReusableInventoryMemberRecord, '_id'>> = [];
+
+    for (const importRecord of importRecords) {
+      switch (importRecord.action) {
         case 'acquire': {
-          if (!acquiredMemberInfos.has(record.memberId)) {
-            acquiredMemberInfos.set(record.memberId, {
-              enterTime: record.time,
-              member: record.member ?? null
-            });
+          if (!latestMemberIds.includes(importRecord.memberId)) {
+            latestMemberIds = [...latestMemberIds, importRecord.memberId];
           }
           break;
         }
         case 'release': {
-          const info = acquiredMemberInfos.get(record.memberId);
-          if (info !== undefined) {
-            acquiredMemberInfos.delete(record.memberId);
-            exitedMemberIds.add(record.memberId);
-            if (info.member !== null) {
-              spans.push({
-                acquireTime: info.enterTime,
-                releaseTime: record.time,
-                member: info.member
-              });
-            }
-          } else if (!exitedMemberIds.has(record.memberId)) {
-            exitedMemberIds.add(record.memberId);
-            if (record.member !== undefined) {
-              spans.push({
-                acquireTime: null,
-                releaseTime: record.time,
-                member: record.member
-              });
-            }
+          if (latestMemberIds.includes(importRecord.memberId)) {
+            latestMemberIds = latestMemberIds.filter((id) => id !== importRecord.memberId);
           }
           break;
         }
         default: {
-          throw new Error(`Unknown action: ${record.action}`);
+          throw new Error(`Unknown action: ${importRecord.action}`);
         }
       }
+
+      memberRecords.push({
+        typeId,
+        instanceId,
+        time: importRecord.time,
+        action: importRecord.action,
+        actionMemberId: importRecord.memberId,
+        memberIds: latestMemberIds
+      });
     }
-    for (const info of acquiredMemberInfos.values()) {
-      if (info.member !== null) {
-        spans.push({
-          acquireTime: info.enterTime,
-          releaseTime: null,
-          member: info.member
-        });
+
+    const promises: Array<Promise<unknown>> = [];
+    promises.push(this._instanceCollection.updateOne({
+      typeId,
+      instanceId
+    }, {
+      $set: {
+        currentMemberIds: latestMemberIds,
+        versionId: new ObjectId()
       }
+    }));
+    if (memberRecords.length > 0) {
+      promises.push(this._memberRecordCollection.insertMany(memberRecords));
     }
-    acquiredMemberInfos.clear();
+    await Promise.all(promises);
+  }
 
-    // Filter spans
-    spans = spans.filter((s) => (
-      (s.acquireTime === null || s.acquireTime.getTime() < endTime.getTime())
-      && (s.releaseTime === null || s.releaseTime.getTime() > startTime.getTime())
-    ));
 
-    // Sort spans
-    spans.sort((a, b) => (
-      a.acquireTime === null ? -1
-        : b.acquireTime === null ? 1
-          : a.acquireTime.getTime() - b.acquireTime.getTime()
-    ));
+  public async getMemberCountHistory(opts: {
+    readonly fromTime: Date;
+    readonly toTime: Date;
+    readonly timeStepMs: number;
+    readonly filterTypeIds: ReadonlyArray<string> | null;
+    readonly filterInstanceIds: ReadonlyArray<string> | null,
+    readonly groupBy: ReusableInventoryMemberCountHistoryGroupBy;
+    readonly countType: ReusableInventoryMemberCountHistoryCountType
+  }): Promise<ReusableInventoryMemberCountHistory> {
+    type MemberRecordMap = ReadonlyMap2<string, string, ReusableInventoryMemberRecord>;
 
-    // Get groups
-    const groupSet = new Set<string>();
-    if (groupBy === null) {
-      groupSet.add('total');
-    } else {
-      for (const span of spans) {
-        groupSet.add(span.member[groupBy]);
-      }
-    }
-    const groups: ReadonlyArray<string> = Array.from(groupSet);
+    const {
+      fromTime,
+      toTime,
+      timeStepMs,
+      filterTypeIds,
+      filterInstanceIds,
+      groupBy,
+      countType
+    } = opts;
 
-    // Get history
-    let i = 0;
-    const activeSpans: Array<Span> = [];
-    const records: Array<ReusableInventoryMemberCountRecord> = [];
-    for (
-      let periodStartTime = startTime;
-      periodStartTime < endTime;
-      periodStartTime = addHours(periodStartTime, 1)
+    if (
+      (filterTypeIds === null || filterTypeIds.length !== 1)
+      && filterInstanceIds !== null
     ) {
-      const periodEndTime = addHours(periodStartTime, 1);
+      throw new TypeError('Invalid combination of arguments: filterInstanceIds must be used with one filterTypeId');
+    }
 
-      while (
-        i < spans.length
-        && (spans[i].acquireTime === null || spans[i].acquireTime! < periodEndTime)
-      ) {
-        if (spans[i].releaseTime === null || spans[i].releaseTime! > periodStartTime) {
-          activeSpans.push(spans[i]);
+    let queryTypeIds: ReadonlyArray<string> | null = null;
+    if (filterTypeIds !== null) {
+      const notFoundTypeIds = await this._hasAllTypes(filterTypeIds);
+      if (notFoundTypeIds.length > 0) {
+        throw new ReusableInventoryTypeNotFoundError(notFoundTypeIds);
+      }
+      queryTypeIds = filterTypeIds;
+    }
+
+    let queryInstanceIds: ReadonlyArray<string> | null = null;
+    if (queryTypeIds !== null && queryTypeIds.length === 1) {
+      if (filterInstanceIds !== null) {
+        const notFoundInstanceIds =
+          await this._hasAllInstances(queryTypeIds[0], filterInstanceIds);
+        if (notFoundInstanceIds.length > 0) {
+          throw new ReusableInventoryInstanceNotFoundError(queryTypeIds[0], notFoundInstanceIds);
         }
+        queryInstanceIds = filterInstanceIds;
+      }
+    }
+
+    const [
+      memberRecords,
+      initialMemberRecords
+    ] = await Promise.all([
+      this._memberRecordCollection
+        .find(
+          {
+            ...queryTypeIds === null ? {} : {
+              typeId: {
+                $in: queryTypeIds.slice()
+              }
+            },
+            ...queryInstanceIds === null ? {} : {
+              instanceId: {
+                $in: queryInstanceIds.slice()
+              }
+            },
+            time: {
+              $gte: fromTime,
+              $lt: toTime
+            }
+          }, {
+            sort: {
+              time: 1,
+              _id: 1
+            }
+          }
+        )
+        .toArray(),
+      (async (): Promise<MemberRecordMap> => {
+        const records = await this._memberRecordCollection
+          .aggregate([
+            {
+              $match: {
+                ...queryTypeIds === null ? {} : {
+                  typeId: {
+                    $in: queryTypeIds.slice()
+                  }
+                },
+                ...queryInstanceIds === null ? {} : {
+                  instanceId: {
+                    $in: queryInstanceIds.slice()
+                  }
+                },
+                time: {
+                  $lt: fromTime
+                }
+              }
+            },
+            {
+              $sort: {
+                typeId: -1,
+                instanceId: -1,
+                time: -1,
+                _id: -1
+              }
+            },
+            {
+              $group: {
+                _id: {
+                  typeId: '$typeId',
+                  instanceId: '$instanceId'
+                },
+                doc: {
+                  $first: '$$ROOT'
+                }
+              }
+            },
+            {
+              $replaceRoot: {
+                newRoot: '$doc'
+              }
+            }
+          ])
+          .toArray();
+
+        const map: Map2<string, string, ReusableInventoryMemberRecord> = new Map();
+        for (const result of records) {
+          setMap2(map, result.typeId, result.instanceId, result);
+        }
+        return map;
+      })()
+    ]);
+
+    const timeSpans = timeSpanRange(fromTime, toTime, timeStepMs);
+    const timeSpansInitialRecords: Array<MemberRecordMap> = [];
+    const timeSpansRecords: Array<ReadonlyArray<ReusableInventoryMemberRecord>> = [];
+    const timeSpansLatestRecords: Array<MemberRecordMap> = [];
+
+    const currentMemberRecords = copyMap2(initialMemberRecords);
+    let i = 0;
+    for (const [, timeSpanEndTime] of timeSpans) {
+      timeSpansInitialRecords.push(
+        copyMap2<string, string, ReusableInventoryMemberRecord>(currentMemberRecords)
+      );
+
+      const timeSpanRecords: Array<ReusableInventoryMemberRecord> = [];
+      while (i < memberRecords.length && memberRecords[i].time <= timeSpanEndTime) {
+        setMap2(
+          currentMemberRecords,
+          memberRecords[i].typeId,
+          memberRecords[i].instanceId,
+          memberRecords[i]
+        );
+        timeSpanRecords.push(memberRecords[i]);
         i += 1;
       }
+      timeSpansRecords.push(timeSpanRecords);
 
-      interface WritableRecord extends Writable<ReusableInventoryMemberCountRecord> {
-        readonly counts: Writable<ReusableInventoryMemberCountRecord['counts']>;
+      timeSpansLatestRecords.push(
+        copyMap2<string, string, ReusableInventoryMemberRecord>(currentMemberRecords)
+      );
+    }
+
+    interface Stat {
+      readonly typeId: string;
+      readonly instanceId: string;
+      readonly memberId: string;
+    }
+    let timeSpansStats: ReadonlyArray<ReadonlyArray<Stat>>;
+    switch (countType) {
+      case 'acquire':
+      case 'uniqueAcquire': {
+        timeSpansStats = timeSpansRecords.map((timeSpanRecords) =>
+          timeSpanRecords
+            .filter((record) => record.action === 'acquire')
+            .map((record) => ({
+              typeId: record.typeId,
+              instanceId: record.instanceId,
+              memberId: record.actionMemberId
+            })));
+        break;
       }
-      const record: WritableRecord = {
-        periodStartTime,
-        periodEndTime,
-        counts: {}
-      };
-      for (const group of groups) {
-        const activeGroupSpans = groupBy === null
-          ? activeSpans
-          : activeSpans.filter((s) => s.member[groupBy] === group);
-
-        switch (countTypes) {
-          case 'acquireCounts':
-          case 'uniqueAcquireCounts': {
-            const enterSpans = activeGroupSpans
-              .filter((s) => s.acquireTime !== null && s.acquireTime >= periodStartTime);
-            if (countTypes === 'acquireCounts') {
-              record.counts[group] = enterSpans.length;
-            } else {
-              record.counts[group] = new Set(enterSpans.map((s) => s.member.memberId)).size;
-            }
-            break;
-          }
-          case 'releaseCounts':
-          case 'uniqueReleaseCounts': {
-            const exitSpans = activeGroupSpans
-              .filter((s) => s.releaseTime !== null && s.releaseTime <= periodEndTime);
-            if (countTypes === 'releaseCounts') {
-              record.counts[group] = exitSpans.length;
-            } else {
-              record.counts[group] = new Set(exitSpans.map((s) => s.member.memberId)).size;
-            }
-            break;
-          }
-          case 'useCounts': {
-            record.counts[group] = activeGroupSpans.length;
-            break;
-          }
-          case 'uniqueUseCounts': {
-            record.counts[group] =
-              new Set(activeGroupSpans.map((s) => s.member.memberId)).size;
-            break;
-          }
-          default: {
-            throw new Error(`Unsupported count type: ${countTypes}`);
-          }
-        }
+      case 'release':
+      case 'uniqueRelease': {
+        timeSpansStats = timeSpansRecords.map((timeSpanRecords) =>
+          timeSpanRecords
+            .filter((record) => record.action === 'release')
+            .map((record) => ({
+              typeId: record.typeId,
+              instanceId: record.instanceId,
+              memberId: record.actionMemberId
+            })));
+        break;
       }
-      records.push(record);
+      case 'use':
+      case 'uniqueUse': {
+        timeSpansStats = timeSpansRecords.map((timeSpanRecords, t) => {
+          const initialRecords = timeSpansInitialRecords[t];
 
-      for (let j = activeSpans.length - 1; j >= 0; j -= 1) {
-        if (activeSpans[j].releaseTime !== null && activeSpans[j].releaseTime! <= periodEndTime) {
-          activeSpans.splice(j, 1);
+          const usingMemberIds: Map2<string, string, Array<string>> = new Map();
+          const usedMemberStats: Array<Stat> = [];
+
+          for (const instanceRecords of initialRecords.values()) {
+            for (const record of instanceRecords.values()) {
+              setMap2(usingMemberIds, record.typeId, record.instanceId, record.memberIds);
+              usedMemberStats.push(...record.memberIds.map((memberId) => ({
+                typeId: record.typeId,
+                instanceId: record.instanceId,
+                memberId
+              })));
+            }
+          }
+
+          for (const record of timeSpanRecords) {
+            switch (record.action) {
+              case 'acquire': {
+                let ids: Array<string> | undefined =
+                  getMap2(usingMemberIds, record.typeId, record.instanceId);
+                if (ids === undefined) {
+                  ids = [];
+                  setMap2(usingMemberIds, record.typeId, record.instanceId, ids);
+                }
+                if (!ids.includes(record.actionMemberId)) {
+                  ids.push(record.actionMemberId);
+                  usedMemberStats.push({
+                    typeId: record.typeId,
+                    instanceId: record.instanceId,
+                    memberId: record.actionMemberId
+                  });
+                }
+                break;
+              }
+              case 'release': {
+                const ids: Array<string> | undefined =
+                  getMap2(usingMemberIds, record.typeId, record.instanceId);
+                if (ids !== undefined && ids.includes(record.actionMemberId)) {
+                  ids.splice(ids.indexOf(record.actionMemberId), 1);
+                }
+                break;
+              }
+              default: {
+                const a: never = record.action;
+                throw new Error(`Unsupported action: ${a}`);
+              }
+            }
+          }
+
+          return usedMemberStats;
+        });
+        break;
+      }
+      default: {
+        const t: never = countType;
+        throw new Error(`Unsupported groupBy: ${t}`);
+      }
+    }
+
+    let groups: ReadonlyArray<string>;
+    let groupedTimeSpansStats: ReadonlyArray<ReadonlyArray<ReadonlyArray<Stat>>>;
+    switch (groupBy) {
+      case null: {
+        groups = ['total'];
+        groupedTimeSpansStats = [
+          timeSpansStats
+        ];
+        break;
+      }
+      case 'type': {
+        if (queryTypeIds !== null) {
+          groups = queryTypeIds;
+        } else {
+          groups = Array.from(new Set(
+            timeSpansStats.flatMap((stats) => stats.flatMap((stat) => stat.memberId))
+          ));
         }
+        groupedTimeSpansStats = groups.map((typeId) =>
+          timeSpansStats.map((stats) =>
+            stats.filter((stat) => stat.typeId === typeId)));
+        break;
+      }
+      case 'instance': {
+        if (queryInstanceIds !== null) {
+          groups = queryInstanceIds;
+        } else if (queryTypeIds === null || queryTypeIds.length !== 1) {
+          throw new Error('groupBy=instance can be used with one filterTypeId only');
+        } else {
+          groups = Array.from(new Set(
+            timeSpansStats.flatMap((stats) => stats.flatMap((stat) => stat.instanceId))
+          ));
+        }
+        groupedTimeSpansStats = groups.map((instanceId) =>
+          timeSpansStats.map((stats) =>
+            stats.filter((stat) => stat.instanceId === instanceId)));
+        break;
+      }
+      case 'member': {
+        groups = Array.from(new Set(
+          timeSpansRecords.flatMap((timeSpanRecords) =>
+            timeSpanRecords.flatMap((record) => record.memberIds))
+        ));
+        groupedTimeSpansStats = groups.map((memberId) =>
+          timeSpansStats.map((stats) =>
+            stats.filter((stat) =>
+              stat.memberId === memberId)));
+        break;
+      }
+      case 'department':
+      case 'typeOfStudy':
+      case 'studyProgramme':
+      case 'yearOfStudy':
+      case 'affiliatedStudentInterestGroup': {
+        const memberIds = Array.from(new Set(
+          timeSpansRecords.flatMap((timeSpanRecords) =>
+            timeSpanRecords.flatMap((record) => record.memberIds))
+        ));
+        const memberList = await this._memberCollection
+          .find({
+            memberId: {
+              $in: memberIds
+            }
+          })
+          .toArray();
+        const memberMap = new Map(memberList.map((m) => [m.memberId, m]));
+
+        groups = Array.from(new Set(memberList.map((member) => member[groupBy])));
+        groupedTimeSpansStats = groups.map((memberId) =>
+          timeSpansStats.map((stats) =>
+            stats.filter((stat) =>
+              memberMap.get(stat.memberId)?.[groupBy] === memberId)));
+        break;
+      }
+      default: {
+        throw new Error(`Unsupported groupBy: ${groupBy}`);
+      }
+    }
+
+    let values: ReadonlyArray<ReadonlyArray<number>>;
+    switch (countType) {
+      case 'acquire':
+      case 'release':
+      case 'use': {
+        values = groupedTimeSpansStats.map((groupStats) =>
+          groupStats.map((stats) =>
+            stats.length));
+        break;
+      }
+      case 'uniqueAcquire':
+      case 'uniqueRelease':
+      case 'uniqueUse': {
+        values = groupedTimeSpansStats.map((groupStats) =>
+          groupStats.map((stats) =>
+            new Set(stats.map((stat) => stat.memberId)).size));
+        break;
+      }
+      default: {
+        const t: never = countType;
+        throw new Error(`Unsupported groupBy: ${t}`);
       }
     }
 
     return {
+      timeSpans,
       groups,
-      records
+      values
+    };
+  }
+
+  public async getMemberCountForecast(opts: {
+    readonly fromTime: Date;
+    readonly filterTypeIds: ReadonlyArray<string> | null;
+    readonly filterInstanceIds: ReadonlyArray<string> | null;
+    readonly groupBy: ReusableInventoryMemberCountForecastGroupBy;
+    readonly countType: ReusableInventoryMemberCountForecastCountType
+  }): Promise<ReusableInventoryMemberCountForecast> {
+    const {
+      fromTime,
+      filterTypeIds,
+      filterInstanceIds,
+      groupBy,
+      countType
+    } = opts;
+
+    const historyToTime = fromTime;
+    const historyFromTime = this._historyForecastService.getHistoryFromTime(historyToTime);
+    const historyTimeStepMs = this._historyForecastService.timeStepMs;
+    const history = await this.getMemberCountHistory({
+      fromTime: historyFromTime,
+      toTime: historyToTime,
+      timeStepMs: historyTimeStepMs,
+      filterTypeIds,
+      filterInstanceIds,
+      groupBy,
+      countType
+    });
+
+    const forecastFromTime = fromTime;
+    const forecastToTime = this._historyForecastService.getForecastToTime(forecastFromTime);
+    const forecastTimeStepMs = this._historyForecastService.timeStepMs;
+    const forecastTimeSpans = timeSpanRange(forecastFromTime, forecastToTime, forecastTimeStepMs);
+    const forecast = history.values.length > 0
+      ? await this._historyForecastService.predict(history.values)
+      : [];
+
+    return {
+      timeSpans: forecastTimeSpans,
+      groups: history.groups,
+      values: forecast
     };
   }
 }

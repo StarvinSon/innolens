@@ -62,7 +62,8 @@
       "request": "launch",
       "module": "innolens_models",
       "args": [
-        "serve"
+        "serve",
+        "--forecast-checkpoint-dir", "./checkpoints/history_forecast"
       ]
     },
   ]

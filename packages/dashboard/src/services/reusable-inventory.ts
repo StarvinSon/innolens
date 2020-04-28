@@ -1,58 +1,57 @@
 import { injectableConstructor, singleton } from '@innolens/resolver/web';
+import { subHours } from 'date-fns';
 
 import { stringTag } from '../utils/class';
 import { Debouncer } from '../utils/debouncer';
+import { deprecated } from '../utils/method-deprecator';
+import { PromiseValue } from '../utils/promise';
 
-import { EffectQueue } from './effect-queue';
 import { FileService } from './file';
 import * as ReusableInventoryGlue from './glues/reusable-inventory';
 import { OAuth2Service } from './oauth2';
 
 
-const computeKey = (name: string, params: Readonly<Record<string, string>>): string =>
-  `${name}?${new URLSearchParams(params).toString()}`;
+export type ReusableInventoryType =
+  PromiseValue<ReturnType<typeof ReusableInventoryGlue.GetTypes.handleResponse>>[number];
 
-
-export interface ReusableInventoryType {
-  readonly typeId: string;
-  readonly typeName: string;
-}
-
-export interface ReusableInventoryInstance {
-  readonly instanceId: string;
-  readonly instanceName: string;
-}
+export type ReusableInventoryInstance =
+  PromiseValue<ReturnType<typeof ReusableInventoryGlue.GetInstances.handleResponse>>[number];
 
 
 export type ReusableInventoryMemberCountHistoryGroupBy =
-  'department'
-  | 'typeOfStudy'
-  | 'studyProgramme'
-  | 'yearOfStudy'
-  | 'affiliatedStudentInterestGroup';
+  Exclude<Parameters<typeof ReusableInventoryGlue.GetMemberCountHistory.createRequest>[0]['body']['groupBy'], undefined>;
+
+export type ReusableInventoryMemberCountHistoryCountType =
+  Exclude<Parameters<typeof ReusableInventoryGlue.GetMemberCountHistory.createRequest>[0]['body']['countType'], undefined>;
+
+export type ReusableInventoryMemberCountHistory =
+  PromiseValue<ReturnType<typeof ReusableInventoryGlue.GetMemberCountHistory.handleResponse>>;
 
 
-export type ReusableInventoryMemberCountType =
-  'acquireCounts'
-  | 'uniqueAcquireCounts'
-  | 'releaseCounts'
-  | 'uniqueReleaseCounts'
-  | 'useCounts'
-  | 'uniqueUseCounts';
+export type ReusableInventoryMemberCountForecastGroupBy =
+  Exclude<Parameters<typeof ReusableInventoryGlue.GetMemberCountForecast.createRequest>[0]['body']['groupBy'], undefined>;
+
+export type ReusableInventoryMemberCountForecastCountType =
+  Exclude<Parameters<typeof ReusableInventoryGlue.GetMemberCountForecast.createRequest>[0]['body']['countType'], undefined>;
+
+export type ReusableInventoryMemberCountForecast =
+  PromiseValue<ReturnType<typeof ReusableInventoryGlue.GetMemberCountForecast.handleResponse>>;
 
 
-export interface ReusableInventoryMemberCountHistory {
+export interface ReusableInventoryMemberCountHistoryLegacy {
   readonly groups: ReadonlyArray<string>;
-  readonly records: ReadonlyArray<ReusableInventoryMemberCountRecord>;
+  readonly records: ReadonlyArray<ReusableInventoryMemberCountRecordLegacy>;
 }
 
-export interface ReusableInventoryMemberCountRecord {
+export interface ReusableInventoryMemberCountRecordLegacy {
   readonly periodStartTime: Date;
   readonly periodEndTime: Date;
   readonly counts: {
     readonly [group: string]: number;
   }
 }
+
+const legacyToTime = new Date();
 
 
 @injectableConstructor({
@@ -61,31 +60,17 @@ export interface ReusableInventoryMemberCountRecord {
 })
 @singleton()
 @stringTag()
-export class ReusableInventoryService extends EventTarget {
+export class ReusableInventoryService {
   private readonly _oauth2Service: OAuth2Service;
   private readonly _fileService: FileService;
 
-  private _typesCache: ReadonlyArray<ReusableInventoryType> | null = null;
-
-  private _instancesCache: {
-    readonly typeId: string;
-    readonly data: ReadonlyArray<ReusableInventoryInstance>;
-  } | null = null;
-
-  private _reusableInventoryMemberCountHistoryCache: {
-    readonly key: string;
-    readonly data: ReusableInventoryMemberCountHistory | null
-  } | null = null;
-
   private readonly _debouncer = new Debouncer();
-  private readonly _effectQueue = new EffectQueue();
 
 
   public constructor(deps: {
     readonly oauth2Service: OAuth2Service;
     readonly fileService: FileService;
   }) {
-    super();
     ({
       oauth2Service: this._oauth2Service,
       fileService: this._fileService
@@ -96,20 +81,13 @@ export class ReusableInventoryService extends EventTarget {
   }
 
 
-  public get types(): ReadonlyArray<ReusableInventoryType> | null {
-    return this._typesCache;
-  }
-
-  public async updateTypes(): Promise<ReadonlyArray<ReusableInventoryType>> {
+  public async fetchTypes(): Promise<ReadonlyArray<ReusableInventoryType>> {
     return this._debouncer.debounce('types', async () => {
       const resData = await this._oauth2Service
         .withAccessToken((token) => fetch(ReusableInventoryGlue.GetTypes.createRequest({
           authentication: { token }
         })))
         .then(ReusableInventoryGlue.GetTypes.handleResponse);
-
-      this._typesCache = resData;
-      Promise.resolve().then(() => this._notifyUpdated('types'));
       return resData;
     });
   }
@@ -117,143 +95,150 @@ export class ReusableInventoryService extends EventTarget {
   public async importTypes(file: File): Promise<void> {
     const fileId = await this._fileService.upload(file);
     await this._oauth2Service
-      .withAccessToken((token) => fetch(ReusableInventoryGlue.PostTypes.createRequest({
+      .withAccessToken((token) => fetch(ReusableInventoryGlue.ImportTypes.createRequest({
         authentication: { token },
         body: { fileId }
       })))
-      .then(ReusableInventoryGlue.PostTypes.handleResponse);
+      .then(ReusableInventoryGlue.ImportTypes.handleResponse);
   }
 
 
-  public getInstances(typeId: string): ReadonlyArray<ReusableInventoryInstance> | null {
-    if (this._instancesCache !== null && this._instancesCache.typeId === typeId) {
-      return this._instancesCache.data;
-    }
-    return null;
-  }
-
-  public async updateInstances(typeId: string): Promise<ReadonlyArray<ReusableInventoryInstance>> {
-    const key = computeKey('instances', {
+  public async fetchInstances(typeId: string): Promise<ReadonlyArray<ReusableInventoryInstance>> {
+    const key = JSON.stringify({
       typeId
     });
-    return this._debouncer.debounce(key, async () =>
-      this._effectQueue.queue('instances', async (applyEffect) => {
-        const resData = await this._oauth2Service
-          .withAccessToken((token) => fetch(ReusableInventoryGlue.GetInstances.createRequest({
-            params: { typeId },
-            authentication: { token }
-          })))
-          .then(ReusableInventoryGlue.GetInstances.handleResponse);
-        applyEffect(() => {
-          this._instancesCache = {
-            typeId,
-            data: resData
-          };
-          Promise.resolve().then(() => this._notifyUpdated('types'));
-        });
-        return resData;
-      }));
+
+    return this._debouncer.debounce(`instances:${key}`, async () => {
+      const resData = await this._oauth2Service
+        .withAccessToken((token) => fetch(ReusableInventoryGlue.GetInstances.createRequest({
+          params: { typeId },
+          authentication: { token }
+        })))
+        .then(ReusableInventoryGlue.GetInstances.handleResponse);
+      return resData;
+    });
   }
 
   public async importInstances(typeId: string, file: File): Promise<void> {
     const fileId = await this._fileService.upload(file);
     await this._oauth2Service
-      .withAccessToken((token) => fetch(ReusableInventoryGlue.PostInstances.createRequest({
+      .withAccessToken((token) => fetch(ReusableInventoryGlue.ImportInstances.createRequest({
         params: { typeId },
         authentication: { token },
         body: { fileId }
       })))
-      .then(ReusableInventoryGlue.PostInstances.handleResponse);
+      .then(ReusableInventoryGlue.ImportInstances.handleResponse);
   }
 
-  public async importInstanceAccessRecords(
-    typeId: string,
-    instanceId: string,
-    deleteFromTime: Date | null,
-    deleteToTime: Date | null,
-    file: File
-  ): Promise<void> {
-    const fileId = await this._fileService.upload(file);
+  public async importInstanceAccessRecords(opts: {
+    readonly typeId: string;
+    readonly instanceId: string;
+    readonly deleteFromTime: Date | null;
+    readonly file: File;
+  }): Promise<void> {
+    const fileId = await this._fileService.upload(opts.file);
     await this._oauth2Service
-      .withAccessToken((token) => fetch(ReusableInventoryGlue.PostInstanceAccessRecords
+      .withAccessToken((token) => fetch(ReusableInventoryGlue.ImportInstanceAccessRecords
         .createRequest({
-          params: { typeId, instanceId },
+          params: {
+            typeId: opts.typeId,
+            instanceId: opts.instanceId
+          },
           authentication: { token },
-          body: { deleteFromTime, deleteToTime, fileId }
+          body: {
+            deleteFromTime: opts.deleteFromTime,
+            fileId
+          }
         })))
-      .then(ReusableInventoryGlue.PostInstanceAccessRecords.handleResponse);
+      .then(ReusableInventoryGlue.ImportInstanceAccessRecords.handleResponse);
   }
 
 
-  private _getMemberCountHistoryKey(
+  public async fetchMemberCountHistory(opts: {
+    readonly fromTime: Date;
+    readonly toTime: Date;
+    readonly timeStepMs: number;
+    readonly filterTypeIds: ReadonlyArray<string> | null;
+    readonly filterInstanceIds: ReadonlyArray<string> | null;
+    readonly groupBy: ReusableInventoryMemberCountHistoryGroupBy;
+    readonly countType: ReusableInventoryMemberCountHistoryCountType;
+  }): Promise<ReusableInventoryMemberCountHistory> {
+    const key = JSON.stringify(opts);
+
+    return this._debouncer.debounce(`member-count-history:${key}`, async () => {
+      const resData = await this._oauth2Service
+        .withAccessToken((token) => fetch(ReusableInventoryGlue.GetMemberCountHistory
+          .createRequest({
+            authentication: { token },
+            body: {
+              fromTime: opts.fromTime,
+              toTime: opts.toTime,
+              timeStepMs: opts.timeStepMs,
+              filterTypeIds: opts.filterTypeIds,
+              filterInstanceIds: opts.filterInstanceIds,
+              groupBy: opts.groupBy,
+              countType: opts.countType
+            }
+          })))
+        .then(ReusableInventoryGlue.GetMemberCountHistory.handleResponse);
+      return resData;
+    });
+  }
+
+  @deprecated()
+  public async updateMemberCountHistoryLegacy(
     pastHours: number,
     typeIds: ReadonlyArray<string> | undefined,
     instanceIds: ReadonlyArray<string> | undefined,
     groupBy: ReusableInventoryMemberCountHistoryGroupBy | undefined,
-    countType: ReusableInventoryMemberCountType | undefined
-  ): string {
-    const params = new URLSearchParams();
-    params.set('pastHours', String(pastHours));
-    if (typeIds !== undefined) params.set('typeId', typeIds.map(encodeURIComponent).join(','));
-    if (instanceIds !== undefined) params.set('instanceId', instanceIds.map(encodeURIComponent).join(','));
-    if (groupBy !== undefined) params.set('groupBy', groupBy);
-    if (countType !== undefined) params.set('countType', countType);
-    return params.toString();
+    countType: ReusableInventoryMemberCountHistoryCountType | undefined
+  ): Promise<ReusableInventoryMemberCountHistoryLegacy> {
+    const toTime = legacyToTime;
+    const fromTime = subHours(toTime, pastHours);
+    const history = await this.fetchMemberCountHistory({
+      fromTime,
+      toTime,
+      timeStepMs: 30 * 60 * 1000,
+      filterTypeIds: typeIds ?? null,
+      filterInstanceIds: instanceIds ?? null,
+      groupBy: groupBy ?? null,
+      countType: countType ?? 'use'
+    });
+    return {
+      groups: history.groups,
+      records: history.timeSpans.map(([startTime, endTime], t) => ({
+        periodStartTime: startTime,
+        periodEndTime: endTime,
+        counts: Object.fromEntries(history.groups.map((group, g) =>
+          [group, history.values[g][t]]))
+      }))
+    };
   }
 
-  public getMemberCountHistory(
-    pastHours: number,
-    typeIds: ReadonlyArray<string> | undefined,
-    instanceIds: ReadonlyArray<string> | undefined,
-    groupBy: ReusableInventoryMemberCountHistoryGroupBy | undefined,
-    countType: ReusableInventoryMemberCountType | undefined
-  ): ReusableInventoryMemberCountHistory | null {
-    const key = this._getMemberCountHistoryKey(pastHours, typeIds, instanceIds, groupBy, countType);
-    if (
-      this._reusableInventoryMemberCountHistoryCache !== null
-      && this._reusableInventoryMemberCountHistoryCache.key === key
-    ) {
-      return this._reusableInventoryMemberCountHistoryCache.data;
-    }
-    return null;
-  }
+  public async fetchMemberCountForecast(opts: {
+    readonly fromTime: Date;
+    readonly filterTypeIds: ReadonlyArray<string> | null;
+    readonly filterInstanceIds: ReadonlyArray<string> | null;
+    readonly groupBy: ReusableInventoryMemberCountForecastGroupBy;
+    readonly countType: ReusableInventoryMemberCountForecastCountType;
+  }): Promise<ReusableInventoryMemberCountForecast> {
+    const key = JSON.stringify(opts);
 
-  public async updateMemberCountHistory(
-    pastHours: number,
-    typeIds: ReadonlyArray<string> | undefined,
-    instanceIds: ReadonlyArray<string> | undefined,
-    groupBy: ReusableInventoryMemberCountHistoryGroupBy | undefined,
-    countType: ReusableInventoryMemberCountType | undefined
-  ): Promise<ReusableInventoryMemberCountHistory> {
-    const key = this._getMemberCountHistoryKey(pastHours, typeIds, instanceIds, groupBy, countType);
-    return this._debouncer.debounce(`history?${key}`, async () =>
-      this._effectQueue.queue('history', async (applyEffect) => {
-        const resData = await this._oauth2Service
-          .withAccessToken((token) => fetch(ReusableInventoryGlue.GetMemberCountHistory
-            .createRequest({
-              query: {
-                pastHours,
-                typeIds,
-                instanceIds,
-                groupBy,
-                countType
-              },
-              authentication: { token }
-            })))
-          .then(ReusableInventoryGlue.GetMemberCountHistory.handleResponse);
-        applyEffect(() => {
-          this._reusableInventoryMemberCountHistoryCache = {
-            key,
-            data: resData
-          };
-          Promise.resolve().then(() => this._notifyUpdated('member-count-history'));
-        });
-        return resData;
-      }));
-  }
-
-
-  private _notifyUpdated(type: string): void {
-    this.dispatchEvent(new Event(`${type}-updated`));
+    return this._debouncer.debounce(`member-count-forecast:${key}`, async () => {
+      const resData = await this._oauth2Service
+        .withAccessToken((token) => fetch(ReusableInventoryGlue.GetMemberCountForecast
+          .createRequest({
+            authentication: { token },
+            body: {
+              fromTime: opts.fromTime,
+              filterTypeIds: opts.filterTypeIds,
+              filterInstanceIds: opts.filterInstanceIds,
+              groupBy: opts.groupBy,
+              countType: opts.countType
+            }
+          })))
+        .then(ReusableInventoryGlue.GetMemberCountForecast.handleResponse);
+      return resData;
+    });
   }
 }

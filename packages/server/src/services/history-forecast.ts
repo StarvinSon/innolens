@@ -1,10 +1,22 @@
 import { singleton, injectableConstructor } from '@innolens/resolver/node';
+import { subWeeks, addDays } from 'date-fns';
 import fetch from 'node-fetch';
 
 
 @injectableConstructor()
 @singleton()
 export class HistoryForecastService {
+
+  public getHistoryFromTime(toTime: Date): Date {
+    return subWeeks(toTime, 2);
+  }
+
+  public getForecastToTime(fromTime: Date): Date {
+    return addDays(fromTime, 2);
+  }
+
+  public readonly timeStepMs = 30 * 60 * 1000;
+
 
   public async predict(
     historyValueBatch: ReadonlyArray<ReadonlyArray<number>>

@@ -1,4 +1,4 @@
-name: PostInstances
+name: ImportInstances
 
 method: post
 path: /api/reusable-inventories/types/:typeId/instances

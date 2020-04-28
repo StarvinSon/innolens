@@ -1,90 +1,20 @@
 import { singleton, injectableConstructor } from '@innolens/resolver/node';
-import { parseISO } from 'date-fns';
-import createHttpError from 'http-errors';
+import csvParse from 'csv-parse';
+import createHttpError, { BadRequest } from 'http-errors';
 import { CREATED, BAD_REQUEST, NOT_FOUND } from 'http-status-codes';
 
 import { FileService } from '../services/file';
 import { OAuth2Service } from '../services/oauth2';
 import {
   ReusableInventoryService, ReusableInventoryTypeNotFoundError, ReusableInventoryInstance,
-  ReusableInventoryMemberCountHistory, ReusableInventoryInstanceNotFoundError
+  ReusableInventoryMemberCountHistory, ReusableInventoryInstanceNotFoundError,
+  ReusableInventoryType, ReusableInventoryImportInstanceAccessRecord,
+  ReusableInventoryMemberCountForecast
 } from '../services/reusable-inventory';
-import { fromAsync } from '../utils/array';
+import { decodeCsvRecord, decodeCsvString, decodeCsvDate } from '../utils/csv-parser';
 
 import { ReusableInventoryControllerGlue } from './glues/reusable-inventory';
-import { CsvParser } from './utils/csv-parser';
 import { FileController } from './utils/file-controller';
-
-
-export interface CsvTypeRecord {
-  readonly type_id: string;
-  readonly type_name: string;
-}
-
-export type CsvTypeRecordJson = CsvTypeRecord;
-
-export const csvTypeRecordJsonSchema: object = {
-  type: 'object',
-  required: ['type_id', 'type_name'],
-  additionalProperties: false,
-  properties: {
-    type_id: {
-      type: 'string'
-    },
-    type_name: {
-      type: 'string'
-    }
-  }
-};
-
-
-export interface CsvInstanceRecord {
-  readonly instance_id: string;
-  readonly instance_name: string;
-}
-
-export type CsvInstanceRecordJson = CsvInstanceRecord;
-
-export const csvInstanceRecordJsonSchema: object = {
-  type: 'object',
-  required: ['instance_id', 'instance_name'],
-  additionalProperties: false,
-  properties: {
-    instance_id: {
-      type: 'string'
-    },
-    instance_name: {
-      type: 'string'
-    }
-  }
-};
-
-interface CsvAccessRecord {
-  readonly time: Date;
-  readonly member_id: string;
-  readonly action: 'acquire' | 'release';
-}
-
-interface CsvAccessRecordJson extends Omit<CsvAccessRecord, 'time'> {
-  readonly time: string;
-}
-
-const csvAccessRecordJsonSchema: object = {
-  type: 'object',
-  required: ['time', 'member_id', 'action'],
-  additionalProperties: false,
-  properties: {
-    time: {
-      type: 'string'
-    },
-    member_id: {
-      type: 'string'
-    },
-    action: {
-      enum: ['acquire', 'release']
-    }
-  }
-};
 
 
 @injectableConstructor({
@@ -98,12 +28,6 @@ export class ReusableInventoryController extends FileController(ReusableInventor
   private readonly _oauth2Service: OAuth2Service;
 
   protected readonly [FileController.fileService]: FileService;
-
-  /* eslint-disable max-len */
-  private readonly _typeCsvParser = new CsvParser<CsvTypeRecordJson>(csvTypeRecordJsonSchema);
-  private readonly _instanceCsvParser = new CsvParser<CsvInstanceRecordJson>(csvInstanceRecordJsonSchema);
-  private readonly _instanceAccessRecordsCsvParser = new CsvParser<CsvAccessRecordJson>(csvAccessRecordJsonSchema);
-  /* eslint-enable max-len */
 
 
   public constructor(deps: {
@@ -124,8 +48,9 @@ export class ReusableInventoryController extends FileController(ReusableInventor
   }
 
 
-  // eslint-disable-next-line max-len
-  protected async handleGetTypes(ctx: ReusableInventoryControllerGlue.GetTypesContext): Promise<void> {
+  protected async handleGetTypes(
+    ctx: ReusableInventoryControllerGlue.GetTypesContext
+  ): Promise<void> {
     const spaces = await this._reusableInventoryService.getTypes();
     ctx.responseBodyData = spaces.map((type) => ({
       typeId: type.typeId,
@@ -133,22 +58,39 @@ export class ReusableInventoryController extends FileController(ReusableInventor
     }));
   }
 
-  // eslint-disable-next-line max-len
-  protected async handlePostTypes(ctx: ReusableInventoryControllerGlue.PostTypesContext): Promise<void> {
+  protected async handleImportTypes(
+    ctx: ReusableInventoryControllerGlue.ImportTypesContext
+  ): Promise<void> {
     const fileStream = this.getFile(ctx.authentication.token, ctx.requestBody.fileId);
-    const records = (await fromAsync(this._typeCsvParser.parse(fileStream)))
-      .map((record) => ({
+
+    const csvRecordStream = fileStream.pipe(csvParse({ columns: true }));
+    const records: Array<Pick<ReusableInventoryType, 'typeId' | 'typeName'>> = [];
+    for await (const csvRecord of csvRecordStream) {
+      const record = decodeCsvRecord(
+        csvRecord,
+        ['type_id', 'type_name'],
+        {
+          type_id: decodeCsvString,
+          type_name: decodeCsvString
+        }
+      );
+      if (record === undefined) {
+        throw new BadRequest('Failed to parse a row in the reusable inventory type csv file');
+      }
+      records.push({
         typeId: record.type_id,
         typeName: record.type_name
-      }));
+      });
+    }
 
     await this._reusableInventoryService.importTypes(records);
     ctx.status = CREATED;
   }
 
 
-  // eslint-disable-next-line max-len
-  protected async handleGetInstances(ctx: ReusableInventoryControllerGlue.GetInstancesContext): Promise<void> {
+  protected async handleGetInstances(
+    ctx: ReusableInventoryControllerGlue.GetInstancesContext
+  ): Promise<void> {
     let instances: ReadonlyArray<ReusableInventoryInstance>;
     try {
       instances = await this._reusableInventoryService.getInstances(ctx.params.typeId);
@@ -165,14 +107,30 @@ export class ReusableInventoryController extends FileController(ReusableInventor
     }));
   }
 
-  // eslint-disable-next-line max-len
-  protected async handlePostInstances(ctx: ReusableInventoryControllerGlue.PostInstancesContext): Promise<void> {
+  protected async handleImportInstances(
+    ctx: ReusableInventoryControllerGlue.ImportInstancesContext
+  ): Promise<void> {
     const fileStream = this.getFile(ctx.authentication.token, ctx.requestBody.fileId);
-    const records = (await fromAsync(this._instanceCsvParser.parse(fileStream)))
-      .map((record) => ({
+
+    const records: Array<Pick<ReusableInventoryInstance, 'instanceId' | 'instanceName'>> = [];
+    const csvRecordStream = fileStream.pipe(csvParse({ columns: true }));
+    for await (const csvRecord of csvRecordStream) {
+      const record = decodeCsvRecord(
+        csvRecord,
+        ['instance_id', 'instance_name'],
+        {
+          instance_id: decodeCsvString,
+          instance_name: decodeCsvString
+        }
+      );
+      if (record === undefined) {
+        throw new BadRequest('Failed to parse a row in the reusable inventory type csv file');
+      }
+      records.push({
         instanceId: record.instance_id,
         instanceName: record.instance_name
-      }));
+      });
+    }
 
     try {
       await this._reusableInventoryService.importInstances(ctx.params.typeId, records);
@@ -186,22 +144,38 @@ export class ReusableInventoryController extends FileController(ReusableInventor
     ctx.status = CREATED;
   }
 
-  // eslint-disable-next-line max-len
-  protected async handlePostInstanceAccessRecords(ctx: ReusableInventoryControllerGlue.PostInstanceAccessRecordsContext): Promise<void> {
+  protected async handleImportInstanceAccessRecords(
+    ctx: ReusableInventoryControllerGlue.ImportInstanceAccessRecordsContext
+  ): Promise<void> {
     const fileStream = this.getFile(ctx.authentication.token, ctx.requestBody.fileId);
-    const records = (await fromAsync(this._instanceAccessRecordsCsvParser.parse(fileStream)))
-      .map((record) => ({
-        time: parseISO(record.time),
-        memberId: record.member_id,
-        action: record.action
-      }));
+
+    const records: Array<ReusableInventoryImportInstanceAccessRecord> = [];
+    const csvRecordStream = fileStream.pipe(csvParse({ columns: true }));
+    for await (const csvRecord of csvRecordStream) {
+      const record = decodeCsvRecord(
+        csvRecord,
+        ['time', 'action', 'member_id'],
+        {
+          time: decodeCsvDate,
+          action: (item) => item === 'acquire' || item === 'release' ? item : undefined,
+          member_id: decodeCsvString
+        }
+      );
+      if (record === undefined) {
+        throw new BadRequest('Failed to parse a row in the reusable inventory type csv file');
+      }
+      records.push({
+        time: record.time,
+        action: record.action,
+        memberId: record.member_id
+      });
+    }
 
     try {
-      await this._reusableInventoryService.importAccessRecords(
+      await this._reusableInventoryService.importInstanceAccessRecords(
         ctx.params.typeId,
         ctx.params.instanceId,
         ctx.requestBody.deleteFromTime,
-        ctx.requestBody.deleteToTime,
         records
       );
     } catch (err) {
@@ -218,17 +192,45 @@ export class ReusableInventoryController extends FileController(ReusableInventor
   }
 
 
-  // eslint-disable-next-line max-len
-  protected async handleGetMemberCountHistory(ctx: ReusableInventoryControllerGlue.GetMemberCountHistoryContext): Promise<void> {
+  protected async handleGetMemberCountHistory(
+    ctx: ReusableInventoryControllerGlue.GetMemberCountHistoryContext
+  ): Promise<void> {
     let history: ReusableInventoryMemberCountHistory;
     try {
-      history = await this._reusableInventoryService.getMemberCountHistory(
-        ctx.query.pastHours,
-        ctx.query.typeIds ?? null,
-        ctx.query.instanceIds ?? null,
-        ctx.query.groupBy ?? null,
-        ctx.query.countType ?? 'useCounts'
-      );
+      history = await this._reusableInventoryService.getMemberCountHistory({
+        fromTime: ctx.requestBody.fromTime,
+        toTime: ctx.requestBody.toTime,
+        timeStepMs: ctx.requestBody.timeStepMs ?? (30 * 60 * 1000),
+        filterTypeIds: ctx.requestBody.filterTypeIds ?? null,
+        filterInstanceIds: ctx.requestBody.filterInstanceIds ?? null,
+        groupBy: ctx.requestBody.groupBy ?? null,
+        countType: ctx.requestBody.countType ?? 'use'
+      });
+    } catch (err) {
+      if (
+        err instanceof ReusableInventoryTypeNotFoundError
+        || err instanceof ReusableInventoryInstanceNotFoundError
+      ) {
+        throw createHttpError(BAD_REQUEST, err);
+      }
+      throw err;
+    }
+
+    ctx.responseBodyData = history;
+  }
+
+  protected async handleGetMemberCountForecast(
+    ctx: ReusableInventoryControllerGlue.GetMemberCountForecastContext
+  ): Promise<void> {
+    let history: ReusableInventoryMemberCountForecast;
+    try {
+      history = await this._reusableInventoryService.getMemberCountForecast({
+        fromTime: ctx.requestBody.fromTime,
+        filterTypeIds: ctx.requestBody.filterTypeIds ?? null,
+        filterInstanceIds: ctx.requestBody.filterInstanceIds ?? null,
+        groupBy: ctx.requestBody.groupBy ?? null,
+        countType: ctx.requestBody.countType ?? 'use'
+      });
     } catch (err) {
       if (
         err instanceof ReusableInventoryTypeNotFoundError

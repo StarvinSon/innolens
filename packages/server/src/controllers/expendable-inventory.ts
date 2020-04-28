@@ -5,7 +5,7 @@ import { CREATED, BAD_REQUEST, NOT_FOUND } from 'http-status-codes';
 
 import {
   ExpendableInventoryService, ExpendableInventoryTypeNotFoundError,
-  ExpendableInventoryType, ExpendableInventoryImportAccessRecord
+  ExpendableInventoryType, ExpendableInventoryImportInstanceAccessRecord
 } from '../services/expendable-inventory';
 import { FileService } from '../services/file';
 import { OAuth2Service } from '../services/oauth2';
@@ -98,7 +98,7 @@ export class ExpendableInventoryController extends FileController(ExpendableInve
     const accessRecordsStream = this.getFile(ctx.authentication.token, ctx.requestBody.fileId);
 
     const csvRecordStream = accessRecordsStream.pipe(csvParse({ columns: true }));
-    const records: Array<ExpendableInventoryImportAccessRecord> = [];
+    const records: Array<ExpendableInventoryImportInstanceAccessRecord> = [];
     for await (const csvRecord of csvRecordStream) {
       const record = decodeCsvRecord(
         csvRecord,

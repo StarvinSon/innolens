@@ -1,4 +1,4 @@
-name: PostInstanceAccessRecords
+name: ImportInstanceAccessRecords
 
 method: post
 path: /api/reusable-inventories/types/:typeId/instances/:instanceId/access-records
@@ -12,15 +12,10 @@ requestBody:
     type: object
     required:
       - deleteFromTime
-      - deleteToTime
       - fileId
     additionalProperties: false
     properties:
       deleteFromTime:
-        anyOf:
-          - type: 'null'
-          - type: date
-      deleteToTime:
         anyOf:
           - type: 'null'
           - type: date

@@ -7,7 +7,7 @@ import {
 
 import '../gauge';
 import {
-  ReusableInventoryService, ReusableInventoryType, ReusableInventoryMemberCountHistory
+  ReusableInventoryService, ReusableInventoryType, ReusableInventoryMemberCountHistoryLegacy
 } from '../../services/reusable-inventory';
 
 import { css, classes } from './user-reusable-inventories-page.scss';
@@ -49,7 +49,7 @@ export class UserReusableInventoriesPage extends LitElement {
   public reusableInventoryTypeCapacity: Readonly<Record<string, number>> | null = null;
 
   @property({ attribute: false })
-  private _countHistory: ReadonlyArray<ReusableInventoryMemberCountHistory> | null = null;
+  private _countHistory: ReadonlyArray<ReusableInventoryMemberCountHistoryLegacy> | null = null;
 
   @property({ attribute: false })
   private _countPrediction: ReadonlyArray<ReusableInventoryMemberCountPrediction> | null = null;
@@ -64,7 +64,7 @@ export class UserReusableInventoriesPage extends LitElement {
   private _gaugeData: ReadonlyArray<{ name: string; value: number }> | null = null;
 
   private _lineChartDataDeps: readonly [
-    ReadonlyArray<ReusableInventoryMemberCountHistory> | null
+    ReadonlyArray<ReusableInventoryMemberCountHistoryLegacy> | null
   ] = [null];
 
   private _lineChartPredictionDataDeps: readonly [
@@ -72,7 +72,7 @@ export class UserReusableInventoriesPage extends LitElement {
   ] = [null];
 
   private _gaugeDataDeps: readonly [
-    ReadonlyArray<ReusableInventoryMemberCountHistory> | null
+    ReadonlyArray<ReusableInventoryMemberCountHistoryLegacy> | null
   ] = [null];
 
   private _dataFetched = false;
@@ -88,7 +88,7 @@ export class UserReusableInventoriesPage extends LitElement {
     if (!this._dataFetched && this.reusableInventoryTypes !== null) {
       const reusableInventoryTypeCapacityPromises = this.reusableInventoryTypes.map(
         async (reusableInventoryType): Promise<{ typeId: string; count: number }> => {
-          const instancesOfType = await this.reusableInventoryService!.updateInstances(
+          const instancesOfType = await this.reusableInventoryService!.fetchInstances(
             reusableInventoryType.typeId
           );
           return {
@@ -108,13 +108,13 @@ export class UserReusableInventoriesPage extends LitElement {
       });
 
       const reusableInventoryCountPromises = this.reusableInventoryTypes.map(
-        async (reusableInventoryType): Promise<ReusableInventoryMemberCountHistory> =>
-          this.reusableInventoryService!.updateMemberCountHistory(
+        async (reusableInventoryType): Promise<ReusableInventoryMemberCountHistoryLegacy> =>
+          this.reusableInventoryService!.updateMemberCountHistoryLegacy(
             getHours(new Date()),
             [reusableInventoryType.typeId],
             undefined,
             undefined,
-            'uniqueUseCounts'
+            'uniqueUse'
           )
       );
       Promise.all(reusableInventoryCountPromises).then((reusableInventoryData) => {

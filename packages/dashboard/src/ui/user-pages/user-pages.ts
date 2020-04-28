@@ -147,7 +147,7 @@ export class UserPages extends LitElement {
     }
 
     if (this.reusableInventoryService !== null && !this._reusableInventoryTypeFetched) {
-      this.reusableInventoryService.updateTypes().then((data) => {
+      this.reusableInventoryService.fetchTypes().then((data) => {
         this._reusableInventoryTypes = data;
         this._reusableInventoryTypeGroups = this._reusableInventoryTypes.reduce(
           (groups: Array<Array<ReusableInventoryType>>, reusableInventoryType, i) => {

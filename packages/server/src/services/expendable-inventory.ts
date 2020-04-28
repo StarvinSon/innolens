@@ -26,7 +26,7 @@ export {
 };
 
 
-export type ExpendableInventoryImportAccessRecord =
+export type ExpendableInventoryImportInstanceAccessRecord =
   Pick<ExpendableInventoryQuantitySetRecord, 'action' | 'time' | 'quantity'>
   | Pick<ExpendableInventoryQuantityTakeRecord, 'action' | 'time' | 'memberId' | 'takeQuantity'>;
 
@@ -127,7 +127,7 @@ export class ExpendableInventoryService {
       );
   }
 
-  public async getTypes(): Promise<Array<ExpendableInventoryType>> {
+  public async getTypes(): Promise<ReadonlyArray<ExpendableInventoryType>> {
     return this._typeCollection.find({}).toArray();
   }
 
@@ -151,7 +151,7 @@ export class ExpendableInventoryService {
   public async importAccessRecords(
     typeId: string,
     deleteFromTime: Date | null,
-    importRecords: ReadonlyArray<ExpendableInventoryImportAccessRecord>
+    importRecords: ReadonlyArray<ExpendableInventoryImportInstanceAccessRecord>
   ): Promise<void> {
     if (!await this._hasType(typeId)) {
       throw new ExpendableInventoryTypeNotFoundError([typeId]);

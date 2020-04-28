@@ -956,7 +956,12 @@ export class ImportPage extends LitElement {
       // eslint-disable-next-line max-len
       await Promise.all(godFiles.reusableInventoryAccessRecords.map(async ([typeId, instanceId, file]) => {
         await reusableInventoryService
-          .importInstanceAccessRecords(typeId, instanceId, null, null, file);
+          .importInstanceAccessRecords({
+            typeId,
+            instanceId,
+            deleteFromTime: null,
+            file
+          });
       }));
 
       if (godFiles.expendableInventoryTypes !== null) {
@@ -1110,12 +1115,11 @@ export class ImportPage extends LitElement {
     const file = fileInputElem.files![0];
 
     this._performFormTask('reusableInventoryInstanceAccessRecords', async () =>
-      reusableInventoryService.importInstanceAccessRecords(
+      reusableInventoryService.importInstanceAccessRecords({
         typeId,
         instanceId,
         deleteFromTime,
-        null,
         file
-      ));
+      }));
   }
 }
