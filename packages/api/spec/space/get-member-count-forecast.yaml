@@ -16,21 +16,22 @@ requestBody:
     properties:
       fromTime:
         type: date
-      timeStepMs:
-        enum:
-          - 1800000
       filterSpaceIds:
         anyOf:
           - type: 'null'
           - type: array
             items:
               type: string
-      filterMemberIds:
-        anyOf:
-          - type: 'null'
-          - type: array
-            items:
-              type: string
+      groupBy:
+        enum:
+          - null
+          - space
+          - member
+          - department
+          - typeOfStudy
+          - studyProgramme
+          - yearOfStudy
+          - affiliatedStudentInterestGroup
       countType:
         enum:
           - enter
@@ -39,15 +40,6 @@ requestBody:
           - uniqueExit
           - stay
           - uniqueStay
-      groupBy:
-        enum:
-          - department
-          - typeOfStudy
-          - studyProgramme
-          - yearOfStudy
-          - affiliatedStudentInterestGroup
-          - space
-          - null
 
 responseBody:
   data:

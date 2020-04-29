@@ -5,23 +5,20 @@
 
 
 :host {
-  display: block;
+  display: grid;
+  grid-template-areas: options charts;
+  grid-template-columns: 1fr 2fr;
 }
 
 :host([hidden]) {
   display: none;
 }
 
-.content {
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-}
-
 .options {
   position: sticky;
-  box-sizing: border-box;
   top: layout.$top-bar-height;
   height: calc(100vh - #{layout.$top-bar-height});
+  box-sizing: border-box;
   padding: 2rem 1rem;
   overflow-y: auto;
 
@@ -43,10 +40,8 @@
   }
 }
 
-.chart-cards {
-  display: flex;
+.charts {
   padding: 2rem 1rem;
-  flex-direction: column;
 
   & > :not(:first-child) {
     margin-top: 2rem;
@@ -54,5 +49,5 @@
 }
 
 .line-chart {
-  #{line-chart.$content-aspect-ratio}: 33%;
+  #{line-chart.$content-aspect-ratio}: 50%;
 }

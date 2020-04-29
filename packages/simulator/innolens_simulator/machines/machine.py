@@ -15,13 +15,18 @@ class Machine(Component):
 
   instance_id: str = ''
   instance_name: str = ''
-  in_use: bool = False
 
+  __in_use: bool
   __log: Final[MutableSequence[Tuple[datetime, str, str]]]
 
   def __init__(self, attached_object: Object):
     super().__init__(attached_object)
+    self.__in_use = False
     self.__log = []
+
+  @property
+  def in_use(self) -> bool:
+    return self.__in_use
 
   @property
   def log(self) -> Sequence[Tuple[datetime, str, str]]:
@@ -35,9 +40,13 @@ class Machine(Component):
       self.instance_name = f'{self.type_name} {self.instance_id}'
 
   def acquire(self, member: Member) -> None:
-    self.in_use = True
+    if self.__in_use:
+      raise Exception(f'{self.type_name} {self.instance_name} is already in use')
+    self.__in_use = True
     self.__log.append((self.engine.clock.current_time, member.member_id, 'acquire'))
 
   def release(self, member: Member) -> None:
-    self.in_use = False
+    if not self.__in_use:
+      raise Exception(f'{self.type_name} {self.instance_name} is not in use')
+    self.__in_use = False
     self.__log.append((self.engine.clock.current_time, member.member_id, 'release'))

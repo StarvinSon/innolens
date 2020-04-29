@@ -6,8 +6,8 @@ import { CREATED, BAD_REQUEST } from 'http-status-codes';
 import { FileService } from '../services/file';
 import { OAuth2Service } from '../services/oauth2';
 import {
-  SpaceService, SpaceNotFoundError,
-  Space, SpaceAccessRecord
+  SpaceService, SpaceNotFoundError, Space,
+  SpaceImportAccessRecord, SpaceMemberCountHistory, SpaceMemberCountForecast
 } from '../services/space';
 import {
   decodeCsvString, decodeCsvRecord, decodeCsvDate, decodeCsvInteger
@@ -25,8 +25,8 @@ import { FileController } from './utils/file-controller';
 @singleton()
 export class SpaceController extends FileController(SpaceControllerGlue) {
   private readonly _spaceService: SpaceService;
-
   private readonly _oauth2Service: OAuth2Service;
+
   protected readonly [FileController.fileService]: FileService;
 
 
@@ -48,11 +48,21 @@ export class SpaceController extends FileController(SpaceControllerGlue) {
   }
 
 
-  protected async handlePostSpaces(ctx: SpaceControllerGlue.PostSpacesContext): Promise<void> {
+  protected async handleGetSpaces(ctx: SpaceControllerGlue.GetSpacesContext): Promise<void> {
+    const spaces = await this._spaceService.getSpaces();
+    ctx.responseBodyData = spaces.map((space) => ({
+      spaceId: space.spaceId,
+      spaceName: space.spaceName,
+      spaceCapacity: space.spaceCapacity
+    }));
+  }
+
+  protected async handleImportSpaces(ctx: SpaceControllerGlue.ImportSpacesContext): Promise<void> {
     const fileStream = this.getFile(ctx.authentication.token, ctx.requestBody.fileId);
 
+    const csvRecordStream = fileStream.pipe(csvParse({ columns: true }));
     const records: Array<Pick<Space, 'spaceId' | 'spaceName' | 'spaceCapacity'>> = [];
-    for await (const csvRecord of fileStream.pipe(csvParse({ columns: true }))) {
+    for await (const csvRecord of csvRecordStream) {
       const record = decodeCsvRecord(
         csvRecord,
         ['space_id', 'space_name', 'space_capacity'],
@@ -76,33 +86,21 @@ export class SpaceController extends FileController(SpaceControllerGlue) {
     ctx.status = CREATED;
   }
 
-  protected async handleGetSpaces(ctx: SpaceControllerGlue.GetSpacesContext): Promise<void> {
-    const spaces = await this._spaceService.getSpaces();
-    ctx.responseBodyData = spaces.map((space) => ({
-      spaceId: space.spaceId,
-      spaceName: space.spaceName,
-      spaceCapacity: space.spaceCapacity
-    }));
-  }
-
-
-  protected async handlePostAccessRecords(
-    ctx: SpaceControllerGlue.PostAccessRecordsContext
+  protected async handleImportAccessRecords(
+    ctx: SpaceControllerGlue.ImportAccessRecordsContext
   ): Promise<void> {
     const fileStream = this.getFile(ctx.authentication.token, ctx.requestBody.fileId);
 
-    const records: Array<Pick<SpaceAccessRecord, 'memberId' | 'time' | 'action'>> = [];
-    for await (const csvRecord of fileStream.pipe(csvParse({ columns: true }))) {
+    const csvRecordStream = fileStream.pipe(csvParse({ columns: true }));
+    const records: Array<SpaceImportAccessRecord> = [];
+    for await (const csvRecord of csvRecordStream) {
       const record = decodeCsvRecord(
         csvRecord,
         ['time', 'member_id', 'action'],
         {
           time: decodeCsvDate,
           member_id: decodeCsvString,
-          action: (item) => {
-            if (item === 'enter' || item === 'exit') return item;
-            return undefined;
-          }
+          action: (item) => item === 'enter' || item === 'exit' ? item : undefined
         }
       );
       if (record === undefined) {
@@ -131,48 +129,16 @@ export class SpaceController extends FileController(SpaceControllerGlue) {
   }
 
 
-  protected async handleGetMemberCount(
-    ctx: SpaceControllerGlue.GetMemberCountContext
-  ): Promise<void> {
-    ctx.responseBodyData = await this._spaceService.getMemberCount(
-      ctx.query.time ?? new Date(),
-      ctx.query.spaceIds ?? null,
-      ctx.query.countType ?? 'total',
-      ctx.query.groupBy ?? null
-    );
-  }
-
   protected async handleGetMemberCountHistory(
     ctx: SpaceControllerGlue.GetMemberCountHistoryContext
   ): Promise<void> {
+    let history: SpaceMemberCountHistory;
     try {
-      ctx.responseBodyData = await this._spaceService.getMemberCountHistory({
-        fromTime: ctx.query.fromTime,
-        toTime: ctx.query.toTime,
-        timeStepMs: ctx.query.timeStepMs ?? (30 * 60 * 1000),
-        filterSpaceIds: ctx.query.filterSpaceIds ?? null,
-        filterMemberIds: ctx.query.filterMemberIds ?? null,
-        countType: ctx.query.countType ?? 'stay',
-        groupBy: ctx.query.groupBy ?? null
-      });
-    } catch (err) {
-      if (err instanceof SpaceNotFoundError) {
-        throw createHttpError(BAD_REQUEST, err);
-      }
-      throw err;
-    }
-  }
-
-  protected async handleGetMemberCountHistory2(
-    ctx: SpaceControllerGlue.GetMemberCountHistory2Context
-  ): Promise<void> {
-    try {
-      ctx.responseBodyData = await this._spaceService.getMemberCountHistory2({
+      history = await this._spaceService.getMemberCountHistory({
         fromTime: ctx.requestBody.fromTime,
         toTime: ctx.requestBody.toTime,
         timeStepMs: ctx.requestBody.timeStepMs ?? (30 * 60 * 1000),
         filterSpaceIds: ctx.requestBody.filterSpaceIds ?? null,
-        filterMemberIds: ctx.requestBody.filterMemberIds ?? null,
         countType: ctx.requestBody.countType ?? 'stay',
         groupBy: ctx.requestBody.groupBy ?? null
       });
@@ -182,20 +148,20 @@ export class SpaceController extends FileController(SpaceControllerGlue) {
       }
       throw err;
     }
+    ctx.responseBodyData = history;
   }
 
 
   protected async handleGetMemberCountForecast(
     ctx: SpaceControllerGlue.GetMemberCountForecastContext
   ): Promise<void> {
+    let forecast: SpaceMemberCountForecast;
     try {
-      ctx.responseBodyData = await this._spaceService.getMemberCountForecast({
+      forecast = await this._spaceService.getMemberCountForecast({
         fromTime: ctx.requestBody.fromTime,
-        timeStepMs: ctx.requestBody.timeStepMs ?? (30 * 60 * 1000),
         filterSpaceIds: ctx.requestBody.filterSpaceIds ?? null,
-        filterMemberIds: ctx.requestBody.filterMemberIds ?? null,
-        countType: ctx.requestBody.countType ?? 'stay',
-        groupBy: ctx.requestBody.groupBy ?? null
+        groupBy: ctx.requestBody.groupBy ?? null,
+        countType: ctx.requestBody.countType ?? 'stay'
       });
     } catch (err) {
       if (err instanceof SpaceNotFoundError) {
@@ -203,6 +169,7 @@ export class SpaceController extends FileController(SpaceControllerGlue) {
       }
       throw err;
     }
+    ctx.responseBodyData = forecast;
   }
 
   protected async handleGetCorrelation(
@@ -213,7 +180,6 @@ export class SpaceController extends FileController(SpaceControllerGlue) {
         fromTime: ctx.requestBody.fromTime,
         timeStepMs: ctx.requestBody.timeStepMs ?? (2 * 60 * 60 * 1000),
         filterSpaceIds: ctx.requestBody.filterSpaceIds,
-        filterMemberIds: ctx.requestBody.filterMemberIds ?? null,
         countType: ctx.requestBody.countType ?? 'uniqueStay'
       });
     } catch (err) {

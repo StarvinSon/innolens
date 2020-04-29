@@ -222,9 +222,9 @@ export class ReusableInventoryController extends FileController(ReusableInventor
   protected async handleGetMemberCountForecast(
     ctx: ReusableInventoryControllerGlue.GetMemberCountForecastContext
   ): Promise<void> {
-    let history: ReusableInventoryMemberCountForecast;
+    let forecast: ReusableInventoryMemberCountForecast;
     try {
-      history = await this._reusableInventoryService.getMemberCountForecast({
+      forecast = await this._reusableInventoryService.getMemberCountForecast({
         fromTime: ctx.requestBody.fromTime,
         filterTypeIds: ctx.requestBody.filterTypeIds ?? null,
         filterInstanceIds: ctx.requestBody.filterInstanceIds ?? null,
@@ -241,6 +241,6 @@ export class ReusableInventoryController extends FileController(ReusableInventor
       throw err;
     }
 
-    ctx.responseBodyData = history;
+    ctx.responseBodyData = forecast;
   }
 }

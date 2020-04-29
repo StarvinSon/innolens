@@ -934,7 +934,11 @@ export class ImportPage extends LitElement {
         await spaceService.importSpaces(godFiles.spaces);
       }
       await Promise.all(godFiles.spaceAccessRecords.map(async ([spaceId, file]) => {
-        await spaceService.importAccessRecords(spaceId, null, file);
+        await spaceService.importAccessRecords({
+          spaceId,
+          deleteFromTime: null,
+          file
+        });
       }));
 
       if (godFiles.machineTypes !== null) {
@@ -1020,7 +1024,11 @@ export class ImportPage extends LitElement {
     const file = fileInputElem.files![0];
 
     this._performFormTask('spaceAccessRecords', async () =>
-      spaceService.importAccessRecords(spaceId, deleteFromTime, file));
+      spaceService.importAccessRecords({
+        spaceId,
+        deleteFromTime,
+        file
+      }));
   }
 
   private _onMachinesFormSubmit(event: Event): void {

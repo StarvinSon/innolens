@@ -11,8 +11,9 @@ export interface SpaceMemberRecord {
   readonly _id: ObjectId;
   readonly spaceId: string;
   readonly time: Date;
+  readonly action: 'enter' | 'exit';
+  readonly actionMemberId: string;
   readonly memberIds: ReadonlyArray<string>;
-  readonly mode: 'access' | 'set';
 }
 
 
@@ -33,8 +34,9 @@ export const SpaceMemberRecordCollection = decorate(
             '_id',
             'spaceId',
             'time',
-            'memberIds',
-            'mode'
+            'action',
+            'actionMemberId',
+            'memberIds'
           ],
           additionalProperties: false,
           properties: {
@@ -47,21 +49,34 @@ export const SpaceMemberRecordCollection = decorate(
             time: {
               bsonType: 'date'
             },
+            action: {
+              enum: ['enter', 'exit']
+            },
+            actionMemberId: {
+              bsonType: 'string'
+            },
             memberIds: {
               bsonType: 'array',
               items: {
                 type: 'string'
               }
-            },
-            mode: {
-              enum: ['access', 'set']
             }
           }
         }
       },
       indexes: [
         {
-          key: { time: 1, _id: 1 }
+          key: {
+            time: 1,
+            _id: 1
+          }
+        },
+        {
+          key: {
+            spaceId: 1,
+            time: 1,
+            _id: 1
+          }
         }
       ]
     })

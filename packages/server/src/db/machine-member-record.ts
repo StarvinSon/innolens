@@ -31,7 +31,6 @@ export const MachineMemberRecordCollection = decorate(
       validator: {
         $jsonSchema: {
           bsonType: 'object',
-          additionalProperties: false,
           required: [
             '_id',
             'typeId',
@@ -41,6 +40,7 @@ export const MachineMemberRecordCollection = decorate(
             'actionMemberId',
             'memberIds'
           ],
+          additionalProperties: false,
           properties: {
             _id: {
               bsonType: 'objectId'

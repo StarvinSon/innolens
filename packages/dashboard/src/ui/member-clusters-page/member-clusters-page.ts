@@ -9,19 +9,17 @@ import {
 import '../chart-card';
 import '../choice-chip';
 import '../choice-chips';
-import '../line-chart'; // eslint-disable-line import/no-duplicates
+import '../line-chart-2';
 import '../member-cluster-dendrogram';
-import { MemberClusterService, MemberClusterResult } from '../../services/member-cluster';
-import { generateKey } from '../../utils/key';
+import { MemberClusterService, MemberClustersResult } from '../../services/member-cluster';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
-import { LineChartData, LineChartLineData } from '../line-chart'; // eslint-disable-line import/no-duplicates
 
 import { css, classes } from './member-clusters-page.scss';
 
 
-interface MemberClusterResultWithHierarchicalNode extends MemberClusterResult {
-  readonly rootHierarchicalNode: HierarchyNode<MemberClusterResult['clusters'][number]>;
+interface MemberClusterResultWithHierarchicalNode extends MemberClustersResult {
+  readonly rootHierarchicalNode: HierarchyNode<MemberClustersResult['clusters'][number]>;
 }
 
 
@@ -61,11 +59,18 @@ export class MemberClustersPage extends LitElement {
 
   @injectableProperty(MemberClusterService)
   @observeProperty('_onServiceInjected')
-  public memberClusterService: MemberClusterService | null;
+  public memberClusterService: MemberClusterService | null = null;
 
 
   @property({ attribute: false })
   private _selectedPastDays = 14;
+
+  @property({ attribute: false })
+  private _distanceThreshold: number | null = null;
+
+  @property({ attribute: false })
+  private _selectedFeature: string | null = null;
+
 
   @property({ attribute: false })
   private _fromTime: Date | null = null;
@@ -75,12 +80,6 @@ export class MemberClustersPage extends LitElement {
 
   @property({ attribute: false })
   private _timeStepMS = 30 * 60 * 1000; // 30mins
-
-  @property({ attribute: false })
-  private _distanceThreshold: number | null = null;
-
-  @property({ attribute: false })
-  private _selectedFeature: string | null = null;
 
 
   private _clusterResultKey: string | null = null;
@@ -94,22 +93,24 @@ export class MemberClustersPage extends LitElement {
     number | null
   ] = [null, null];
 
+  @property({ attribute: false })
   private _flatClusterResult: FlatMemberClusterResult | null = null;
 
 
-  private _clusterLineChartDatasDeps: readonly [
+  private _clusterLineChartPropsDeps: readonly [
     FlatMemberClusterResult | null,
     string | null
   ] = [null, null];
 
-  private _clusterLineChartDatas: ReadonlyArray<{
-    readonly lineChartData: LineChartData<Date>;
+  private _clusterLineChartProps: ReadonlyArray<{
+    readonly name: string;
+    readonly ys: ReadonlyArray<ReadonlyArray<number>>;
+    readonly xLabels: ReadonlyArray<Date>;
   }> | null = null;
 
 
   public constructor() {
     super();
-    this.memberClusterService = null;
     this._formatLineChartLabel = this._formatLineChartLabel.bind(this);
   }
 
@@ -141,23 +142,24 @@ export class MemberClustersPage extends LitElement {
       }
     }
 
-    const clusterResultKey = generateKey({
-      fromTime: this._fromTime?.toISOString(),
-      toTime: this._toTime?.toISOString(),
-      timeStepMs: String(this._timeStepMS)
+    const clusterResultKey = JSON.stringify({
+      fromTime: this._fromTime,
+      toTime: this._toTime,
+      timeStepMs: this._timeStepMS,
+      filterMemberIds: null,
+      filterSpaceIds: null
     });
     if (this._clusterResultKey !== clusterResultKey) {
-      if (
-        this._fromTime === null
-        || this._toTime === null
-      ) {
+      if (this._fromTime === null || this._toTime === null) {
         this._clusterResult = null;
       } else {
         this.memberClusterService
-          .fetchMemberCluster({
+          .fetchMemberClusters({
             fromTime: this._fromTime,
             toTime: this._toTime,
-            timeStepMs: this._timeStepMS
+            timeStepMs: this._timeStepMS,
+            filterMemberIds: null,
+            filterSpaceIds: null
           })
           .then((data) => {
             if (this._clusterResultKey === clusterResultKey) {
@@ -174,10 +176,10 @@ export class MemberClustersPage extends LitElement {
             }
           })
           .catch((err) => {
+            console.error(err);
             if (this._clusterResultKey === clusterResultKey) {
               this._clusterResultKey = null;
             }
-            console.error(err);
           });
       }
       this._clusterResultKey = clusterResultKey;
@@ -191,10 +193,10 @@ export class MemberClustersPage extends LitElement {
         this._flatClusterResult = null;
       } else {
         const findClusters = (
-          node: HierarchyNode<MemberClusterResult['clusters'][number]>
+          node: HierarchyNode<MemberClustersResult['clusters'][number]>
         ): ReadonlyArray<FlatMemberClusterResult['flatClusters'][number]> => {
           if (node.data.distance <= this._distanceThreshold!) {
-            const memberIds = node.leaves().flatMap((leaf) => leaf.data.memberId ?? []);
+            const memberIds = node.leaves().map((leaf) => leaf.data.memberId!);
             return [{
               memberIds
             }];
@@ -214,29 +216,42 @@ export class MemberClustersPage extends LitElement {
     }
 
     if (
-      this._clusterLineChartDatasDeps[0] !== this._flatClusterResult
-      || this._clusterLineChartDatasDeps[1] !== this._selectedFeature
+      this._clusterLineChartPropsDeps[0] !== this._flatClusterResult
+      || this._clusterLineChartPropsDeps[1] !== this._selectedFeature
     ) {
       if (this._flatClusterResult === null || this._selectedFeature === null) {
-        this._clusterLineChartDatas = null;
+        this._clusterLineChartProps = null;
       } else {
-        this._clusterLineChartDatas = this._flatClusterResult.flatClusters.map((cluster, i) => {
-          const lines = cluster.memberIds.map((memberId): LineChartLineData => {
-            const values = this._flatClusterResult!.values[memberId][this._selectedFeature!];
-            return {
-              name: `Member ${i}`,
-              values
-            };
-          });
-          return {
-            lineChartData: {
-              lines,
-              labels: this._flatClusterResult!.timeSpans.map((ts) => ts[1])
-            }
-          };
-        });
+        const outlierMemberIds: Array<string> = [];
+        const allClusters: Array<readonly [string, ReadonlyArray<string>]> = [];
+        for (const flatCluster of this._flatClusterResult.flatClusters) {
+          if (flatCluster.memberIds.length < 2) {
+            outlierMemberIds.push(...flatCluster.memberIds);
+          } else {
+            allClusters.push([
+              `Cluster ${allClusters.length + 1}`,
+              flatCluster.memberIds
+            ]);
+          }
+        }
+        if (outlierMemberIds.length > 0) {
+          allClusters.push([
+            'Outliers',
+            outlierMemberIds
+          ]);
+        }
+
+        this._clusterLineChartProps = allClusters.map(([clusterName, clusterMemberIds]) => ({
+          name: clusterName,
+          ys: clusterMemberIds.map((memberId) => {
+            const memberIdx = this._flatClusterResult!.memberIds.indexOf(memberId);
+            const featureIdx = this._flatClusterResult!.features.indexOf(this._selectedFeature!);
+            return this._flatClusterResult!.values[memberIdx][featureIdx];
+          }),
+          xLabels: this._flatClusterResult!.timeSpans.map(([, endTime]) => endTime)
+        }));
       }
-      this._clusterLineChartDatasDeps = [this._flatClusterResult, this._selectedFeature];
+      this._clusterLineChartPropsDeps = [this._flatClusterResult, this._selectedFeature];
     }
   }
 
@@ -324,25 +339,27 @@ export class MemberClustersPage extends LitElement {
   private _renderClusterFeatureCharts(): TemplateResult {
     /* eslint-disable @typescript-eslint/indent */
     return html`
-      ${this._clusterLineChartDatas === null
+      ${this._clusterLineChartProps === null
         ? []
-        : this._clusterLineChartDatas.map((clusterLineChartData, i) => html`
+        : this._clusterLineChartProps.map((chartProps) => html`
           <inno-chart-card>
-            <inno-line-chart
+            <inno-line-chart-2
               class="${classes.featureChart}"
-              .data="${clusterLineChartData.lineChartData}"
-              .formatLabel="${this._formatLineChartLabel}"
+              .ys="${chartProps.ys}"
+              .xLabels="${chartProps.xLabels}"
+              .formatXLabel="${this._formatLineChartLabel}"
               no-legend
             >
-              <span slot="title">Cluster ${i + 1} (${clusterLineChartData.lineChartData.lines.length} members)</span>
-            </inno-line-chart>
+              <span slot="title">${chartProps.name} (${chartProps.ys.length} members)</span>
+            </inno-line-chart-2>
           </inno-chart-card>
         `)}
     `;
     /* eslint-enable @typescript-eslint/indent */
   }
 
-  private _formatLineChartLabel(date: Date): string {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private _formatLineChartLabel(date: Date, i: number): string {
     return format(date, 'd/M');
   }
 

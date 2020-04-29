@@ -55,6 +55,9 @@ python -m innolens_models user_count train --model-dir ./tensorflow_models/user_
 
 Evaluate:
 ```shell
+# For member cluster
+python -m innolens_models member_cluster cluster --data ./member_cluster_sample.json --ui
+
 # For access causality
 python -m innolens_models access_causality train --checkpoint-dir ./checkpoints/access_causality --evaluation-data ./access_causality_sample_train.json --log-dir ./logs/access_causality --ui
 

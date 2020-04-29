@@ -222,9 +222,9 @@ export class MachineController extends FileController(MachineControllerGlue) {
   protected async handleGetMemberCountForecast(
     ctx: MachineControllerGlue.GetMemberCountForecastContext
   ): Promise<void> {
-    let history: MachineMemberCountForecast;
+    let forecast: MachineMemberCountForecast;
     try {
-      history = await this._machineService.getMemberCountForecast({
+      forecast = await this._machineService.getMemberCountForecast({
         fromTime: ctx.requestBody.fromTime,
         filterTypeIds: ctx.requestBody.filterTypeIds ?? null,
         filterInstanceIds: ctx.requestBody.filterInstanceIds ?? null,
@@ -241,6 +241,6 @@ export class MachineController extends FileController(MachineControllerGlue) {
       throw err;
     }
 
-    ctx.responseBodyData = history;
+    ctx.responseBodyData = forecast;
   }
 }

@@ -17,28 +17,16 @@ import '../line-chart-2';
 import {
   SpaceService, Space,
   SpaceMemberCountHistoryGroupBy, SpaceMemberCountHistoryCountType, SpaceMemberCountForecast,
-  SpaceMemberCountHistory2
+  SpaceMemberCountHistory
 } from '../../services/space';
 import { toggleNullableArray } from '../../utils/array';
-import { generateKey } from '../../utils/key';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
 
 import { css, classes } from './spaces-page.scss';
 
 
-const pastDaysChoices: ReadonlyArray<number> = [
-  1,
-  2,
-  3,
-  7,
-  14,
-  30,
-  60,
-  90,
-  180,
-  360
-];
+const pastDaysChoices = [1, 2, 3, 7, 14, 30, 60, 120, 180, 360];
 
 const groupByChoices: ReadonlyArray<{
   readonly type: SpaceMemberCountHistoryGroupBy | null;
@@ -47,6 +35,14 @@ const groupByChoices: ReadonlyArray<{
   {
     type: null,
     name: 'None'
+  },
+  {
+    type: 'space',
+    name: 'Space'
+  },
+  {
+    type: 'member',
+    name: 'Member'
   },
   {
     type: 'department',
@@ -67,10 +63,6 @@ const groupByChoices: ReadonlyArray<{
   {
     type: 'affiliatedStudentInterestGroup',
     name: 'Affiliated Student Interest Group'
-  },
-  {
-    type: 'space',
-    name: 'Space'
   }
 ];
 
@@ -146,23 +138,23 @@ export class SpacesPage extends LitElement {
   private _selectedSpaceIds: ReadonlyArray<string> | null = null;
 
   @property({ attribute: false })
-  private _selectedCountType: SpaceMemberCountHistoryCountType = 'stay';
+  private _selectedGroupBy: SpaceMemberCountHistoryGroupBy | null = null;
 
   @property({ attribute: false })
-  private _selectedGroupBy: SpaceMemberCountHistoryGroupBy | null = null;
+  private _selectedCountType: SpaceMemberCountHistoryCountType = 'stay';
 
   @property({ attribute: false })
   private _selectedChartStyle: ChartStyle = 'normal';
 
 
   @property({ attribute: false })
-  private _selectedFromTime: Date | null = null;
+  private _fromTime: Date | null = null;
 
   @property({ attribute: false })
-  private _selectedToTime: Date | null = null;
+  private _toTime: Date | null = null;
 
   @property({ attribute: false })
-  private readonly _selectedTimeStepMs = 1800000;
+  private readonly _timeStepMs = 1800000;
 
 
   private _spaceFetched = false;
@@ -174,7 +166,7 @@ export class SpacesPage extends LitElement {
   private _historyKey: string | null = null;
 
   @property({ attribute: false })
-  private _history: SpaceMemberCountHistory2 | null = null;
+  private _history: SpaceMemberCountHistory | null = null;
 
 
   private _forecastKey: string | null = null;
@@ -184,7 +176,7 @@ export class SpacesPage extends LitElement {
 
 
   private _chartPropsDeps: readonly [
-    SpaceMemberCountHistory2 | null,
+    SpaceMemberCountHistory | null,
     SpaceMemberCountForecast | null
   ] = [null, null];
 
@@ -219,22 +211,22 @@ export class SpacesPage extends LitElement {
   private _updateProperties(): void {
     if (this.spaceService === null) return;
 
-    if (this._selectedToTime === null) {
+    if (this._toTime === null) {
       let toTime = new Date();
       toTime = utcToZonedTime(toTime, 'Asia/Hong_Kong');
       toTime = startOfMinute(toTime);
       toTime = setMinutes(toTime, Math.floor(toTime.getMinutes() / 30) * 30);
       toTime = zonedTimeToUtc(toTime, 'Asia/Hong_Kong');
-      this._selectedToTime = toTime;
+      this._toTime = toTime;
     }
 
-    if (this._selectedToTime !== null) {
-      const fromTime = subDays(this._selectedToTime, this._selectedPastDays);
+    if (this._toTime !== null) {
+      const fromTime = subDays(this._toTime, this._selectedPastDays);
       if (
-        this._selectedFromTime === null
-        || this._selectedFromTime.getTime() !== fromTime.getTime()
+        this._fromTime === null
+        || this._fromTime.getTime() !== fromTime.getTime()
       ) {
-        this._selectedFromTime = fromTime;
+        this._fromTime = fromTime;
       }
     }
 
@@ -243,30 +235,34 @@ export class SpacesPage extends LitElement {
         .fetchSpaces()
         .then((spaces) => {
           this._spaces = spaces;
+        })
+        .catch((err) => {
+          console.error(err);
+          this._spaces = null;
         });
       this._spaceFetched = true;
     }
 
-    const historyKey = generateKey({
-      fromTime: this._selectedFromTime?.toISOString(),
-      toTime: this._selectedToTime?.toISOString(),
-      timeStepMs: String(this._selectedTimeStepMs),
-      spaceIds: this._selectedSpaceIds?.map(encodeURIComponent).join(',') ?? undefined,
-      countType: this._selectedCountType,
-      groupBy: this._selectedGroupBy ?? undefined
+    const historyKey = JSON.stringify({
+      fromTime: this._fromTime,
+      toTime: this._toTime,
+      timeStepMs: this._timeStepMs,
+      filterSpaceIds: this._selectedSpaceIds,
+      groupBy: this._selectedGroupBy,
+      countType: this._selectedCountType
     });
     if (this._historyKey !== historyKey) {
-      if (this._selectedFromTime === null || this._selectedToTime === null) {
+      if (this._fromTime === null || this._toTime === null) {
         this._history = null;
       } else {
         this.spaceService
-          .fetchMemberCountHistory2({
-            fromTime: this._selectedFromTime,
-            toTime: this._selectedToTime,
-            timeStepMs: this._selectedTimeStepMs,
+          .fetchMemberCountHistory({
+            fromTime: this._fromTime,
+            toTime: this._toTime,
+            timeStepMs: this._timeStepMs,
             filterSpaceIds: this._selectedSpaceIds,
-            countType: this._selectedCountType,
-            groupBy: this._selectedGroupBy
+            groupBy: this._selectedGroupBy,
+            countType: this._selectedCountType
           })
           .then((data) => {
             if (this._historyKey === historyKey) {
@@ -283,25 +279,22 @@ export class SpacesPage extends LitElement {
       this._historyKey = historyKey;
     }
 
-    const forecastKey = generateKey({
-      fromTime: this._selectedToTime?.toISOString(),
-      timeStepMs: String(this._selectedTimeStepMs),
-      spaceIds: this._selectedSpaceIds?.map(encodeURIComponent).join(','),
-      countType: this._selectedCountType,
-      groupBy: this._selectedGroupBy ?? undefined
+    const forecastKey = JSON.stringify({
+      fromTime: this._toTime,
+      filterSpaceIds: this._selectedSpaceIds,
+      groupBy: this._selectedGroupBy,
+      countType: this._selectedCountType
     });
     if (this._forecastKey !== forecastKey) {
-      if (this._selectedToTime === null) {
+      if (this._toTime === null) {
         this._forecast = null;
       } else {
         this.spaceService
           .fetchMemberCountForecast({
-            fromTime: this._selectedToTime,
-            timeStepMs: this._selectedTimeStepMs,
+            fromTime: this._toTime,
             filterSpaceIds: this._selectedSpaceIds,
-            filterMemberIds: null,
-            countType: this._selectedCountType,
-            groupBy: this._selectedGroupBy
+            groupBy: this._selectedGroupBy,
+            countType: this._selectedCountType
           })
           .then((data) => {
             if (this._forecastKey === forecastKey) {
@@ -325,10 +318,10 @@ export class SpacesPage extends LitElement {
         this._chartXLabels = null;
         this._chartLineLabels = null;
       } else {
-        this._chartLineLabels = Array.from(new Set(
+        const groups = Array.from(new Set(
           this._history.groups.concat(this._forecast.groups)
         ));
-        this._chartYs = this._chartLineLabels.map((group) => {
+        this._chartYs = groups.map((group) => {
           const historyG = this._history!.groups.indexOf(group);
           const forecastG = this._forecast!.groups.indexOf(group);
           const historyGroupY = historyG >= 0
@@ -342,6 +335,7 @@ export class SpacesPage extends LitElement {
         this._chartDashedStartIndex = this._history.timeSpans.length - 1;
         this._chartXLabels = this._history.timeSpans.concat(this._forecast.timeSpans)
           .map(([, endTime]) => endTime);
+        this._chartLineLabels = groups;
       }
       this._chartPropsDeps = [this._history, this._forecast];
     }
@@ -349,10 +343,8 @@ export class SpacesPage extends LitElement {
 
   protected render(): TemplateResult {
     return html`
-      <div class="${classes.content}">
-        ${this._renderOptions()}
-        ${this._renderLineChart()}
-      </div>
+      ${this._renderOptions()}
+      ${this._renderLineChart()}
     `;
   }
 
@@ -378,19 +370,11 @@ export class SpacesPage extends LitElement {
             },
             ...this._spaces ?? []
           ],
-          selectItem: (space) => space.spaceId === null
+          selectItem: (item) => item.spaceId === null
             ? this._selectedSpaceIds === null
-            : this._selectedSpaceIds !== null && this._selectedSpaceIds.includes(space.spaceId),
+            : this._selectedSpaceIds !== null && this._selectedSpaceIds.includes(item.spaceId),
           formatItem: (item) => item.spaceName,
-          onClick: (space) => this._onSpaceChipClick(space.spaceId)
-        })}
-
-        ${this._renderChipOptions({
-          title: 'Count Type',
-          items: countTypeChoices,
-          selectItem: (item) => item.type === this._selectedCountType,
-          formatItem: (item) => item.name,
-          onClick: (item) => this._onCountTypeChipClick(item.type)
+          onClick: (item) => this._onSpaceChipClick(item.spaceId)
         })}
 
         ${this._renderChipOptions({
@@ -399,6 +383,14 @@ export class SpacesPage extends LitElement {
           selectItem: (item) => item.type === this._selectedGroupBy,
           formatItem: (item) => item.name,
           onClick: (item) => this._onGroupByChipClick(item.type)
+        })}
+
+        ${this._renderChipOptions({
+          title: 'Count Type',
+          items: countTypeChoices,
+          selectItem: (item) => item.type === this._selectedCountType,
+          formatItem: (item) => item.name,
+          onClick: (item) => this._onCountTypeChipClick(item.type)
         })}
 
         ${this._renderChipOptions({
@@ -441,7 +433,7 @@ export class SpacesPage extends LitElement {
 
   private _renderLineChart(): TemplateResult {
     return html`
-      <div class="${classes.chartCards}">
+      <div class="${classes.charts}">
         <inno-chart-card>
           <inno-line-chart-2
             class="${classes.lineChart}"

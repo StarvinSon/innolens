@@ -168,7 +168,7 @@ export class ExpendableInventoryController extends FileController(ExpendableInve
       ctx.responseBodyData = await this._expendableInventoryService.getQuantityHistory({
         fromTime: ctx.requestBody.fromTime,
         toTime: ctx.requestBody.toTime,
-        timeStepMs: ctx.requestBody.timeStepMs,
+        timeStepMs: ctx.requestBody.timeStepMs ?? (30 * 60 * 1000),
         filterTypeIds: ctx.requestBody.filterTypeIds ?? null,
         groupBy: ctx.requestBody.groupBy ?? null,
         countType: ctx.requestBody.countType ?? 'quantity'
@@ -187,7 +187,7 @@ export class ExpendableInventoryController extends FileController(ExpendableInve
     try {
       ctx.responseBodyData = await this._expendableInventoryService.getQuantityForecast({
         fromTime: ctx.requestBody.fromTime,
-        timeStepMs: ctx.requestBody.timeStepMs,
+        timeStepMs: ctx.requestBody.timeStepMs ?? (30 * 60 * 1000),
         filterTypeIds: ctx.requestBody.filterTypeIds ?? null,
         groupBy: ctx.requestBody.groupBy ?? null,
         countType: ctx.requestBody.countType ?? 'quantity'

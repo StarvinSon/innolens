@@ -12,7 +12,6 @@ requestBody:
     type: object
     required:
       - fromTime
-      - timeStepMs
     additionalProperties: false
     properties:
       fromTime:

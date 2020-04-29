@@ -4,7 +4,7 @@ import { MemberService } from './member';
 import { SpaceService } from './space';
 
 
-export interface FeatureHistory {
+export interface AccessCausalityFeatureHistory {
   readonly timeSpans: ReadonlyArray<readonly [Date, Date]>;
   readonly features: ReadonlyArray<string>;
   readonly values: ReadonlyArray<ReadonlyArray<number>>;
@@ -35,19 +35,18 @@ export class AccessCausalityService {
     readonly fromTime: Date;
     readonly toTime: Date;
     readonly timeStepMs: number;
-  }): Promise<FeatureHistory> {
+  }): Promise<AccessCausalityFeatureHistory> {
     const {
       fromTime,
       toTime,
       timeStepMs
     } = opts;
 
-    const spaceMemberHistory = await this._spaceService.getMemberCountHistory2({
+    const spaceMemberHistory = await this._spaceService.getMemberCountHistory({
       fromTime,
       toTime,
       timeStepMs,
       filterSpaceIds: null,
-      filterMemberIds: null,
       countType: 'stay',
       groupBy: 'space'
     });

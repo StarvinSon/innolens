@@ -30,25 +30,27 @@ export class MemberClusterController extends MemberClusterControllerGlue {
   }
 
 
-  protected async handleGetMemberActivityHistory(
-    ctx: MemberClusterControllerGlue.GetMemberActivityHistoryContext
+  protected async handleGetMemberHistoryFeatures(
+    ctx: MemberClusterControllerGlue.GetMemberHistoryFeaturesContext
   ): Promise<void> {
-    ctx.responseBodyData = await this._memberClusterService.getMemberActivityHistory({
-      fromTime: ctx.query.fromTime,
-      toTime: ctx.query.toTime,
-      timeStepMs: ctx.query.timeStepMs ?? (30 * 60 * 1000),
-      filterMemberIds: ctx.query.filterMemberIds ?? null
+    ctx.responseBodyData = await this._memberClusterService.getMemberHistoryFeatures({
+      fromTime: ctx.requestBody.fromTime,
+      toTime: ctx.requestBody.toTime,
+      timeStepMs: ctx.requestBody.timeStepMs ?? (30 * 60 * 1000),
+      filterMemberIds: ctx.requestBody.filterMemberIds ?? null,
+      filterSpaceIds: ctx.requestBody.filterSpaceIds ?? null
     });
   }
 
-  protected async handleGetMemberCluster(
-    ctx: MemberClusterControllerGlue.GetMemberClusterContext
+  protected async handleGetMemberClusters(
+    ctx: MemberClusterControllerGlue.GetMemberClustersContext
   ): Promise<void> {
-    ctx.responseBodyData = await this._memberClusterService.getCluster({
-      fromTime: ctx.query.fromTime,
-      toTime: ctx.query.toTime,
-      timeStepMs: ctx.query.timeStepMs ?? (30 * 60 * 1000),
-      filterMemberIds: ctx.query.filterMemberIds ?? null
+    ctx.responseBodyData = await this._memberClusterService.getClusters({
+      fromTime: ctx.requestBody.fromTime,
+      toTime: ctx.requestBody.toTime,
+      timeStepMs: ctx.requestBody.timeStepMs ?? (30 * 60 * 1000),
+      filterMemberIds: ctx.requestBody.filterMemberIds ?? null,
+      filterSpaceIds: ctx.requestBody.filterSpaceIds ?? null
     });
   }
 }

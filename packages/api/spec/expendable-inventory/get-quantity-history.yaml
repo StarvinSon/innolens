@@ -13,7 +13,6 @@ requestBody:
     required:
       - fromTime
       - toTime
-      - timeStepMs
     additionalProperties: false
     properties:
       fromTime:

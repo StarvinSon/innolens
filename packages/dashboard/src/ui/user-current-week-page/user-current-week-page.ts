@@ -8,7 +8,7 @@ import {
 
 // eslint-disable-next-line import/no-duplicates
 import '../line-chart';
-import { SpaceService, SpaceMemberCountHistory } from '../../services/space';
+import { SpaceService, SpaceMemberCountHistoryLegacy } from '../../services/space';
 // eslint-disable-next-line import/no-duplicates
 import { LineChartLineData } from '../line-chart';
 
@@ -47,7 +47,7 @@ export class UserCurrentWeekPage extends LitElement {
   public spaceService: SpaceService | null = null;
 
   @property({ attribute: false })
-  private _countHistory: SpaceMemberCountHistory | null = null;
+  private _countHistory: SpaceMemberCountHistoryLegacy | null = null;
 
   @property({ attribute: false })
   private _countPrediction: SpaceCountPrediction | null = null;
@@ -58,7 +58,7 @@ export class UserCurrentWeekPage extends LitElement {
   @property({ attribute: false })
   private _lineChartPredictionData: import('../line-chart').LineChartData<Date> | null = null;
 
-  private _lineChartDataDeps: readonly [SpaceMemberCountHistory | null] = [null];
+  private _lineChartDataDeps: readonly [SpaceMemberCountHistoryLegacy | null] = [null];
 
   private _lineChartPredictionDataDeps: readonly [SpaceCountPrediction | null] = [null];
 
@@ -75,13 +75,13 @@ export class UserCurrentWeekPage extends LitElement {
 
     if (!this._dataFetched) {
       const current = new Date();
-      this._countHistory = await this.spaceService!.fetchMemberCountHistory(
+      this._countHistory = await this.spaceService!.fetchMemberCountHistoryLegacy(
         subDays(startOfDay(current), getDay(current)),
         startOfHour(current),
         3600000,
         ['inno_wing'],
-        'uniqueStay',
-        'department'
+        'department',
+        'uniqueStay'
       );
       // Hard coded predictions
       const time = startOfHour(new Date());

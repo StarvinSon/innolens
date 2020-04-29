@@ -25,12 +25,6 @@ requestBody:
           - type: array
             items:
               type: string
-      filterMemberIds:
-        anyOf:
-          - type: 'null'
-          - type: array
-            items:
-              type: string
       countType:
         enum:
           - enter

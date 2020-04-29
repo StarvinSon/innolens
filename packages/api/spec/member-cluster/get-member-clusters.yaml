@@ -1,0 +1,97 @@
+name: GetMemberClusters
+
+method: post
+path: /api/member-clusters/member-clusters
+
+authentication:
+  type: bearer
+
+requestBody:
+  contentType: application/json
+  schema:
+    type: object
+    required:
+      - fromTime
+      - toTime
+    additionalProperties: false
+    properties:
+      fromTime:
+        type: date
+      toTime:
+        type: date
+      timeStepMs:
+        type: integer
+      filterMemberIds:
+        anyOf:
+          - type: 'null'
+          - type: array
+            items:
+              type: string
+      filterSpaceIds:
+        anyOf:
+          - type: 'null'
+          - type: array
+            items:
+              type: string
+
+responseBody:
+  data:
+    schema:
+      type: object
+      required:
+        - memberIds
+        - features
+        - timeSpans
+        - values
+        - clusters
+      additionalProperties: false
+      properties:
+        timeSpans:
+          type: array
+          items:
+            type: array
+            items:
+              - type: date
+              - type: date
+        memberIds:
+          type: array
+          items:
+            type: string
+        features:
+          type: array
+          items:
+            type: string
+        values:
+          type: array
+          items:
+            type: array
+            items:
+              type: array
+              items:
+                type: number
+        clusters:
+          type: array
+          items:
+            type: object
+            required:
+              - clusterId
+              - memberId
+              - childClusterIds
+              - distance
+              - size
+            additionalProperties: false
+            properties:
+              clusterId:
+                type: integer
+              memberId:
+                anyOf:
+                  - type: 'null'
+                  - type: string
+              childClusterIds:
+                type: array
+                items:
+                  type: integer
+              distance:
+                type: number
+              size:
+                type: integer

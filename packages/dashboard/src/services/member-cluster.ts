@@ -2,16 +2,14 @@ import { injectableConstructor, singleton } from '@innolens/resolver/web';
 
 import { stringTag } from '../utils/class';
 import { Debouncer } from '../utils/debouncer';
-import { generateKey } from '../utils/key';
+import { PromiseValue } from '../utils/promise';
 
 import * as MemberClusterGlue from './glues/member-cluster';
 import { OAuth2Service } from './oauth2';
 
 
-type ExtractPromise<T extends Promise<any>> = T extends Promise<infer U> ? U : never;
-
-// eslint-disable-next-line max-len
-export type MemberClusterResult = ExtractPromise<ReturnType<typeof MemberClusterGlue.GetMemberCluster.handleResponse>>;
+export type MemberClustersResult =
+  PromiseValue<ReturnType<typeof MemberClusterGlue.GetMemberClusters.handleResponse>>;
 
 
 @injectableConstructor({
@@ -30,33 +28,42 @@ export class MemberClusterService {
   }
 
 
-  public async fetchMemberCluster(opts: {
-    readonly fromTime: Date,
-    readonly toTime: Date,
-    readonly timeStepMs: number,
-    readonly filter?: {
-      readonly memberIds?: ReadonlyArray<string>
-    }
-  }): Promise<MemberClusterResult> {
-    const key = generateKey({
-      fromTime: opts.fromTime.toISOString(),
-      toTime: opts.toTime.toISOString(),
-      timeStepMs: String(opts.timeStepMs),
-      filterMemberIds: opts.filter?.memberIds?.map(encodeURIComponent).join(',')
+  public async fetchMemberClusters(opts: {
+    readonly fromTime: Date;
+    readonly toTime: Date;
+    readonly timeStepMs: number;
+    readonly filterMemberIds: ReadonlyArray<string> | null;
+    readonly filterSpaceIds: ReadonlyArray<string> | null;
+  }): Promise<MemberClustersResult> {
+    const {
+      fromTime,
+      toTime,
+      timeStepMs,
+      filterMemberIds,
+      filterSpaceIds
+    } = opts;
+
+    const key = JSON.stringify({
+      fromTime,
+      toTime,
+      timeStepMs,
+      filterMemberIds,
+      filterSpaceIds
     });
 
-    return this._debouncer.debounce(`fetchMemberCluster?${key}`, async () => {
+    return this._debouncer.debounce(`member-clusters:${key}`, async () => {
       const data = await this._oauth2Service
-        .withAccessToken((token) => fetch(MemberClusterGlue.GetMemberCluster.createRequest({
-          query: {
-            fromTime: opts.fromTime,
-            toTime: opts.toTime,
-            timeStepMs: opts.timeStepMs,
-            filterMemberIds: opts.filter?.memberIds
-          },
-          authentication: { token }
+        .withAccessToken((token) => fetch(MemberClusterGlue.GetMemberClusters.createRequest({
+          authentication: { token },
+          body: {
+            fromTime,
+            toTime,
+            timeStepMs,
+            filterMemberIds,
+            filterSpaceIds
+          }
         })))
-        .then(MemberClusterGlue.GetMemberCluster.handleResponse);
+        .then(MemberClusterGlue.GetMemberClusters.handleResponse);
       return data;
     });
   }

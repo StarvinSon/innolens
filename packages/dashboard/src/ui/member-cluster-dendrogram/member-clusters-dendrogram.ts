@@ -11,7 +11,7 @@ import {
 import { nothing, svg } from 'lit-html';
 import { styleMap } from 'lit-html/directives/style-map';
 
-import { MemberClusterResult } from '../../services/member-cluster';
+import { MemberClustersResult } from '../../services/member-cluster';
 
 import { css, classes } from './member-clusters-dendrogram.scss';
 
@@ -43,14 +43,14 @@ export class MemberClustersDendrogram extends LitElement {
 
 
   @property({ attribute: false })
-  public rootNode: HierarchyNode<MemberClusterResult['clusters'][number]> | null = null;
+  public rootNode: HierarchyNode<MemberClustersResult['clusters'][number]> | null = null;
 
   @property({ type: Number })
   public markDistance: number | null = null;
 
 
-  private _rootPointNodeDeps: readonly [HierarchyNode<MemberClusterResult['clusters'][number]> | null] = [null];
-  private _rootPointNode: HierarchyPointNode<MemberClusterResult['clusters'][number]> | null = null;
+  private _rootPointNodeDeps: readonly [HierarchyNode<MemberClustersResult['clusters'][number]> | null] = [null];
+  private _rootPointNode: HierarchyPointNode<MemberClustersResult['clusters'][number]> | null = null;
   private _scaleX: ScaleLinear<number, number> | null = null;
   private _scaleY: ScaleLinear<number, number> | null = null;
 
@@ -71,7 +71,7 @@ export class MemberClustersDendrogram extends LitElement {
         this._scaleX = null;
         this._scaleY = null;
       } else {
-        this._rootPointNode = d3Cluster<MemberClusterResult['clusters'][number]>()
+        this._rootPointNode = d3Cluster<MemberClustersResult['clusters'][number]>()
           .separation(() => 1)
           .call(undefined, this.rootNode.copy());
 
@@ -98,7 +98,6 @@ export class MemberClustersDendrogram extends LitElement {
     return html`
       ${this._renderTitle()}
       ${this._renderSvg()}
-      ${this._renderClusterLabels()}
       ${this._renderDistanceLabels()}
       ${this._renderHandle()}
     `;
@@ -111,7 +110,7 @@ export class MemberClustersDendrogram extends LitElement {
   }
 
   private _renderSvg(): TemplateResult {
-    const renderPointNode = (node: HierarchyPointNode<MemberClusterResult['clusters'][number]>): ReadonlyArray<TemplateResult> => [
+    const renderPointNode = (node: HierarchyPointNode<MemberClustersResult['clusters'][number]>): ReadonlyArray<TemplateResult> => [
       ...(node.height > 0 ? [] : [svg`
         <line
           class="${classes.labelTick}"

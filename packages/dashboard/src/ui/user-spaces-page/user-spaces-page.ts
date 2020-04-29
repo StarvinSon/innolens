@@ -7,7 +7,7 @@ import {
 
 import '../gauge';
 import {
-  SpaceService, Space, SpaceMemberCountHistory, SpaceMemberCountForecast
+  SpaceService, Space, SpaceMemberCountHistoryLegacy, SpaceMemberCountForecast
 } from '../../services/space';
 import { generateKey } from '../../utils/key';
 
@@ -32,7 +32,7 @@ export class UserSpacesPage extends LitElement {
   public spaces: ReadonlyArray<Space> | null = null;
 
   @property({ attribute: false })
-  private _countHistory: ReadonlyArray<SpaceMemberCountHistory> | null = null;
+  private _countHistory: ReadonlyArray<SpaceMemberCountHistoryLegacy> | null = null;
 
   private _forecastKey: string | null = null;
 
@@ -48,13 +48,15 @@ export class UserSpacesPage extends LitElement {
   @property({ attribute: false })
   private _gaugeData: ReadonlyArray<{ name: string; value: number }> | null = null;
 
-  private _lineChartDataDeps: readonly [ReadonlyArray<SpaceMemberCountHistory> | null] = [null];
+  private _lineChartDataDeps: readonly [
+    ReadonlyArray<SpaceMemberCountHistoryLegacy> | null
+  ] = [null];
 
   private _lineChartPredictionDataDeps: readonly [
     ReadonlyArray<SpaceMemberCountForecast> | null
   ] = [null];
 
-  private _gaugeDataDeps: readonly [ReadonlyArray<SpaceMemberCountHistory> | null] = [null];
+  private _gaugeDataDeps: readonly [ReadonlyArray<SpaceMemberCountHistoryLegacy> | null] = [null];
 
   private _dataFetched = false;
 
@@ -69,14 +71,14 @@ export class UserSpacesPage extends LitElement {
     if (!this._dataFetched && this.spaces !== null) {
       const current = new Date();
       const spaceCountPromises = this.spaces.map(
-        async (space): Promise<SpaceMemberCountHistory> =>
-          this.spaceService!.fetchMemberCountHistory(
+        async (space): Promise<SpaceMemberCountHistoryLegacy> =>
+          this.spaceService!.fetchMemberCountHistoryLegacy(
             subHours(startOfHour(current), 20),
             startOfHour(current),
             1800000,
             [space.spaceId],
-            'uniqueStay',
-            null
+            null,
+            'uniqueStay'
           )
       );
       Promise.all(spaceCountPromises).then((spaceData) => {
@@ -94,8 +96,8 @@ export class UserSpacesPage extends LitElement {
           async (space): Promise<SpaceMemberCountForecast> =>
             this.spaceService!.fetchMemberCountForecast({
               fromTime: startOfHour(current),
-              timeStepMs: 1800000,
               filterSpaceIds: [space.spaceId],
+              groupBy: null,
               countType: 'uniqueStay'
             })
         );

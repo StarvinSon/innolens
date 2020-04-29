@@ -1,7 +1,7 @@
 @use '../layout';
 @use '../typography';
 @use '../theme';
-@use '../line-chart';
+@use '../line-chart-2' as line-chart;
 
 
 :host {

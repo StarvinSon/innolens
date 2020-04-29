@@ -1,26 +1,22 @@
 import { URL } from 'url';
 
 import { singleton, injectableConstructor } from '@innolens/resolver/node';
-import { addMilliseconds } from 'date-fns';
 import fetch from 'node-fetch';
 
 import { MemberService } from './member';
 import { SpaceService } from './space';
+import { timeSpanRange } from './time';
 
 
-export interface MemberActivityHistory {
+export interface MemberHistoryFeatures {
+  readonly timeSpans: ReadonlyArray<readonly [Date, Date]>;
   readonly memberIds: ReadonlyArray<string>;
   readonly features: ReadonlyArray<string>;
-  readonly timeSpans: ReadonlyArray<readonly [Date, Date]>;
-  readonly values: {
-    readonly [memberId: string]: {
-      readonly [feature: string]: ReadonlyArray<number>;
-    };
-  };
+  readonly values: ReadonlyArray<ReadonlyArray<ReadonlyArray<number>>>;
 }
 
 
-export interface MemberClusterResult extends MemberActivityHistory {
+export interface MemberClusterResult extends MemberHistoryFeatures {
   readonly clusters: ReadonlyArray<{
     readonly clusterId: number;
     readonly memberId: string | null;
@@ -51,94 +47,103 @@ export class MemberClusterService {
   }
 
 
-  public async getMemberActivityHistory(opts: {
+  public async getMemberHistoryFeatures(opts: {
     readonly fromTime: Date;
     readonly toTime: Date;
     readonly timeStepMs: number;
     readonly filterMemberIds: ReadonlyArray<string> | null;
-  }): Promise<MemberActivityHistory> {
+    readonly filterSpaceIds: ReadonlyArray<string> | null;
+  }): Promise<MemberHistoryFeatures> {
     const {
       fromTime,
       toTime,
-      timeStepMs
+      timeStepMs,
+      filterMemberIds,
+      filterSpaceIds
     } = opts;
 
     let memberIds: ReadonlyArray<string>;
-    if (opts.filterMemberIds !== undefined && opts.filterMemberIds !== null) {
-      memberIds = opts.filterMemberIds;
+    if (filterMemberIds !== undefined && filterMemberIds !== null) {
+      memberIds = filterMemberIds;
     } else {
       memberIds = (await this._memberService.getMembers()).map((m) => m.memberId);
     }
 
-    const spaceIds = (await this._spaceService.getSpaces()).map((space) => space.spaceId);
-    const spaceMemberHistory = await this._spaceService.getMemberHistory({
-      fromTime,
-      toTime,
-      timeStepMs,
-      filterSpaceIds: spaceIds,
-      filterMemberIds: memberIds,
-      countType: 'uniqueStay',
-      groupBy: 'space'
-    });
-
-    const timeSpans: Array<MemberActivityHistory['timeSpans'][number]> = [];
-    const values =
-      Object.fromEntries(memberIds.map((memberId): [string, Record<string, Array<number>>] => [
-        memberId,
-        Object.fromEntries(spaceIds.map((spaceId): [string, Array<number>] => [
-          spaceId,
-          []
-        ]))
-      ]));
-
-    for (
-      // eslint-disable-next-line max-len
-      let periodStartTime = fromTime, periodEndTime = addMilliseconds(periodStartTime, timeStepMs), i = 0;
-      periodStartTime < toTime;
-      // eslint-disable-next-line max-len
-      periodStartTime = periodEndTime, periodEndTime = addMilliseconds(periodEndTime, timeStepMs), i += 1
-    ) {
-      timeSpans.push([periodStartTime, periodEndTime]);
-      for (const memberId of memberIds) {
-        for (let s = 0; s < spaceIds.length; s += 1) {
-          values[memberId][spaceIds[s]].push(
-            spaceMemberHistory.values[s][i].includes(memberId) ? 1 : 0
-          );
-        }
-      }
+    let spaceIds: ReadonlyArray<string>;
+    if (filterSpaceIds !== undefined && filterSpaceIds !== null) {
+      spaceIds = filterSpaceIds;
+    } else {
+      spaceIds = (await this._spaceService.getSpaces()).map((space) => space.spaceId);
     }
 
+    const spaceMemberHistories = new Map(await Promise.all(
+      spaceIds.map(async (spaceId) => {
+        const history = await this._spaceService.getMemberCountHistory({
+          fromTime,
+          toTime,
+          timeStepMs,
+          filterSpaceIds: [spaceId],
+          groupBy: 'member',
+          countType: 'uniqueStay'
+        });
+        return [spaceId, history] as const;
+      })
+    ));
+
+    const timeSpans = timeSpanRange(fromTime, toTime, timeStepMs);
+    const features = spaceIds; // concat other features...
+    const values = memberIds.map((memberId) => [
+      ...spaceIds.map((spaceId) => {
+        const history = spaceMemberHistories.get(spaceId)!;
+        const historyMemberIdx = history.groups.indexOf(memberId);
+        return historyMemberIdx < 0
+          ? timeSpans.map(() => 0)
+          : history.values[historyMemberIdx];
+      })
+      // other features...
+    ]);
+
     return {
-      memberIds,
-      features: spaceIds,
       timeSpans,
+      memberIds,
+      features,
       values
     };
   }
 
-  public async getCluster(opts: {
+  public async getClusters(opts: {
     readonly fromTime: Date;
     readonly toTime: Date;
     readonly timeStepMs: number;
     readonly filterMemberIds: ReadonlyArray<string> | null;
+    readonly filterSpaceIds: ReadonlyArray<string> | null;
   }): Promise<MemberClusterResult> {
-    const history = await this.getMemberActivityHistory({
-      fromTime: opts.fromTime,
-      toTime: opts.toTime,
-      timeStepMs: opts.timeStepMs,
-      filterMemberIds: opts.filterMemberIds
+    const {
+      fromTime,
+      toTime,
+      timeStepMs,
+      filterMemberIds,
+      filterSpaceIds
+    } = opts;
+
+    const history = await this.getMemberHistoryFeatures({
+      fromTime,
+      toTime,
+      timeStepMs,
+      filterMemberIds,
+      filterSpaceIds
     });
 
-    const url = new URL('http://localhost:5000/cluster');
+    const url = new URL('http://localhost:5000/cluster-members');
     const res = await fetch(url.href, {
       method: 'post',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
+        timeSpans: history.timeSpans,
         memberIds: history.memberIds,
         features: history.features,
-        timeSpans: history.timeSpans,
         values: history.values
       })
     });

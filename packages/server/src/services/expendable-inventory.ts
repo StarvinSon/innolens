@@ -368,7 +368,7 @@ export class ExpendableInventoryService {
     let i = 0;
     for (const [, periodEndTime] of timeSpans) {
       const periodRecords: Array<ExpendableInventoryQuantityRecord> = [];
-      while (i < quantityRecords.length && quantityRecords[i].time <= periodEndTime) {
+      while (i < quantityRecords.length && quantityRecords[i].time < periodEndTime) {
         currentQuantityMap.set(quantityRecords[i].typeId, quantityRecords[i].quantity);
         periodRecords.push(quantityRecords[i]);
         i += 1;

@@ -162,13 +162,13 @@ export class ReusableInventoriesPage extends LitElement {
 
 
   @property({ attribute: false })
-  private _selectedFromTime: Date | null = null;
+  private _fromTime: Date | null = null;
 
   @property({ attribute: false })
-  private _selectedToTime: Date | null = null;
+  private _toTime: Date | null = null;
 
   @property({ attribute: false })
-  private readonly _selectedTimeStepMs = 1800000;
+  private readonly _timeStepMs = 1800000;
 
 
   private _typeFetched = false;
@@ -236,22 +236,22 @@ export class ReusableInventoriesPage extends LitElement {
   private _updateProperties(): void {
     if (this.reusableInventoryService === null) return;
 
-    if (this._selectedToTime === null) {
+    if (this._toTime === null) {
       let toTime = new Date();
       toTime = utcToZonedTime(toTime, 'Asia/Hong_Kong');
       toTime = startOfMinute(toTime);
       toTime = setMinutes(toTime, Math.floor(toTime.getMinutes() / 30) * 30);
       toTime = zonedTimeToUtc(toTime, 'Asia/Hong_Kong');
-      this._selectedToTime = toTime;
+      this._toTime = toTime;
     }
 
-    if (this._selectedToTime !== null) {
-      const fromTime = subDays(this._selectedToTime, this._selectedPastDays);
+    if (this._toTime !== null) {
+      const fromTime = subDays(this._toTime, this._selectedPastDays);
       if (
-        this._selectedFromTime === null
-        || this._selectedFromTime.getTime() !== fromTime.getTime()
+        this._fromTime === null
+        || this._fromTime.getTime() !== fromTime.getTime()
       ) {
-        this._selectedFromTime = fromTime;
+        this._fromTime = fromTime;
       }
     }
 
@@ -315,23 +315,23 @@ export class ReusableInventoriesPage extends LitElement {
     }
 
     const historyKey = JSON.stringify({
-      fromTime: this._selectedFromTime,
-      toTime: this._selectedToTime,
-      timeStepMs: this._selectedTimeStepMs,
+      fromTime: this._fromTime,
+      toTime: this._toTime,
+      timeStepMs: this._timeStepMs,
       filterTypeIds: this._selectedTypeIds,
       filterInstanceIds: this._selectedInstanceIds,
       groupBy: this._selectedGroupBy,
       countType: this._selectedCountType
     });
     if (this._historyKey !== historyKey) {
-      if (this._selectedFromTime === null || this._selectedToTime === null) {
+      if (this._fromTime === null || this._toTime === null) {
         this._history = null;
       } else {
         this.reusableInventoryService
           .fetchMemberCountHistory({
-            fromTime: this._selectedFromTime,
-            toTime: this._selectedToTime,
-            timeStepMs: this._selectedTimeStepMs,
+            fromTime: this._fromTime,
+            toTime: this._toTime,
+            timeStepMs: this._timeStepMs,
             filterTypeIds: this._selectedTypeIds,
             filterInstanceIds: this._selectedInstanceIds,
             groupBy: this._selectedGroupBy,
@@ -353,19 +353,19 @@ export class ReusableInventoriesPage extends LitElement {
     }
 
     const forecastKey = JSON.stringify({
-      fromTime: this._selectedToTime,
+      fromTime: this._toTime,
       filterTypeIds: this._selectedTypeIds,
       filterInstanceIds: this._selectedInstanceIds,
       groupBy: this._selectedGroupBy,
       countType: this._selectedCountType
     });
     if (this._forecastKey !== forecastKey) {
-      if (this._selectedToTime === null) {
+      if (this._toTime === null) {
         this._forecast = null;
       } else {
         this.reusableInventoryService
           .fetchMemberCountForecast({
-            fromTime: this._selectedToTime,
+            fromTime: this._toTime,
             filterTypeIds: this._selectedTypeIds,
             filterInstanceIds: this._selectedInstanceIds,
             groupBy: this._selectedGroupBy,

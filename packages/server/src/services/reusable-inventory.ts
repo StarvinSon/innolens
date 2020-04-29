@@ -5,10 +5,7 @@ import { MemberCollection } from '../db/member';
 import { ReusableInventoryInstanceCollection, ReusableInventoryInstance } from '../db/reusable-inventory-instance';
 import { ReusableInventoryMemberRecord, ReusableInventoryMemberRecordCollection } from '../db/reusable-inventory-member-record';
 import { ReusableInventoryType, ReusableInventoryTypeCollection } from '../db/reusable-inventory-type';
-import {
-  setMap2, copyMap2, getMap2,
-  ReadonlyMap2, Map2
-} from '../utils/map';
+import { ReadonlyMap2, Map2 } from '../utils/map2';
 
 import { HistoryForecastService } from './history-forecast';
 import { timeSpanRange } from './time';
@@ -197,8 +194,10 @@ export class ReusableInventoryService {
             update: {
               $set: {
                 instanceName: instance.instanceName,
-                currentMemberIds: [],
                 versionId: new ObjectId()
+              },
+              $setOnInsert: {
+                currentMemberIds: []
               }
             },
             upsert: true
@@ -412,9 +411,9 @@ export class ReusableInventoryService {
           ])
           .toArray();
 
-        const map: Map2<string, string, ReusableInventoryMemberRecord> = new Map();
+        const map: Map2<string, string, ReusableInventoryMemberRecord> = new Map2();
         for (const result of records) {
-          setMap2(map, result.typeId, result.instanceId, result);
+          map.set(result.typeId, result.instanceId, result);
         }
         return map;
       })()
@@ -425,17 +424,14 @@ export class ReusableInventoryService {
     const timeSpansRecords: Array<ReadonlyArray<ReusableInventoryMemberRecord>> = [];
     const timeSpansLatestRecords: Array<MemberRecordMap> = [];
 
-    const currentMemberRecords = copyMap2(initialMemberRecords);
+    const currentMemberRecords = new Map2(initialMemberRecords);
     let i = 0;
     for (const [, timeSpanEndTime] of timeSpans) {
-      timeSpansInitialRecords.push(
-        copyMap2<string, string, ReusableInventoryMemberRecord>(currentMemberRecords)
-      );
+      timeSpansInitialRecords.push(new Map2(currentMemberRecords));
 
       const timeSpanRecords: Array<ReusableInventoryMemberRecord> = [];
-      while (i < memberRecords.length && memberRecords[i].time <= timeSpanEndTime) {
-        setMap2(
-          currentMemberRecords,
+      while (i < memberRecords.length && memberRecords[i].time < timeSpanEndTime) {
+        currentMemberRecords.set(
           memberRecords[i].typeId,
           memberRecords[i].instanceId,
           memberRecords[i]
@@ -445,9 +441,7 @@ export class ReusableInventoryService {
       }
       timeSpansRecords.push(timeSpanRecords);
 
-      timeSpansLatestRecords.push(
-        copyMap2<string, string, ReusableInventoryMemberRecord>(currentMemberRecords)
-      );
+      timeSpansLatestRecords.push(new Map2(currentMemberRecords));
     }
 
     interface Stat {
@@ -486,28 +480,25 @@ export class ReusableInventoryService {
         timeSpansStats = timeSpansRecords.map((timeSpanRecords, t) => {
           const initialRecords = timeSpansInitialRecords[t];
 
-          const usingMemberIds: Map2<string, string, Array<string>> = new Map();
+          const usingMemberIds: Map2<string, string, Array<string>> = new Map2();
           const usedMemberStats: Array<Stat> = [];
 
-          for (const instanceRecords of initialRecords.values()) {
-            for (const record of instanceRecords.values()) {
-              setMap2(usingMemberIds, record.typeId, record.instanceId, record.memberIds);
-              usedMemberStats.push(...record.memberIds.map((memberId) => ({
-                typeId: record.typeId,
-                instanceId: record.instanceId,
-                memberId
-              })));
-            }
+          for (const record of initialRecords.values()) {
+            usingMemberIds.set(record.typeId, record.instanceId, record.memberIds.slice());
+            usedMemberStats.push(...record.memberIds.map((memberId) => ({
+              typeId: record.typeId,
+              instanceId: record.instanceId,
+              memberId
+            })));
           }
 
           for (const record of timeSpanRecords) {
             switch (record.action) {
               case 'acquire': {
-                let ids: Array<string> | undefined =
-                  getMap2(usingMemberIds, record.typeId, record.instanceId);
+                let ids = usingMemberIds.get(record.typeId, record.instanceId);
                 if (ids === undefined) {
                   ids = [];
-                  setMap2(usingMemberIds, record.typeId, record.instanceId, ids);
+                  usingMemberIds.set(record.typeId, record.instanceId, ids);
                 }
                 if (!ids.includes(record.actionMemberId)) {
                   ids.push(record.actionMemberId);
@@ -520,8 +511,7 @@ export class ReusableInventoryService {
                 break;
               }
               case 'release': {
-                const ids: Array<string> | undefined =
-                  getMap2(usingMemberIds, record.typeId, record.instanceId);
+                const ids = usingMemberIds.get(record.typeId, record.instanceId);
                 if (ids !== undefined && ids.includes(record.actionMemberId)) {
                   ids.splice(ids.indexOf(record.actionMemberId), 1);
                 }
@@ -559,7 +549,8 @@ export class ReusableInventoryService {
           groups = queryTypeIds;
         } else {
           groups = Array.from(new Set(
-            timeSpansStats.flatMap((stats) => stats.flatMap((stat) => stat.memberId))
+            timeSpansStats.flatMap((stats) =>
+              stats.flatMap((stat) => stat.typeId))
           ));
         }
         groupedTimeSpansStats = groups.map((typeId) =>

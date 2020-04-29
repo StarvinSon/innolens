@@ -50,7 +50,7 @@ export class UserHeatMapPage extends LitElement {
       const time = new Date();
       const spaceCountPromises = this.spaces.map(
         async (space): Promise<HeatmapSpaceData> => {
-          const countData = await this.spaceService!.fetchMemberCount(
+          const countData = await this.spaceService!.fetchMemberCountLegacy(
             time,
             [space.spaceId],
             'uniqueMember',

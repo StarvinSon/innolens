@@ -1,79 +1,76 @@
+# This is the updated version of the API get-member-count-history.yaml
 name: GetMemberCountHistory
 
-method: get
+method: post
 path: /api/spaces/member-count-history
-query:
-  fromTime:
-    required: true
-    schema:
-      type: date
-  toTime:
-    required: true
-    schema:
-      type: date
-  timeStepMs:
-    schema:
-      type: integer
-  filterSpaceIds:
-    schema:
-      type: array
-      items:
-        type: string
-  filterMemberIds:
-    schema:
-      type: array
-      items:
-        type: string
-  countType:
-    schema:
-      enum:
-        - enter
-        - uniqueEnter
-        - exit
-        - uniqueExit
-        - stay
-        - uniqueStay
-  groupBy:
-    schema:
-      enum:
-        - department
-        - typeOfStudy
-        - studyProgramme
-        - yearOfStudy
-        - affiliatedStudentInterestGroup
-        - space
 
 authentication:
   type: bearer
+
+requestBody:
+  contentType: application/json
+  schema:
+    type: object
+    required:
+      - fromTime
+      - toTime
+    additionalProperties: false
+    properties:
+      fromTime:
+        type: date
+      toTime:
+        type: date
+      timeStepMs:
+        type: integer
+      filterSpaceIds:
+        anyOf:
+          - type: 'null'
+          - type: array
+            items:
+              type: string
+      groupBy:
+        enum:
+          - null
+          - space
+          - member
+          - department
+          - typeOfStudy
+          - studyProgramme
+          - yearOfStudy
+          - affiliatedStudentInterestGroup
+      countType:
+        enum:
+          - enter
+          - uniqueEnter
+          - exit
+          - uniqueExit
+          - stay
+          - uniqueStay
 
 responseBody:
   data:
     schema:
       type: object
       required:
+        - timeSpans
         - groups
-        - records
+        - values
       additionalProperties: false
       properties:
+        timeSpans:
+          type: array
+          items:
+            type: array
+            items:
+              - type: date
+              - type: date
         groups:
           type: array
           items:
             type: string
-        records:
+        values:
           type: array
           items:
-            type: object
-            required:
-              - startTime
-              - endTime
-              - counts
-            additionalProperties: false
-            properties:
-              startTime:
-                type: date
-              endTime:
-                type: date
-              counts:
-                type: object
-                additionalProperties:
-                  type: number
+            type: array
+            items:
+              type: number
