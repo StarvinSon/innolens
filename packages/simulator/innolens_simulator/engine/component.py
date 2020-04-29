@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, TypeVar
+from typing import TYPE_CHECKING, Callable, TypeVar, Type, Optional, Iterable
 from typing_extensions import Final
 
 if TYPE_CHECKING:
@@ -47,6 +47,13 @@ class Component:
 
   def _on_next_tick(self) -> None:
     pass
+
+
+  def find_component(self, t: Type[TComponent], *, recursive: bool = False) -> Optional[TComponent]:
+    return self.attached_object.find_component(t, recursive=recursive)
+
+  def find_components(self, t: Type[TComponent], *, recursive: bool = False) -> Iterable[TComponent]:
+    return self.attached_object.find_components(t, recursive=recursive)
 
 
 TComponent = TypeVar('TComponent', bound=Component)

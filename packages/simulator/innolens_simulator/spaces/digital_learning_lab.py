@@ -24,7 +24,7 @@ class DigitalLearningLab(Space):
       self.attached_object.add_object(machine_obj)
 
   def __add_raspberry_pis(self) -> None:
-    for i in range(150):
+    for i in range(100):
       obj = self.engine.create_object()
       inventory = obj.add_component(RaspberryPi)
       inventory.instance_id = f'{i}'

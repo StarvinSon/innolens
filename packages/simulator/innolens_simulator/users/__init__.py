@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from typing_extensions import Literal
 
 import numpy as np
 import pandas as pd
@@ -17,21 +18,23 @@ from ..utils.time import hk_timezone
 
 
 def add_users(container: Object) -> None:
-  add_comp1117_classmates(container)
+  add_comp1117_classmates(container, 'a')
+  add_comp1117_classmates(container, 'b')
   # add_general_users(container)
   # add_inno_lens_members(container)
   # add_comp3356_robotics_members(container)
 
-def add_comp1117_classmates(container: Object) -> None:
-  for _ in range(120):
+def add_comp1117_classmates(container: Object, subclass: Literal['a', 'b']) -> None:
+  for _ in range(60):
     obj = container.engine.create_object()
+
     member = obj.add_component(Member)
     member.randomize_fields(
       department_choices=['Computer Science', 'Electrical and Electronic Engineering'],
       type_of_study_choices=['Undergraduate'],
       study_programme_choices=['JS6963'],
       year_of_study_choices=[2, 3, 4],
-      affiliated_student_interest_groups_choices=['COMP1117'],
+      affiliated_student_interest_groups_choices=[f'COMP1117_{subclass.upper()}'],
       membership_start_time=randtime_nd(
         lower=datetime(2020, 1, 1, tzinfo=hk_timezone),
         upper=datetime(2020, 1, 20, tzinfo=hk_timezone),
@@ -41,7 +44,10 @@ def add_comp1117_classmates(container: Object) -> None:
       ),
       membership_end_time=datetime(2020, 6, 1, tzinfo=hk_timezone)
     )
-    obj.add_component(COMP1117Classmate)
+
+    comp1117 = obj.add_component(COMP1117Classmate)
+    comp1117.subclass = subclass
+
     container.add_object(obj)
 
 def add_general_users(container: Object) -> None:
