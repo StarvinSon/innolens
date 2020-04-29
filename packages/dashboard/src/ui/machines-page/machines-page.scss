@@ -1,26 +1,27 @@
 @use '../layout';
 @use '../theme';
 @use '../typography';
-@use '../line-chart';
+@use '../line-chart-2' as line-chart;
 
 
 :host {
-  display: block;
+  display: grid;
+  grid-template-areas: options charts;
+  grid-template-columns: 1fr 2fr;
 }
 
 :host([hidden]) {
   display: none;
 }
 
-.content {
-  box-sizing: border-box;
-  margin-left: auto;
-  margin-right: auto;
-  max-width: layout.$max-width;
-  padding: 2rem 1rem;
-}
-
 .options {
+  position: sticky;
+  top: layout.$top-bar-height;
+  height: calc(100vh - #{layout.$top-bar-height});
+  box-sizing: border-box;
+  padding: 2rem 1rem;
+  overflow-y: auto;
+
   & > :not(:first-child) {
     margin-top: 2rem;
   }
@@ -39,16 +40,14 @@
   }
 }
 
-.chart-cards {
-  display: flex;
-  margin-top: 4rem;
-  flex-direction: column;
+.charts {
+  padding: 2rem 1rem;
 
-  & > * {
+  & > :not(:first-child) {
     margin-top: 2rem;
   }
 }
 
 .line-chart {
-  #{line-chart.$content-aspect-ratio}: 33%;
+  #{line-chart.$content-aspect-ratio}: 50%;
 }

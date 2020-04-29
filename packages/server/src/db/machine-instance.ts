@@ -12,7 +12,10 @@ export interface MachineInstance {
   readonly typeId: string;
   readonly instanceId: string;
   readonly instanceName: string;
+  readonly currentMemberIds: ReadonlyArray<string>;
+  readonly versionId: ObjectId;
 }
+
 
 export interface MachineInstanceCollection extends Collection<MachineInstance> {}
 
@@ -32,7 +35,9 @@ export const MachineInstanceCollection = decorate(
             '_id',
             'typeId',
             'instanceId',
-            'instanceName'
+            'instanceName',
+            'currentMemberIds',
+            'versionId'
           ],
           properties: {
             _id: {
@@ -46,6 +51,15 @@ export const MachineInstanceCollection = decorate(
             },
             instanceName: {
               bsonType: 'string'
+            },
+            currentMemberIds: {
+              bsonType: 'array',
+              items: {
+                type: 'string'
+              }
+            },
+            versionId: {
+              bsonType: 'objectId'
             }
           }
         }

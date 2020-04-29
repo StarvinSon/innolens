@@ -1,7 +1,7 @@
-name: PostTypes
+name: ImportInstances
 
 method: post
-path: /api/machines/types
+path: /api/machines/types/:typeId/instances
 
 authentication:
   type: bearer

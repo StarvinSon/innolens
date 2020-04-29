@@ -1,90 +1,19 @@
 import { singleton, injectableConstructor } from '@innolens/resolver/node';
-import { parseISO } from 'date-fns';
-import createHttpError from 'http-errors';
+import csvParse from 'csv-parse';
+import createHttpError, { BadRequest } from 'http-errors';
 import { CREATED, BAD_REQUEST, NOT_FOUND } from 'http-status-codes';
 
 import { FileService } from '../services/file';
 import {
-  MachineService, MachineTypeNotFoundError, MachineInstance,
-  MachineMemberCountHistory, MachineInstanceNotFoundError
+  MachineService, MachineTypeNotFoundError, MachineType, MachineInstance,
+  MachineMemberCountHistory, MachineInstanceNotFoundError,
+  MachineImportInstanceAccessRecord, MachineMemberCountForecast
 } from '../services/machine';
 import { OAuth2Service } from '../services/oauth2';
-import { fromAsync } from '../utils/array';
+import { decodeCsvRecord, decodeCsvString, decodeCsvDate } from '../utils/csv-parser';
 
 import { MachineControllerGlue } from './glues/machine';
-import { CsvParser } from './utils/csv-parser';
 import { FileController } from './utils/file-controller';
-
-
-export interface CsvTypeRecord {
-  readonly type_id: string;
-  readonly type_name: string;
-}
-
-export type CsvTypeRecordJson = CsvTypeRecord;
-
-export const csvTypeRecordJsonSchema: object = {
-  type: 'object',
-  required: ['type_id', 'type_name'],
-  additionalProperties: false,
-  properties: {
-    type_id: {
-      type: 'string'
-    },
-    type_name: {
-      type: 'string'
-    }
-  }
-};
-
-
-export interface CsvInstanceRecord {
-  readonly instance_id: string;
-  readonly instance_name: string;
-}
-
-export type CsvInstanceRecordJson = CsvInstanceRecord;
-
-export const csvInstanceRecordJsonSchema: object = {
-  type: 'object',
-  required: ['instance_id', 'instance_name'],
-  additionalProperties: false,
-  properties: {
-    instance_id: {
-      type: 'string'
-    },
-    instance_name: {
-      type: 'string'
-    }
-  }
-};
-
-interface CsvAccessRecord {
-  readonly time: Date;
-  readonly member_id: string;
-  readonly action: 'acquire' | 'release';
-}
-
-interface CsvAccessRecordJson extends Omit<CsvAccessRecord, 'time'> {
-  readonly time: string;
-}
-
-const csvAccessRecordJsonSchema: object = {
-  type: 'object',
-  required: ['time', 'member_id', 'action'],
-  additionalProperties: false,
-  properties: {
-    time: {
-      type: 'string'
-    },
-    member_id: {
-      type: 'string'
-    },
-    action: {
-      enum: ['acquire', 'release']
-    }
-  }
-};
 
 
 @injectableConstructor({
@@ -98,12 +27,6 @@ export class MachineController extends FileController(MachineControllerGlue) {
   private readonly _oauth2Service: OAuth2Service;
 
   protected readonly [FileController.fileService]: FileService;
-
-  /* eslint-disable max-len */
-  private readonly _typeCsvParser = new CsvParser<CsvTypeRecordJson>(csvTypeRecordJsonSchema);
-  private readonly _instanceCsvParser = new CsvParser<CsvInstanceRecordJson>(csvInstanceRecordJsonSchema);
-  private readonly _instanceAccessRecordsCsvParser = new CsvParser<CsvAccessRecordJson>(csvAccessRecordJsonSchema);
-  /* eslint-enable max-len */
 
 
   public constructor(deps: {
@@ -119,12 +42,15 @@ export class MachineController extends FileController(MachineControllerGlue) {
     } = deps);
   }
 
+
   protected async checkBearerToken(bearToken: string): Promise<boolean> {
     return this._oauth2Service.checkAccessToken(bearToken);
   }
 
 
-  protected async handleGetTypes(ctx: MachineControllerGlue.GetTypesContext): Promise<void> {
+  protected async handleGetTypes(
+    ctx: MachineControllerGlue.GetTypesContext
+  ): Promise<void> {
     const spaces = await this._machineService.getTypes();
     ctx.responseBodyData = spaces.map((type) => ({
       typeId: type.typeId,
@@ -132,21 +58,39 @@ export class MachineController extends FileController(MachineControllerGlue) {
     }));
   }
 
-  protected async handlePostTypes(ctx: MachineControllerGlue.PostTypesContext): Promise<void> {
+  protected async handleImportTypes(
+    ctx: MachineControllerGlue.ImportTypesContext
+  ): Promise<void> {
     const fileStream = this.getFile(ctx.authentication.token, ctx.requestBody.fileId);
-    const records = (await fromAsync(this._typeCsvParser.parse(fileStream)))
-      .map((record) => ({
+
+    const csvRecordStream = fileStream.pipe(csvParse({ columns: true }));
+    const records: Array<Pick<MachineType, 'typeId' | 'typeName'>> = [];
+    for await (const csvRecord of csvRecordStream) {
+      const record = decodeCsvRecord(
+        csvRecord,
+        ['type_id', 'type_name'],
+        {
+          type_id: decodeCsvString,
+          type_name: decodeCsvString
+        }
+      );
+      if (record === undefined) {
+        throw new BadRequest('Failed to parse a row in the reusable inventory type csv file');
+      }
+      records.push({
         typeId: record.type_id,
         typeName: record.type_name
-      }));
+      });
+    }
 
     await this._machineService.importTypes(records);
     ctx.status = CREATED;
   }
 
 
-  // eslint-disable-next-line max-len
-  protected async handleGetInstances(ctx: MachineControllerGlue.GetInstancesContext): Promise<void> {
+  protected async handleGetInstances(
+    ctx: MachineControllerGlue.GetInstancesContext
+  ): Promise<void> {
     let instances: ReadonlyArray<MachineInstance>;
     try {
       instances = await this._machineService.getInstances(ctx.params.typeId);
@@ -163,14 +107,30 @@ export class MachineController extends FileController(MachineControllerGlue) {
     }));
   }
 
-  // eslint-disable-next-line max-len
-  protected async handlePostInstances(ctx: MachineControllerGlue.PostInstancesContext): Promise<void> {
+  protected async handleImportInstances(
+    ctx: MachineControllerGlue.ImportInstancesContext
+  ): Promise<void> {
     const fileStream = this.getFile(ctx.authentication.token, ctx.requestBody.fileId);
-    const records = (await fromAsync(this._instanceCsvParser.parse(fileStream)))
-      .map((record) => ({
+
+    const records: Array<Pick<MachineInstance, 'instanceId' | 'instanceName'>> = [];
+    const csvRecordStream = fileStream.pipe(csvParse({ columns: true }));
+    for await (const csvRecord of csvRecordStream) {
+      const record = decodeCsvRecord(
+        csvRecord,
+        ['instance_id', 'instance_name'],
+        {
+          instance_id: decodeCsvString,
+          instance_name: decodeCsvString
+        }
+      );
+      if (record === undefined) {
+        throw new BadRequest('Failed to parse a row in the reusable inventory type csv file');
+      }
+      records.push({
         instanceId: record.instance_id,
         instanceName: record.instance_name
-      }));
+      });
+    }
 
     try {
       await this._machineService.importInstances(ctx.params.typeId, records);
@@ -184,26 +144,45 @@ export class MachineController extends FileController(MachineControllerGlue) {
     ctx.status = CREATED;
   }
 
-  // eslint-disable-next-line max-len
-  protected async handlePostInstanceAccessRecords(ctx: MachineControllerGlue.PostInstanceAccessRecordsContext): Promise<void> {
+  protected async handleImportInstanceAccessRecords(
+    ctx: MachineControllerGlue.ImportInstanceAccessRecordsContext
+  ): Promise<void> {
     const fileStream = this.getFile(ctx.authentication.token, ctx.requestBody.fileId);
-    const records = (await fromAsync(this._instanceAccessRecordsCsvParser.parse(fileStream)))
-      .map((record) => ({
-        time: parseISO(record.time),
-        memberId: record.member_id,
-        action: record.action
-      }));
+
+    const records: Array<MachineImportInstanceAccessRecord> = [];
+    const csvRecordStream = fileStream.pipe(csvParse({ columns: true }));
+    for await (const csvRecord of csvRecordStream) {
+      const record = decodeCsvRecord(
+        csvRecord,
+        ['time', 'action', 'member_id'],
+        {
+          time: decodeCsvDate,
+          action: (item) => item === 'acquire' || item === 'release' ? item : undefined,
+          member_id: decodeCsvString
+        }
+      );
+      if (record === undefined) {
+        throw new BadRequest('Failed to parse a row in the reusable inventory type csv file');
+      }
+      records.push({
+        time: record.time,
+        action: record.action,
+        memberId: record.member_id
+      });
+    }
 
     try {
-      await this._machineService.importAccessRecords(
+      await this._machineService.importInstanceAccessRecords(
         ctx.params.typeId,
         ctx.params.instanceId,
         ctx.requestBody.deleteFromTime,
-        ctx.requestBody.deleteToTime,
         records
       );
     } catch (err) {
-      if (err instanceof MachineTypeNotFoundError || err instanceof MachineInstanceNotFoundError) {
+      if (
+        err instanceof MachineTypeNotFoundError
+        || err instanceof MachineInstanceNotFoundError
+      ) {
         throw createHttpError(NOT_FOUND, err);
       }
       throw err;
@@ -213,18 +192,50 @@ export class MachineController extends FileController(MachineControllerGlue) {
   }
 
 
-  // eslint-disable-next-line max-len
-  protected async handleGetMemberCountHistory(ctx: MachineControllerGlue.GetMemberCountHistoryContext): Promise<void> {
+  protected async handleGetMemberCountHistory(
+    ctx: MachineControllerGlue.GetMemberCountHistoryContext
+  ): Promise<void> {
     let history: MachineMemberCountHistory;
     try {
-      history = await this._machineService.getMemberCountHistory(
-        ctx.query.typeIds ?? null,
-        ctx.query.instanceIds ?? null,
-        ctx.query.groupBy ?? 'all',
-        ctx.query.pastHours
-      );
+      history = await this._machineService.getMemberCountHistory({
+        fromTime: ctx.requestBody.fromTime,
+        toTime: ctx.requestBody.toTime,
+        timeStepMs: ctx.requestBody.timeStepMs ?? (30 * 60 * 1000),
+        filterTypeIds: ctx.requestBody.filterTypeIds ?? null,
+        filterInstanceIds: ctx.requestBody.filterInstanceIds ?? null,
+        groupBy: ctx.requestBody.groupBy ?? null,
+        countType: ctx.requestBody.countType ?? 'use'
+      });
     } catch (err) {
-      if (err instanceof MachineTypeNotFoundError || err instanceof MachineInstanceNotFoundError) {
+      if (
+        err instanceof MachineTypeNotFoundError
+        || err instanceof MachineInstanceNotFoundError
+      ) {
+        throw createHttpError(BAD_REQUEST, err);
+      }
+      throw err;
+    }
+
+    ctx.responseBodyData = history;
+  }
+
+  protected async handleGetMemberCountForecast(
+    ctx: MachineControllerGlue.GetMemberCountForecastContext
+  ): Promise<void> {
+    let history: MachineMemberCountForecast;
+    try {
+      history = await this._machineService.getMemberCountForecast({
+        fromTime: ctx.requestBody.fromTime,
+        filterTypeIds: ctx.requestBody.filterTypeIds ?? null,
+        filterInstanceIds: ctx.requestBody.filterInstanceIds ?? null,
+        groupBy: ctx.requestBody.groupBy ?? null,
+        countType: ctx.requestBody.countType ?? 'use'
+      });
+    } catch (err) {
+      if (
+        err instanceof MachineTypeNotFoundError
+        || err instanceof MachineInstanceNotFoundError
+      ) {
         throw createHttpError(BAD_REQUEST, err);
       }
       throw err;

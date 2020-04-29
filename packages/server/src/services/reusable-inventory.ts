@@ -115,8 +115,7 @@ export class ReusableInventoryService {
   }
 
   private async _hasType(typeId: string): Promise<boolean> {
-    const count = await this._typeCollection
-      .countDocuments({ typeId }, { limit: 1 });
+    const count = await this._typeCollection.countDocuments({ typeId }, { limit: 1 });
     return count >= 1;
   }
 

@@ -944,7 +944,12 @@ export class ImportPage extends LitElement {
         await machineService.importInstances(typeId, file);
       }));
       await Promise.all(godFiles.machineAccessRecords.map(async ([typeId, instanceId, file]) => {
-        await machineService.importInstanceAccessRecords(typeId, instanceId, null, null, file);
+        await machineService.importInstanceAccessRecords({
+          typeId,
+          instanceId,
+          deleteFromTime: null,
+          file
+        });
       }));
 
       if (godFiles.reusableInventoryTypes !== null) {
@@ -1065,7 +1070,12 @@ export class ImportPage extends LitElement {
     const file = fileInputElem.files![0];
 
     this._performFormTask('machineInstanceAccessRecords', async () =>
-      machineService.importInstanceAccessRecords(typeId, instanceId, deleteFromTime, null, file));
+      machineService.importInstanceAccessRecords({
+        typeId,
+        instanceId,
+        deleteFromTime,
+        file
+      }));
   }
 
   private _onReusableInventoriesFormSubmit(event: Event): void {

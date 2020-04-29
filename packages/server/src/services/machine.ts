@@ -1,44 +1,18 @@
 import { singleton, injectableConstructor } from '@innolens/resolver/node';
-import { subDays, subHours, addHours } from 'date-fns';
-import { FilterQuery, QuerySelector } from 'mongodb';
+import { ObjectId } from 'mongodb';
 
-import { TypedAggregationCursor } from '../db/cursor';
-import { MachineAccessRecord, MachineAccessRecordCollection } from '../db/machine-access-record';
 import { MachineInstanceCollection, MachineInstance } from '../db/machine-instance';
+import { MachineMemberRecord, MachineMemberRecordCollection } from '../db/machine-member-record';
 import { MachineType, MachineTypeCollection } from '../db/machine-type';
 import { MemberCollection } from '../db/member';
-import { Writable } from '../utils/object';
+import {
+  ReadonlyMap2, Map2, setMap2,
+  copyMap2, getMap2
+} from '../utils/map';
 
-import { Member } from './member';
+import { HistoryForecastService } from './history-forecast';
+import { timeSpanRange } from './time';
 
-
-type PromiseRaceSettleResult<T> = {
-  status: 'filfilled';
-  value: T;
-  promise: Promise<T>;
-} | {
-  status: 'rejected';
-  reason: any;
-  promise: Promise<T>;
-};
-
-const raceSettled =
-  async <T>(promises: Iterable<Promise<T>>): Promise<PromiseRaceSettleResult<T>> =>
-    new Promise<PromiseRaceSettleResult<T>>((resolve) => {
-      for (const promise of promises) {
-        promise
-          .then((value) => resolve({
-            status: 'filfilled',
-            value,
-            promise
-          }))
-          .catch((reason) => resolve({
-            status: 'rejected',
-            reason,
-            promise
-          }));
-      }
-    });
 
 export class MachineTypeNotFoundError extends Error {
   public constructor(typeIds: ReadonlyArray<string>) {
@@ -53,130 +27,121 @@ export class MachineInstanceNotFoundError extends Error {
 }
 
 
-export { MachineType, MachineInstance, MachineAccessRecord };
+export {
+  MachineType,
+  MachineInstance,
+  MachineMemberRecord
+};
 
-export const machineMemberCountHistoryGroupBys = [
-  'all',
-  'department',
-  'typeOfStudy',
-  'studyProgramme',
-  'yearOfStudy',
-  'affiliatedStudentInterestGroup'
-] as const;
 
-export type MachineMemberCountHistoryGroupBy = (typeof machineMemberCountHistoryGroupBys)[number];
+export interface MachineImportInstanceAccessRecord {
+  readonly time: Date;
+  readonly action: 'acquire' | 'release';
+  readonly memberId: string;
+}
+
+
+export type MachineMemberCountHistoryGroupBy =
+  null
+  | 'type'
+  | 'instance'
+  | 'member'
+  | 'department'
+  | 'typeOfStudy'
+  | 'studyProgramme'
+  | 'yearOfStudy'
+  | 'affiliatedStudentInterestGroup';
+
+export type MachineMemberCountHistoryCountType =
+  'acquire'
+  | 'uniqueAcquire'
+  | 'release'
+  | 'uniqueRelease'
+  | 'use'
+  | 'uniqueUse';
 
 export interface MachineMemberCountHistory {
+  readonly timeSpans: ReadonlyArray<readonly [Date, Date]>;
   readonly groups: ReadonlyArray<string>;
-  readonly records: ReadonlyArray<MachineMemberCountRecord>;
+  readonly values: ReadonlyArray<ReadonlyArray<number>>;
 }
 
-export interface MachineMemberCountRecord {
-  readonly periodStartTime: Date;
-  readonly periodEndTime: Date;
-  readonly acquireCounts: MachineMemberCountRecordValues;
-  readonly uniqueAcquireCounts: MachineMemberCountRecordValues;
-  readonly releaseCounts: MachineMemberCountRecordValues;
-  readonly uniqueReleaseCounts: MachineMemberCountRecordValues;
-  readonly useCounts: MachineMemberCountRecordValues;
-  readonly uniqueUseCounts: MachineMemberCountRecordValues;
-}
 
-export interface MachineMemberCountRecordValues {
-  readonly [group: string]: number;
-}
+export type MachineMemberCountForecastGroupBy =
+  MachineMemberCountHistoryGroupBy;
+
+export type MachineMemberCountForecastCountType =
+  MachineMemberCountHistoryCountType;
+
+export type MachineMemberCountForecast =
+  MachineMemberCountHistory;
+
 
 @injectableConstructor({
   machineTypeCollection: MachineTypeCollection,
   machineInstanceCollection: MachineInstanceCollection,
-  machineAccessRecordCollection: MachineAccessRecordCollection,
-  memberCollection: MemberCollection
+  machineAccessRecordCollection: MachineMemberRecordCollection,
+  memberCollection: MemberCollection,
+  historyForecastService: HistoryForecastService
 })
 @singleton()
 export class MachineService {
-  private readonly _machineTypeCollection: MachineTypeCollection;
-  private readonly _machineInstanceCollection: MachineInstanceCollection;
-  private readonly _machineAccessRecordCollection: MachineAccessRecordCollection;
+  private readonly _typeCollection: MachineTypeCollection;
+  private readonly _instanceCollection: MachineInstanceCollection;
+  private readonly _memberRecordCollection: MachineMemberRecordCollection;
+
   private readonly _memberCollection: MemberCollection;
+  private readonly _historyForecastService: HistoryForecastService;
 
   public constructor(deps: {
     machineTypeCollection: MachineTypeCollection;
     machineInstanceCollection: MachineInstanceCollection;
-    machineAccessRecordCollection: MachineAccessRecordCollection;
+    machineAccessRecordCollection: MachineMemberRecordCollection;
     memberCollection: MemberCollection;
+    historyForecastService: HistoryForecastService;
   }) {
     ({
-      machineTypeCollection: this._machineTypeCollection,
-      machineInstanceCollection: this._machineInstanceCollection,
-      machineAccessRecordCollection: this._machineAccessRecordCollection,
-      memberCollection: this._memberCollection
+      machineTypeCollection: this._typeCollection,
+      machineInstanceCollection: this._instanceCollection,
+      machineAccessRecordCollection: this._memberRecordCollection,
+      memberCollection: this._memberCollection,
+      historyForecastService: this._historyForecastService
     } = deps);
   }
 
 
-  public async importTypes(types: ReadonlyArray<Omit<MachineType, '_id'>>): Promise<void> {
-    if (types.length === 0) return;
-    await this._machineTypeCollection
-      .bulkWrite(
-        types.map((type) => ({
-          replaceOne: {
-            filter: {
-              typeId: type.typeId
-            },
-            replacement: type,
-            upsert: true
-          }
-        })),
-        { ordered: false }
-      );
-  }
-
   public async getTypes(): Promise<Array<MachineType>> {
-    return this._machineTypeCollection.find({}).toArray();
+    return this._typeCollection.find({}).toArray();
   }
 
   private async _hasType(typeId: string): Promise<boolean> {
-    const count = await this._machineTypeCollection.countDocuments({ typeId }, { limit: 1 });
+    const count = await this._typeCollection.countDocuments({ typeId }, { limit: 1 });
     return count >= 1;
   }
 
-  private async _hasAllTypes(typeIds: ReadonlyArray<string>): Promise<boolean> {
-    const promises = new Set(typeIds.map(async (id) => this._hasType(id)));
-    while (promises.size > 0) {
-      // eslint-disable-next-line no-await-in-loop
-      const result = await raceSettled(promises);
-      promises.delete(result.promise);
-      if (result.status === 'rejected') {
-        throw result.reason;
+  private async _hasAllTypes(typeIds: ReadonlyArray<string>): Promise<ReadonlyArray<string>> {
+    const matchedTypes = await this._typeCollection.find({
+      typeId: {
+        $in: typeIds.slice()
       }
-      if (!result.value) {
-        return false;
-      }
-    }
-    return true;
+    }).toArray();
+    const matchedTypeIds = new Set(matchedTypes.map((type) => type.typeId));
+    return typeIds.filter((typeId) => !matchedTypeIds.has(typeId));
   }
 
-
-  public async importInstances(
-    typeId: string,
-    instances: ReadonlyArray<Omit<MachineInstance, '_id' | 'typeId'>>
-  ): Promise<void> {
-    if (!await this._hasType(typeId)) {
-      throw new MachineTypeNotFoundError([typeId]);
-    }
-
-    if (instances.length === 0) return;
-    await this._machineInstanceCollection
+  public async importTypes(types: ReadonlyArray<Pick<MachineType, 'typeId' | 'typeName'>>): Promise<void> {
+    if (types.length === 0) return;
+    await this._typeCollection
       .bulkWrite(
-        instances.map((instance) => ({
-          replaceOne: {
+        types.map((type) => ({
+          updateOne: {
             filter: {
-              typeId,
-              instanceId: instance.instanceId
+              typeId: type.typeId
             },
-            replacement: {
-              ...instance,
-              typeId
+            update: {
+              $set: {
+                typeName: type.typeName
+              }
             },
             upsert: true
           }
@@ -185,12 +150,13 @@ export class MachineService {
       );
   }
 
-  public async getInstances(typeId: string): Promise<Array<MachineInstance>> {
-    return this._machineInstanceCollection.find({ typeId }).toArray();
+
+  public async getInstances(typeId: string): Promise<ReadonlyArray<MachineInstance>> {
+    return this._instanceCollection.find({ typeId }).toArray();
   }
 
   private async _hasInstance(typeId: string, instanceId: string): Promise<boolean> {
-    const count = await this._machineInstanceCollection
+    const count = await this._instanceCollection
       .countDocuments({ typeId, instanceId }, { limit: 1 });
     return count >= 1;
   }
@@ -198,281 +164,528 @@ export class MachineService {
   private async _hasAllInstances(
     typeId: string,
     instanceIds: ReadonlyArray<string>
-  ): Promise<boolean> {
-    const promises = new Set(instanceIds
-      .map(async (id) => this._hasInstance(typeId, id)));
-    while (promises.size > 0) {
-      // eslint-disable-next-line no-await-in-loop
-      const result = await raceSettled(promises);
-      promises.delete(result.promise);
-      if (result.status === 'rejected') {
-        throw result.reason;
+  ): Promise<ReadonlyArray<string>> {
+    const matchedTypes = await this._instanceCollection.find({
+      typeId,
+      instanceId: {
+        $in: instanceIds.slice()
       }
-      if (!result.value) {
-        return false;
-      }
-    }
-    return true;
+    }).toArray();
+    const matchedInstanceIds = new Set(matchedTypes.map((instance) => instance.instanceId));
+    return instanceIds.filter((instanceId) => !matchedInstanceIds.has(instanceId));
   }
 
-  public async importAccessRecords(
+  public async importInstances(
     typeId: string,
-    instanceId: string,
-    deleteFromTime: Date | null,
-    deleteToTime: Date | null,
-    records: ReadonlyArray<Omit<MachineAccessRecord, '_id' | 'typeId' | 'instanceId'>>
+    instances: ReadonlyArray<Pick<MachineInstance, 'instanceId' | 'instanceName'>>
   ): Promise<void> {
-    if (!await this._hasInstance(typeId, instanceId)) {
+    if (!await this._hasType(typeId)) {
       throw new MachineTypeNotFoundError([typeId]);
     }
 
-    const deleteFilterQuery: FilterQuery<Writable<MachineAccessRecord>> = {
-      typeId,
-      instanceId
-    };
-    if (deleteFromTime !== null || deleteToTime !== null) {
-      const timeQuerySelector: QuerySelector<Date> = {};
-      if (deleteFromTime !== null) timeQuerySelector.$gte = deleteFromTime;
-      if (deleteToTime !== null) timeQuerySelector.$lt = deleteToTime;
-      deleteFilterQuery.time = timeQuerySelector;
-    }
-    await this._machineAccessRecordCollection.deleteMany(deleteFilterQuery);
-
-    if (records.length > 0) {
-      await this._machineAccessRecordCollection.insertMany(records.map((record) => ({
-        ...record,
-        typeId,
-        instanceId
-      })));
-    }
+    if (instances.length === 0) return;
+    await this._instanceCollection
+      .bulkWrite(
+        instances.map((instance) => ({
+          updateOne: {
+            filter: {
+              typeId,
+              instanceId: instance.instanceId
+            },
+            update: {
+              $set: {
+                instanceName: instance.instanceName,
+                currentMemberIds: [],
+                versionId: new ObjectId()
+              }
+            },
+            upsert: true
+          }
+        })),
+        { ordered: false }
+      );
   }
 
-
-  public async getMemberCountHistory(
-    typeIds: ReadonlyArray<string> | null,
-    instanceIds: ReadonlyArray<string> | null,
-    groupBy: MachineMemberCountHistoryGroupBy,
-    pastHours: number
-  ): Promise<MachineMemberCountHistory> {
-    if (
-      (typeIds === null || typeIds.length > 1)
-      && instanceIds !== null
-    ) {
-      throw new TypeError('Invalid combination of arguments');
+  public async importInstanceAccessRecords(
+    typeId: string,
+    instanceId: string,
+    deleteFromTime: Date | null,
+    importRecords: ReadonlyArray<MachineImportInstanceAccessRecord>
+  ): Promise<void> {
+    if (!await this._hasInstance(typeId, instanceId)) {
+      throw new MachineInstanceNotFoundError(typeId, [instanceId]);
     }
 
-    const endTime = new Date();
-    const startTime = subHours(endTime, pastHours);
-
-    if (typeIds !== null && !await this._hasAllTypes(typeIds)) {
-      throw new MachineTypeNotFoundError(typeIds);
-    }
-    if (
-      typeIds !== null && instanceIds !== null
-      && !await this._hasAllInstances(typeIds[0], instanceIds)
-    ) {
-      throw new MachineInstanceNotFoundError(typeIds[0], instanceIds);
-    }
-
-    type Record = MachineAccessRecord & { readonly member?: Member };
-    type RecordCursor = TypedAggregationCursor<Record>;
-    const cursor: RecordCursor = this._machineAccessRecordCollection.aggregate([
-      {
-        $match: {
-          ...typeIds === null ? {} : {
-            typeId: {
-              $in: typeIds
-            }
-          },
-          ...instanceIds === null ? {} : {
-            instanceId: {
-              $in: instanceIds
-            }
-          },
-          time: {
-            $gte: subDays(startTime, 1),
-            $lt: endTime
-          }
-        }
-      },
-      {
-        $sort: {
-          time: 1
-        }
-      },
-      {
-        $lookup: {
-          from: this._memberCollection.collectionName,
-          localField: 'memberId',
-          foreignField: 'memberId',
-          as: 'member'
-        }
-      },
-      {
-        $unwind: {
-          path: '$member',
-          preserveNullAndEmptyArrays: true
+    await this._memberRecordCollection.deleteMany({
+      typeId,
+      instanceId,
+      ...deleteFromTime === null ? {} : {
+        time: {
+          $gte: deleteFromTime
         }
       }
-    ]);
+    });
 
-    // Get spans
-    interface Span {
-      readonly acquireTime: Date | null;
-      readonly releaseTime: Date | null;
-      readonly member: Member;
-    }
-    const acquiredMemberInfos = new Map<string, {
-      readonly enterTime: Date;
-      readonly member: Member | null;
-    }>();
-    const exitedMemberIds = new Set<string>();
-    let spans: Array<Span> = [];
-    for await (const record of cursor) {
-      switch (record.action) {
+    const latestMemberRecord = await this._memberRecordCollection.findOne({
+      typeId,
+      instanceId
+    }, {
+      sort: {
+        time: -1,
+        _id: -1
+      }
+    });
+
+    let latestMemberIds = latestMemberRecord === null ? [] : latestMemberRecord.memberIds;
+    const memberRecords: Array<Omit<MachineMemberRecord, '_id'>> = [];
+
+    for (const importRecord of importRecords) {
+      switch (importRecord.action) {
         case 'acquire': {
-          if (!acquiredMemberInfos.has(record.memberId)) {
-            acquiredMemberInfos.set(record.memberId, {
-              enterTime: record.time,
-              member: record.member ?? null
-            });
+          if (!latestMemberIds.includes(importRecord.memberId)) {
+            latestMemberIds = [...latestMemberIds, importRecord.memberId];
           }
           break;
         }
         case 'release': {
-          const info = acquiredMemberInfos.get(record.memberId);
-          if (info !== undefined) {
-            acquiredMemberInfos.delete(record.memberId);
-            exitedMemberIds.add(record.memberId);
-            if (info.member !== null) {
-              spans.push({
-                acquireTime: info.enterTime,
-                releaseTime: record.time,
-                member: info.member
-              });
-            }
-          } else if (!exitedMemberIds.has(record.memberId)) {
-            exitedMemberIds.add(record.memberId);
-            if (record.member !== undefined) {
-              spans.push({
-                acquireTime: null,
-                releaseTime: record.time,
-                member: record.member
-              });
-            }
+          if (latestMemberIds.includes(importRecord.memberId)) {
+            latestMemberIds = latestMemberIds.filter((id) => id !== importRecord.memberId);
           }
           break;
         }
         default: {
-          throw new Error(`Unknown action: ${record.action}`);
+          throw new Error(`Unknown action: ${importRecord.action}`);
         }
       }
+
+      memberRecords.push({
+        typeId,
+        instanceId,
+        time: importRecord.time,
+        action: importRecord.action,
+        actionMemberId: importRecord.memberId,
+        memberIds: latestMemberIds
+      });
     }
-    for (const info of acquiredMemberInfos.values()) {
-      if (info.member !== null) {
-        spans.push({
-          acquireTime: info.enterTime,
-          releaseTime: null,
-          member: info.member
-        });
+
+    const promises: Array<Promise<unknown>> = [];
+    promises.push(this._instanceCollection.updateOne({
+      typeId,
+      instanceId
+    }, {
+      $set: {
+        currentMemberIds: latestMemberIds,
+        versionId: new ObjectId()
       }
+    }));
+    if (memberRecords.length > 0) {
+      promises.push(this._memberRecordCollection.insertMany(memberRecords));
     }
-    acquiredMemberInfos.clear();
+    await Promise.all(promises);
+  }
 
-    // Filter spans
-    spans = spans.filter((s) => (
-      (s.acquireTime === null || s.acquireTime.getTime() < endTime.getTime())
-      && (s.releaseTime === null || s.releaseTime.getTime() > startTime.getTime())
-    ));
 
-    // Sort spans
-    spans.sort((a, b) => (
-      a.acquireTime === null ? -1
-        : b.acquireTime === null ? 1
-          : a.acquireTime.getTime() - b.acquireTime.getTime()
-    ));
+  public async getMemberCountHistory(opts: {
+    readonly fromTime: Date;
+    readonly toTime: Date;
+    readonly timeStepMs: number;
+    readonly filterTypeIds: ReadonlyArray<string> | null;
+    readonly filterInstanceIds: ReadonlyArray<string> | null,
+    readonly groupBy: MachineMemberCountHistoryGroupBy;
+    readonly countType: MachineMemberCountHistoryCountType
+  }): Promise<MachineMemberCountHistory> {
+    type MemberRecordMap = ReadonlyMap2<string, string, MachineMemberRecord>;
 
-    // Get groups
-    const groupSet = new Set<string>();
-    if (groupBy === 'all') {
-      groupSet.add('all');
-    } else {
-      for (const span of spans) {
-        groupSet.add(span.member[groupBy]);
-      }
-    }
-    const groups: ReadonlyArray<string> = Array.from(groupSet);
+    const {
+      fromTime,
+      toTime,
+      timeStepMs,
+      filterTypeIds,
+      filterInstanceIds,
+      groupBy,
+      countType
+    } = opts;
 
-    // Get history
-    let i = 0;
-    const activeSpans: Array<Span> = [];
-    const records: Array<MachineMemberCountRecord> = [];
-    for (
-      let periodStartTime = startTime;
-      periodStartTime < endTime;
-      periodStartTime = addHours(periodStartTime, 1)
+    if (
+      (filterTypeIds === null || filterTypeIds.length !== 1)
+      && filterInstanceIds !== null
     ) {
-      const periodEndTime = addHours(periodStartTime, 1);
+      throw new TypeError('Invalid combination of arguments: filterInstanceIds must be used with one filterTypeId');
+    }
 
-      while (
-        i < spans.length
-        && (spans[i].acquireTime === null || spans[i].acquireTime! < periodEndTime)
-      ) {
-        if (spans[i].releaseTime === null || spans[i].releaseTime! > periodStartTime) {
-          activeSpans.push(spans[i]);
+    if (filterTypeIds !== null) {
+      const notFoundTypeIds = await this._hasAllTypes(filterTypeIds);
+      if (notFoundTypeIds.length > 0) {
+        throw new MachineTypeNotFoundError(notFoundTypeIds);
+      }
+    }
+
+    if (filterTypeIds !== null && filterTypeIds.length === 1) {
+      if (filterInstanceIds !== null) {
+        const notFoundInstanceIds =
+          await this._hasAllInstances(filterTypeIds[0], filterInstanceIds);
+        if (notFoundInstanceIds.length > 0) {
+          throw new MachineInstanceNotFoundError(filterTypeIds[0], notFoundInstanceIds);
         }
+      }
+    }
+
+    const [
+      memberRecords,
+      initialMemberRecords
+    ] = await Promise.all([
+      this._memberRecordCollection
+        .find(
+          {
+            ...filterTypeIds === null ? {} : {
+              typeId: {
+                $in: filterTypeIds.slice()
+              }
+            },
+            ...filterInstanceIds === null ? {} : {
+              instanceId: {
+                $in: filterInstanceIds.slice()
+              }
+            },
+            time: {
+              $gte: fromTime,
+              $lt: toTime
+            }
+          }, {
+            sort: {
+              time: 1,
+              _id: 1
+            }
+          }
+        )
+        .toArray(),
+      (async (): Promise<MemberRecordMap> => {
+        const records = await this._memberRecordCollection
+          .aggregate([
+            {
+              $match: {
+                ...filterTypeIds === null ? {} : {
+                  typeId: {
+                    $in: filterTypeIds.slice()
+                  }
+                },
+                ...filterInstanceIds === null ? {} : {
+                  instanceId: {
+                    $in: filterInstanceIds.slice()
+                  }
+                },
+                time: {
+                  $lt: fromTime
+                }
+              }
+            },
+            {
+              $sort: {
+                typeId: -1,
+                instanceId: -1,
+                time: -1,
+                _id: -1
+              }
+            },
+            {
+              $group: {
+                _id: {
+                  typeId: '$typeId',
+                  instanceId: '$instanceId'
+                },
+                doc: {
+                  $first: '$$ROOT'
+                }
+              }
+            },
+            {
+              $replaceRoot: {
+                newRoot: '$doc'
+              }
+            }
+          ])
+          .toArray();
+
+        const map: Map2<string, string, MachineMemberRecord> = new Map();
+        for (const result of records) {
+          setMap2(map, result.typeId, result.instanceId, result);
+        }
+        return map;
+      })()
+    ]);
+
+    const timeSpans = timeSpanRange(fromTime, toTime, timeStepMs);
+    const timeSpansInitialRecords: Array<MemberRecordMap> = [];
+    const timeSpansRecords: Array<ReadonlyArray<MachineMemberRecord>> = [];
+    const timeSpansLatestRecords: Array<MemberRecordMap> = [];
+
+    const currentMemberRecords = copyMap2(initialMemberRecords);
+    let i = 0;
+    for (const [, timeSpanEndTime] of timeSpans) {
+      timeSpansInitialRecords.push(
+        copyMap2<string, string, MachineMemberRecord>(currentMemberRecords)
+      );
+
+      const timeSpanRecords: Array<MachineMemberRecord> = [];
+      while (i < memberRecords.length && memberRecords[i].time <= timeSpanEndTime) {
+        setMap2(
+          currentMemberRecords,
+          memberRecords[i].typeId,
+          memberRecords[i].instanceId,
+          memberRecords[i]
+        );
+        timeSpanRecords.push(memberRecords[i]);
         i += 1;
       }
+      timeSpansRecords.push(timeSpanRecords);
 
-      interface WritableRecord extends Writable<MachineMemberCountRecord> {
-        readonly acquireCounts: Writable<MachineMemberCountRecordValues>;
-        readonly uniqueAcquireCounts: Writable<MachineMemberCountRecordValues>;
-        readonly releaseCounts: Writable<MachineMemberCountRecordValues>;
-        readonly uniqueReleaseCounts: Writable<MachineMemberCountRecordValues>;
-        readonly useCounts: Writable<MachineMemberCountRecordValues>;
-        readonly uniqueUseCounts: Writable<MachineMemberCountRecordValues>;
+      timeSpansLatestRecords.push(
+        copyMap2<string, string, MachineMemberRecord>(currentMemberRecords)
+      );
+    }
+
+    interface Stat {
+      readonly typeId: string;
+      readonly instanceId: string;
+      readonly memberId: string;
+    }
+    let timeSpansStats: ReadonlyArray<ReadonlyArray<Stat>>;
+    switch (countType) {
+      case 'acquire':
+      case 'uniqueAcquire': {
+        timeSpansStats = timeSpansRecords.map((timeSpanRecords) =>
+          timeSpanRecords
+            .filter((record) => record.action === 'acquire')
+            .map((record) => ({
+              typeId: record.typeId,
+              instanceId: record.instanceId,
+              memberId: record.actionMemberId
+            })));
+        break;
       }
-      const record: WritableRecord = {
-        periodStartTime,
-        periodEndTime,
-        acquireCounts: {},
-        uniqueAcquireCounts: {},
-        releaseCounts: {},
-        uniqueReleaseCounts: {},
-        useCounts: {},
-        uniqueUseCounts: {}
-      };
-      for (const group of groups) {
-        const activeGroupSpans = groupBy === 'all'
-          ? activeSpans
-          : activeSpans.filter((s) => s.member[groupBy] === group);
-
-        const enterSpans = activeGroupSpans
-          .filter((s) => s.acquireTime !== null && s.acquireTime >= periodStartTime);
-        record.acquireCounts[group] = enterSpans.length;
-        record.uniqueAcquireCounts[group] = new Set(enterSpans.map((s) => s.member.memberId)).size;
-
-        const exitSpans = activeGroupSpans
-          .filter((s) => s.releaseTime !== null && s.releaseTime <= periodEndTime);
-        record.releaseCounts[group] = exitSpans.length;
-        record.uniqueReleaseCounts[group] = new Set(exitSpans.map((s) => s.member.memberId)).size;
-
-        record.useCounts[group] = activeGroupSpans.length;
-        record.uniqueUseCounts[group] =
-          new Set(activeGroupSpans.map((s) => s.member.memberId)).size;
+      case 'release':
+      case 'uniqueRelease': {
+        timeSpansStats = timeSpansRecords.map((timeSpanRecords) =>
+          timeSpanRecords
+            .filter((record) => record.action === 'release')
+            .map((record) => ({
+              typeId: record.typeId,
+              instanceId: record.instanceId,
+              memberId: record.actionMemberId
+            })));
+        break;
       }
-      records.push(record);
+      case 'use':
+      case 'uniqueUse': {
+        timeSpansStats = timeSpansRecords.map((timeSpanRecords, t) => {
+          const initialRecords = timeSpansInitialRecords[t];
 
-      for (let j = activeSpans.length - 1; j >= 0; j -= 1) {
-        if (activeSpans[j].releaseTime !== null && activeSpans[j].releaseTime! <= periodEndTime) {
-          activeSpans.splice(j, 1);
+          const usingMemberIds: Map2<string, string, Array<string>> = new Map();
+          const usedMemberStats: Array<Stat> = [];
+
+          for (const instanceRecords of initialRecords.values()) {
+            for (const record of instanceRecords.values()) {
+              setMap2(usingMemberIds, record.typeId, record.instanceId, record.memberIds);
+              usedMemberStats.push(...record.memberIds.map((memberId) => ({
+                typeId: record.typeId,
+                instanceId: record.instanceId,
+                memberId
+              })));
+            }
+          }
+
+          for (const record of timeSpanRecords) {
+            switch (record.action) {
+              case 'acquire': {
+                let ids: Array<string> | undefined =
+                  getMap2(usingMemberIds, record.typeId, record.instanceId);
+                if (ids === undefined) {
+                  ids = [];
+                  setMap2(usingMemberIds, record.typeId, record.instanceId, ids);
+                }
+                if (!ids.includes(record.actionMemberId)) {
+                  ids.push(record.actionMemberId);
+                  usedMemberStats.push({
+                    typeId: record.typeId,
+                    instanceId: record.instanceId,
+                    memberId: record.actionMemberId
+                  });
+                }
+                break;
+              }
+              case 'release': {
+                const ids: Array<string> | undefined =
+                  getMap2(usingMemberIds, record.typeId, record.instanceId);
+                if (ids !== undefined && ids.includes(record.actionMemberId)) {
+                  ids.splice(ids.indexOf(record.actionMemberId), 1);
+                }
+                break;
+              }
+              default: {
+                const a: never = record.action;
+                throw new Error(`Unsupported action: ${a}`);
+              }
+            }
+          }
+
+          return usedMemberStats;
+        });
+        break;
+      }
+      default: {
+        const t: never = countType;
+        throw new Error(`Unsupported groupBy: ${t}`);
+      }
+    }
+
+    let groups: ReadonlyArray<string>;
+    let groupedTimeSpansStats: ReadonlyArray<ReadonlyArray<ReadonlyArray<Stat>>>;
+    switch (groupBy) {
+      case null: {
+        groups = ['total'];
+        groupedTimeSpansStats = [
+          timeSpansStats
+        ];
+        break;
+      }
+      case 'type': {
+        if (filterTypeIds !== null) {
+          groups = filterTypeIds;
+        } else {
+          groups = Array.from(new Set(
+            timeSpansStats.flatMap((stats) => stats.flatMap((stat) => stat.memberId))
+          ));
         }
+        groupedTimeSpansStats = groups.map((typeId) =>
+          timeSpansStats.map((stats) =>
+            stats.filter((stat) => stat.typeId === typeId)));
+        break;
+      }
+      case 'instance': {
+        if (filterInstanceIds !== null) {
+          groups = filterInstanceIds;
+        } else {
+          groups = Array.from(new Set(
+            timeSpansStats.flatMap((stats) => stats.flatMap((stat) => stat.instanceId))
+          ));
+        }
+        groupedTimeSpansStats = groups.map((instanceId) =>
+          timeSpansStats.map((stats) =>
+            stats.filter((stat) => stat.instanceId === instanceId)));
+        break;
+      }
+      case 'member': {
+        groups = Array.from(new Set(
+          timeSpansRecords.flatMap((timeSpanRecords) =>
+            timeSpanRecords.flatMap((record) => record.memberIds))
+        ));
+        groupedTimeSpansStats = groups.map((memberId) =>
+          timeSpansStats.map((stats) =>
+            stats.filter((stat) =>
+              stat.memberId === memberId)));
+        break;
+      }
+      case 'department':
+      case 'typeOfStudy':
+      case 'studyProgramme':
+      case 'yearOfStudy':
+      case 'affiliatedStudentInterestGroup': {
+        const memberIds = Array.from(new Set(
+          timeSpansRecords.flatMap((timeSpanRecords) =>
+            timeSpanRecords.flatMap((record) => record.memberIds))
+        ));
+        const memberList = await this._memberCollection
+          .find({
+            memberId: {
+              $in: memberIds
+            }
+          })
+          .toArray();
+        const memberMap = new Map(memberList.map((m) => [m.memberId, m]));
+
+        groups = Array.from(new Set(memberList.map((member) => member[groupBy])));
+        groupedTimeSpansStats = groups.map((memberId) =>
+          timeSpansStats.map((stats) =>
+            stats.filter((stat) =>
+              memberMap.get(stat.memberId)?.[groupBy] === memberId)));
+        break;
+      }
+      default: {
+        throw new Error(`Unsupported groupBy: ${groupBy}`);
+      }
+    }
+
+    let values: ReadonlyArray<ReadonlyArray<number>>;
+    switch (countType) {
+      case 'acquire':
+      case 'release':
+      case 'use': {
+        values = groupedTimeSpansStats.map((groupStats) =>
+          groupStats.map((stats) =>
+            stats.length));
+        break;
+      }
+      case 'uniqueAcquire':
+      case 'uniqueRelease':
+      case 'uniqueUse': {
+        values = groupedTimeSpansStats.map((groupStats) =>
+          groupStats.map((stats) =>
+            new Set(stats.map((stat) => stat.memberId)).size));
+        break;
+      }
+      default: {
+        const t: never = countType;
+        throw new Error(`Unsupported groupBy: ${t}`);
       }
     }
 
     return {
+      timeSpans,
       groups,
-      records
+      values
+    };
+  }
+
+  public async getMemberCountForecast(opts: {
+    readonly fromTime: Date;
+    readonly filterTypeIds: ReadonlyArray<string> | null;
+    readonly filterInstanceIds: ReadonlyArray<string> | null;
+    readonly groupBy: MachineMemberCountForecastGroupBy;
+    readonly countType: MachineMemberCountForecastCountType
+  }): Promise<MachineMemberCountForecast> {
+    const {
+      fromTime,
+      filterTypeIds,
+      filterInstanceIds,
+      groupBy,
+      countType
+    } = opts;
+
+    const historyToTime = fromTime;
+    const historyFromTime = this._historyForecastService.getHistoryFromTime(historyToTime);
+    const historyTimeStepMs = this._historyForecastService.timeStepMs;
+    const history = await this.getMemberCountHistory({
+      fromTime: historyFromTime,
+      toTime: historyToTime,
+      timeStepMs: historyTimeStepMs,
+      filterTypeIds,
+      filterInstanceIds,
+      groupBy,
+      countType
+    });
+
+    const forecastFromTime = fromTime;
+    const forecastToTime = this._historyForecastService.getForecastToTime(forecastFromTime);
+    const forecastTimeStepMs = this._historyForecastService.timeStepMs;
+    const forecastTimeSpans = timeSpanRange(forecastFromTime, forecastToTime, forecastTimeStepMs);
+    const forecast = history.values.length > 0
+      ? await this._historyForecastService.predict(history.values)
+      : [];
+
+    return {
+      timeSpans: forecastTimeSpans,
+      groups: history.groups,
+      values: forecast
     };
   }
 }

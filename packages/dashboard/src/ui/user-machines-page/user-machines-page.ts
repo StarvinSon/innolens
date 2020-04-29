@@ -7,7 +7,7 @@ import {
 
 import '../gauge';
 import {
-  MachineService, MachineType, MachineMemberCountHistory
+  MachineService, MachineType, MachineMemberCountHistoryLegacy
 } from '../../services/machine';
 
 import { css, classes } from './user-machines-page.scss';
@@ -54,7 +54,7 @@ export class UserMachinesPage extends LitElement {
   public machineTypeCapacity: Readonly<Record<string, number>> | null = null;
 
   @property({ attribute: false })
-  private _countHistory: ReadonlyArray<MachineMemberCountHistory> | null = null;
+  private _countHistory: ReadonlyArray<MachineMemberCountHistoryLegacy> | null = null;
 
   @property({ attribute: false })
   private _countPrediction: ReadonlyArray<MachineMemberCountPrediction> | null = null;
@@ -68,13 +68,14 @@ export class UserMachinesPage extends LitElement {
   @property({ attribute: false })
   private _gaugeData: ReadonlyArray<{ name: string; value: number }> | null = null;
 
-  private _lineChartDataDeps: readonly [ReadonlyArray<MachineMemberCountHistory> | null] = [null];
+  // eslint-disable-next-line max-len
+  private _lineChartDataDeps: readonly [ReadonlyArray<MachineMemberCountHistoryLegacy> | null] = [null];
 
   private _lineChartPredictionDataDeps: readonly [
     ReadonlyArray<MachineMemberCountPrediction> | null
   ] = [null];
 
-  private _gaugeDataDeps: readonly [ReadonlyArray<MachineMemberCountHistory> | null] = [null];
+  private _gaugeDataDeps: readonly [ReadonlyArray<MachineMemberCountHistoryLegacy> | null] = [null];
 
   private _dataFetched = false;
 
@@ -89,7 +90,7 @@ export class UserMachinesPage extends LitElement {
     if (!this._dataFetched && this.machineTypes !== null) {
       const machineTypeCapacityPromises = this.machineTypes.map(
         async (machineType): Promise<{ typeId: string; count: number }> => {
-          const instancesOfType = await this.machineService!.updateInstances(machineType.typeId);
+          const instancesOfType = await this.machineService!.fetchInstances(machineType.typeId);
           return {
             typeId: machineType.typeId,
             count: instancesOfType.length
@@ -104,11 +105,11 @@ export class UserMachinesPage extends LitElement {
       });
 
       const machineCountPromises = this.machineTypes.map(
-        async (machineType): Promise<MachineMemberCountHistory> =>
-          this.machineService!.updateMemberCountHistory(
+        async (machineType): Promise<MachineMemberCountHistoryLegacy> =>
+          this.machineService!.updateMemberCountHistoryLegacy(
             [machineType.typeId],
             undefined,
-            'all',
+            null,
             getHours(new Date())
           )
       );

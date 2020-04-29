@@ -195,24 +195,35 @@ export class ReusableInventoryService {
   ): Promise<ReusableInventoryMemberCountHistoryLegacy> {
     const toTime = legacyToTime;
     const fromTime = subHours(toTime, pastHours);
-    const history = await this.fetchMemberCountHistory({
+    const key = JSON.stringify({
       fromTime,
       toTime,
-      timeStepMs: 30 * 60 * 1000,
-      filterTypeIds: typeIds ?? null,
-      filterInstanceIds: instanceIds ?? null,
-      groupBy: groupBy ?? null,
-      countType: countType ?? 'use'
+      typeIds,
+      instanceIds,
+      groupBy,
+      countType
     });
-    return {
-      groups: history.groups,
-      records: history.timeSpans.map(([startTime, endTime], t) => ({
-        periodStartTime: startTime,
-        periodEndTime: endTime,
-        counts: Object.fromEntries(history.groups.map((group, g) =>
-          [group, history.values[g][t]]))
-      }))
-    };
+
+    return this._debouncer.debounce(`update-member-count-history:${key}`, async () => {
+      const history = await this.fetchMemberCountHistory({
+        fromTime,
+        toTime,
+        timeStepMs: 30 * 60 * 1000,
+        filterTypeIds: typeIds ?? null,
+        filterInstanceIds: instanceIds ?? null,
+        groupBy: groupBy ?? null,
+        countType: countType ?? 'use'
+      });
+      return {
+        groups: history.groups,
+        records: history.timeSpans.map(([startTime, endTime], t) => ({
+          periodStartTime: startTime,
+          periodEndTime: endTime,
+          counts: Object.fromEntries(history.groups.map((group, g) =>
+            [group, history.values[g][t]]))
+        }))
+      };
+    });
   }
 
   public async fetchMemberCountForecast(opts: {

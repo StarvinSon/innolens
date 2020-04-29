@@ -129,7 +129,7 @@ export class UserPages extends LitElement {
     }
 
     if (this.machineService !== null && !this._machineTypeFetched) {
-      this.machineService.updateTypes().then((data) => {
+      this.machineService.fetchTypes().then((data) => {
         this._machineTypes = data;
         this._machineTypeGroups = this._machineTypes.reduce(
           (groups: Array<Array<MachineType>>, machineType, i) => {

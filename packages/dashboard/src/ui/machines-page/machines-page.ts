@@ -1,4 +1,8 @@
-import { format as formatDate } from 'date-fns';
+import {
+  format as formatDate, startOfMinute, setMinutes,
+  subDays
+} from 'date-fns';
+import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
 import {
   customElement, LitElement, TemplateResult,
   html, PropertyValues, property
@@ -6,15 +10,15 @@ import {
 
 import '../choice-chip';
 import '../choice-chips';
-import '../line-chart';
 import '../chart-card';
+import '../line-chart-2';
 import {
-  MachineService, MachineType, MachineMemberCountHistoryGroupByValues,
-  MachineInstance, MachineMemberCountRecord,
-  machineMemberCountHistoryGroupByValues,
-  MachineMemberCountRecordValues,
-  MachineMemberCountHistory
+  MachineService, MachineType, MachineInstance,
+  MachineMemberCountHistory, MachineMemberCountHistoryGroupBy,
+  MachineMemberCountHistoryCountType,
+  MachineMemberCountForecast
 } from '../../services/machine';
+import { toggleNullableArray } from '../../utils/array';
 import { mergeArray } from '../../utils/immutable/array';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
@@ -22,41 +26,93 @@ import { observeProperty } from '../../utils/property-observer';
 import { css, classes } from './machines-page.scss';
 
 
-const pastDaysChoices = [1, 2, 7, 30, 60, 120, 360];
+const pastDaysChoices = [1, 2, 3, 7, 14, 30, 60, 120, 180, 360];
 
-
-type CountType = {
-  // eslint-disable-next-line max-len
-  [K in keyof MachineMemberCountRecord]: MachineMemberCountRecord[K] extends MachineMemberCountRecordValues ? K : never
-}[keyof MachineMemberCountRecord];
-
-const countTypeChoices: ReadonlyArray<{
-  readonly type: CountType,
+const groupByChoices: ReadonlyArray<{
+  readonly type: MachineMemberCountHistoryGroupBy,
   readonly name: string
 }> = [
   {
-    type: 'acquireCounts',
+    type: null,
+    name: 'None'
+  },
+  {
+    type: 'type',
+    name: 'Type'
+  },
+  {
+    type: 'instance',
+    name: 'Instance'
+  },
+  {
+    type: 'member',
+    name: 'Member'
+  },
+  {
+    type: 'department',
+    name: 'Department'
+  },
+  {
+    type: 'typeOfStudy',
+    name: 'Type of Study'
+  },
+  {
+    type: 'studyProgramme',
+    name: 'Study Programme'
+  },
+  {
+    type: 'yearOfStudy',
+    name: 'Year of Study'
+  },
+  {
+    type: 'affiliatedStudentInterestGroup',
+    name: 'Affiliated Student Interest Group'
+  }
+];
+
+const countTypeChoices: ReadonlyArray<{
+  readonly type: MachineMemberCountHistoryCountType,
+  readonly name: string
+}> = [
+  {
+    type: 'acquire',
     name: 'Acquire'
   },
   {
-    type: 'uniqueAcquireCounts',
-    name: 'Unique Acquire'
-  },
-  {
-    type: 'releaseCounts',
+    type: 'release',
     name: 'Release'
   },
   {
-    type: 'uniqueReleaseCounts',
-    name: 'Unique Release'
-  },
-  {
-    type: 'useCounts',
+    type: 'use',
     name: 'Use'
   },
   {
-    type: 'uniqueUseCounts',
+    type: 'uniqueAcquire',
+    name: 'Unique Acquire'
+  },
+  {
+    type: 'uniqueRelease',
+    name: 'Unique Release'
+  },
+  {
+    type: 'uniqueUse',
     name: 'Unique Use'
+  }
+];
+
+type ChartStyle = 'normal' | 'stacked';
+
+const chartStyleChoices: ReadonlyArray<{
+  readonly type: ChartStyle;
+  readonly name: string;
+}> = [
+  {
+    type: 'normal',
+    name: 'Normal'
+  },
+  {
+    type: 'stacked',
+    name: 'Stacked'
   }
 ];
 
@@ -78,7 +134,7 @@ export class MachinesPage extends LitElement {
 
 
   @injectableProperty(MachineService)
-  @observeProperty('_onDependencyInjected')
+  @observeProperty('_onServiceInjected')
   public machineService: MachineService | null;
 
 
@@ -87,60 +143,83 @@ export class MachinesPage extends LitElement {
 
 
   @property({ attribute: false })
-  private _types: ReadonlyArray<MachineType> | null = null;
+  private _selectedPastDays = 7;
 
   @property({ attribute: false })
   private _selectedTypeIds: ReadonlyArray<string> | null = null;
 
   @property({ attribute: false })
-  private _instances: ReadonlyArray<MachineInstance> | null = null;
-
-  @property({ attribute: false })
   private _selectedInstanceIds: ReadonlyArray<string> | null = null;
 
   @property({ attribute: false })
-  private _selectedGroupBy: MachineMemberCountHistoryGroupByValues = 'all';
+  private _selectedGroupBy: MachineMemberCountHistoryGroupBy | null = null;
 
   @property({ attribute: false })
-  private _selectedPastDays = 7;
+  private _selectedCountType: MachineMemberCountHistoryCountType = 'use';
 
   @property({ attribute: false })
-  private _selectedCountType: CountType = 'useCounts';
+  private _selectedChartStyle: ChartStyle = 'normal';
+
 
   @property({ attribute: false })
-  private _countHistory: MachineMemberCountHistory | null = null;
+  private _selectedFromTime: Date | null = null;
 
   @property({ attribute: false })
-  private _lineChartData: import('../line-chart').LineChartData<Date> | null = null;
+  private _selectedToTime: Date | null = null;
+
+  @property({ attribute: false })
+  private readonly _selectedTimeStepMs = 1800000;
 
 
-  private _selectedTypeIdsDeps: readonly [ReadonlyArray<MachineType> | null] = [null];
+  private _typeFetched = false;
 
-  private _selectedInstanceIdsDeps: readonly [ReadonlyArray<MachineInstance> | null] = [null];
+  @property({ attribute: false })
+  private _types: ReadonlyArray<MachineType> | null = null;
 
-  private _lineChartDataDeps: readonly [
+
+  private _instanceKey: string | null = null;
+
+  @property({ attribute: false })
+  private _instances: ReadonlyArray<MachineInstance> | null = null;
+
+
+  private _historyKey: string | null = null;
+
+  @property({ attribute: false })
+  private _history: MachineMemberCountHistory | null = null;
+
+
+  private _forecastKey: string | null = null;
+
+  @property({ attribute: false })
+  private _forecast: MachineMemberCountForecast | null = null;
+
+
+  private _chartPropsDeps: readonly [
     MachineMemberCountHistory | null,
-    CountType | null
+    MachineMemberCountForecast | null
   ] = [null, null];
+
+  @property({ attribute: false })
+  private _chartYs: ReadonlyArray<ReadonlyArray<number>> | null = null;
+
+  @property({ attribute: false })
+  private _chartDashedStartIndex: number | null = null;
+
+  @property({ attribute: false })
+  private _chartXLabels: ReadonlyArray<Date> | null = null;
+
+  @property({ attribute: false })
+  private _chartLineLabels: ReadonlyArray<string> | null = null;
 
 
   public constructor() {
     super();
-    this._onMachineServiceUpdated = this._onMachineServiceUpdated.bind(this);
+    this._formatLineChartLabel = this._formatLineChartLabel.bind(this);
     this.machineService = null;
   }
 
-
-  private _onDependencyInjected(): void {
-    if (this.machineService !== null) {
-      this.machineService.addEventListener('types-updated', this._onMachineServiceUpdated);
-      this.machineService.addEventListener('instances-updated', this._onMachineServiceUpdated);
-      this.machineService.addEventListener('member-count-history-updated', this._onMachineServiceUpdated);
-      this._updateProperties();
-    }
-  }
-
-  private _onMachineServiceUpdated(): void {
+  private _onServiceInjected(): void {
     this.requestUpdate();
   }
 
@@ -157,94 +236,190 @@ export class MachinesPage extends LitElement {
   private _updateProperties(): void {
     if (this.machineService === null) return;
 
-    this._types = this.machineService.types;
-    if (this._types === null) {
-      this.machineService.updateTypes();
+    if (this._selectedToTime === null) {
+      let toTime = new Date();
+      toTime = utcToZonedTime(toTime, 'Asia/Hong_Kong');
+      toTime = startOfMinute(toTime);
+      toTime = setMinutes(toTime, Math.floor(toTime.getMinutes() / 30) * 30);
+      toTime = zonedTimeToUtc(toTime, 'Asia/Hong_Kong');
+      this._selectedToTime = toTime;
     }
 
-    if (this._selectedTypeIdsDeps[0] !== this._types) {
-      if (this._types === null) {
+    if (this._selectedToTime !== null) {
+      const fromTime = subDays(this._selectedToTime, this._selectedPastDays);
+      if (
+        this._selectedFromTime === null
+        || this._selectedFromTime.getTime() !== fromTime.getTime()
+      ) {
+        this._selectedFromTime = fromTime;
+      }
+    }
+
+    if (!this._typeFetched) {
+      this.machineService
+        .fetchTypes()
+        .then((types) => {
+          this._types = types;
+        })
+        .catch((err) => {
+          console.error(err);
+          this._types = null;
+        });
+      this._typeFetched = true;
+    }
+
+    if (this._types === null || this._selectedTypeIds === null) {
+      this._selectedTypeIds = null;
+    } else {
+      const typeIds = new Set(this._types.map((type) => type.typeId));
+      const newSelectedTypeIds = this._selectedTypeIds.filter((id) => typeIds.has(id));
+      if (newSelectedTypeIds.length === 0) {
         this._selectedTypeIds = null;
       } else {
-        const ids = new Set(this._types.map((type) => type.typeId));
-        this._selectedTypeIds = mergeArray(
-          this._selectedTypeIds,
-          this._selectedTypeIds === null
-            ? emptyArray
-            : this._selectedTypeIds.filter((id) => ids.has(id))
-        );
+        this._selectedTypeIds = mergeArray(this._selectedTypeIds, newSelectedTypeIds);
       }
-      this._selectedTypeIdsDeps = [this._types];
     }
 
-    if (this._selectedTypeIds === null) {
-      this._instances = null;
-    } else if (this._selectedTypeIds.length !== 1) {
-      this._instances = emptyArray;
+    const instanceKey = JSON.stringify({ typeId: this._selectedTypeIds });
+    if (this._instanceKey !== instanceKey) {
+      if (this._selectedTypeIds === null || this._selectedTypeIds.length !== 1) {
+        this._instances = null;
+      } else {
+        this.machineService
+          .fetchInstances(this._selectedTypeIds[0])
+          .then((instances) => {
+            if (this._instanceKey === instanceKey) {
+              this._instances = instances;
+            }
+          })
+          .catch((err) => {
+            console.error(err);
+            if (this._instanceKey === instanceKey) {
+              this._instances = null;
+            }
+          });
+      }
+      this._instanceKey = instanceKey;
+    }
+
+    if (this._instances === null || this._selectedInstanceIds === null) {
+      this._selectedInstanceIds = null;
     } else {
-      this._instances = this.machineService.getInstances(this._selectedTypeIds[0]);
-      if (this._instances === null) {
-        this.machineService.updateInstances(this._selectedTypeIds[0]);
-      }
-    }
-
-    if (this._selectedInstanceIdsDeps[0] !== this._instances) {
-      if (this._instances === null) {
+      const ids = new Set(this._instances.map((instance) => instance.instanceId));
+      const newSelectedInstanceIds = this._selectedInstanceIds.filter((id) => ids.has(id));
+      if (newSelectedInstanceIds.length === 0) {
         this._selectedInstanceIds = null;
       } else {
-        const ids = new Set(this._instances.map((instance) => instance.instanceId));
-        this._selectedInstanceIds = mergeArray(
-          this._selectedInstanceIds,
-          this._selectedInstanceIds === null
-            ? emptyArray
-            : this._selectedInstanceIds.filter((id) => ids.has(id))
-        );
-      }
-      this._selectedInstanceIdsDeps = [this._instances];
-    }
-
-    if (this._selectedTypeIds === null || this._selectedInstanceIds === null) {
-      this._countHistory = null;
-    } else {
-      const opts = [
-        this._selectedTypeIds.length > 0 ? this._selectedTypeIds : undefined,
-        this._selectedInstanceIds.length > 0 ? this._selectedInstanceIds : undefined,
-        this._selectedGroupBy,
-        this._selectedPastDays * 24
-      ] as const;
-      this._countHistory = this.machineService.getMemberCountHistory(...opts);
-      if (this._countHistory === null) {
-        this.machineService.updateMemberCountHistory(...opts);
+        this._selectedInstanceIds = mergeArray(this._selectedInstanceIds, newSelectedInstanceIds);
       }
     }
 
-    if (
-      this._lineChartDataDeps[0] !== this._countHistory
-      || this._lineChartDataDeps[1] !== this._selectedCountType
-    ) {
-      if (this._countHistory === null) {
-        this._lineChartData = null;
+    const historyKey = JSON.stringify({
+      fromTime: this._selectedFromTime,
+      toTime: this._selectedToTime,
+      timeStepMs: this._selectedTimeStepMs,
+      filterTypeIds: this._selectedTypeIds,
+      filterInstanceIds: this._selectedInstanceIds,
+      groupBy: this._selectedGroupBy,
+      countType: this._selectedCountType
+    });
+    if (this._historyKey !== historyKey) {
+      if (this._selectedFromTime === null || this._selectedToTime === null) {
+        this._history = null;
       } else {
-        this._lineChartData = {
-          lines: this._countHistory.groups.map((group) => ({
-            name: group,
-            values: this._countHistory!.records
-              .map((record) => record[this._selectedCountType][group])
-          })),
-          labels: this._countHistory.records.map((record) => record.periodEndTime),
-          formatLabel: (time) => formatDate(time, 'd/L')
-        };
+        this.machineService
+          .fetchMemberCountHistory({
+            fromTime: this._selectedFromTime,
+            toTime: this._selectedToTime,
+            timeStepMs: this._selectedTimeStepMs,
+            filterTypeIds: this._selectedTypeIds,
+            filterInstanceIds: this._selectedInstanceIds,
+            groupBy: this._selectedGroupBy,
+            countType: this._selectedCountType
+          })
+          .then((history) => {
+            if (this._historyKey === historyKey) {
+              this._history = history;
+            }
+          })
+          .catch((err) => {
+            console.error(err);
+            if (this._historyKey === historyKey) {
+              this._history = null;
+            }
+          });
       }
-      this._lineChartDataDeps = [this._countHistory, this._selectedCountType];
+      this._historyKey = historyKey;
+    }
+
+    const forecastKey = JSON.stringify({
+      fromTime: this._selectedToTime,
+      filterTypeIds: this._selectedTypeIds,
+      filterInstanceIds: this._selectedInstanceIds,
+      groupBy: this._selectedGroupBy,
+      countType: this._selectedCountType
+    });
+    if (this._forecastKey !== forecastKey) {
+      if (this._selectedToTime === null) {
+        this._forecast = null;
+      } else {
+        this.machineService
+          .fetchMemberCountForecast({
+            fromTime: this._selectedToTime,
+            filterTypeIds: this._selectedTypeIds,
+            filterInstanceIds: this._selectedInstanceIds,
+            groupBy: this._selectedGroupBy,
+            countType: this._selectedCountType
+          })
+          .then((forecast) => {
+            if (this._forecastKey === forecastKey) {
+              this._forecast = forecast;
+            }
+          })
+          .catch((err) => {
+            console.error(err);
+            if (this._forecastKey === forecastKey) {
+              this._forecast = null;
+            }
+          });
+      }
+      this._forecastKey = forecastKey;
+    }
+
+    if (this._chartPropsDeps[0] !== this._history || this._chartPropsDeps[1] !== this._forecast) {
+      if (this._history === null || this._forecast === null) {
+        this._chartYs = null;
+        this._chartDashedStartIndex = null;
+        this._chartXLabels = null;
+        this._chartLineLabels = null;
+      } else {
+        const groups = Array.from(new Set(
+          this._history.groups.concat(this._forecast.groups)
+        ));
+        this._chartYs = groups.map((group) => {
+          const historyG = this._history!.groups.indexOf(group);
+          const forecastG = this._forecast!.groups.indexOf(group);
+          const historyGroupY = historyG >= 0
+            ? this._history!.values[historyG]
+            : this._history!.timeSpans.map(() => 0);
+          const forecastGroupY = forecastG >= 0
+            ? this._forecast!.values[forecastG]
+            : this._forecast!.timeSpans.map(() => 0);
+          return historyGroupY.concat(forecastGroupY);
+        });
+        this._chartDashedStartIndex = this._history.timeSpans.length - 1;
+        this._chartXLabels = this._history.timeSpans.concat(this._forecast.timeSpans)
+          .map(([, endTime]) => endTime);
+        this._chartLineLabels = groups;
+      }
+      this._chartPropsDeps = [this._history, this._forecast];
     }
   }
 
   protected render(): TemplateResult {
     return html`
-      <div class="${classes.content}">
-        ${this._renderOptions()}
-        ${this._renderLineChart()}
-      </div>
+      ${this._renderOptions()}
+      ${this._renderLineChart()}
     `;
   }
 
@@ -254,7 +429,15 @@ export class MachinesPage extends LitElement {
       <div class="${classes.options}">
 
         ${this._renderChipOptions({
-          title: 'Machine Type',
+          title: 'Past Days',
+          items: pastDaysChoices,
+          selectItem: (item) => item === this._selectedPastDays,
+          formatItem: (item) => html`${item} Days`,
+          onClick: (item) => this._onPastDaysChipClick(item)
+        })}
+
+        ${this._renderChipOptions({
+          title: 'Type',
           items: this._types === null ? emptyArray : [
             {
               typeId: null,
@@ -262,15 +445,15 @@ export class MachinesPage extends LitElement {
             },
             ...this._types
           ],
-          selectItem: (type) => type.typeId === null
-            ? this._selectedTypeIds !== null && this._selectedTypeIds.length === 0
-            : this._selectedTypeIds !== null && this._selectedTypeIds.includes(type.typeId),
-          formatItem: (type) => type.typeName,
-          onClick: (type) => this._onTypeChipClick(type.typeId)
+          selectItem: (item) => item.typeId === null
+            ? this._selectedTypeIds === null
+            : this._selectedTypeIds !== null && this._selectedTypeIds.includes(item.typeId),
+          formatItem: (item) => item.typeName,
+          onClick: (item) => this._onTypeChipClick(item.typeId)
         })}
 
         ${this._renderChipOptions({
-          title: 'Machine Instance',
+          title: 'Instance',
           items: this._instances === null ? emptyArray : [
             {
               instanceId: null,
@@ -278,35 +461,36 @@ export class MachinesPage extends LitElement {
             },
             ...this._instances
           ],
-          selectItem: (instance) => instance.instanceId === null
-            ? this._selectedInstanceIds !== null && this._selectedInstanceIds.length === 0
+          selectItem: (item) => item.instanceId === null
+            ? this._selectedInstanceIds === null
             // eslint-disable-next-line max-len
-            : this._selectedInstanceIds !== null && this._selectedInstanceIds.includes(instance.instanceId),
-          formatItem: (instance) => instance.instanceName,
-          onClick: (instance) => this._onInstanceChipClick(instance.instanceId)
+            : this._selectedInstanceIds !== null && this._selectedInstanceIds.includes(item.instanceId),
+          formatItem: (item) => item.instanceName,
+          onClick: (item) => this._onInstanceChipClick(item.instanceId)
         })}
 
         ${this._renderChipOptions({
           title: 'Group By',
-          items: machineMemberCountHistoryGroupByValues,
-          selectItem: (groupBy) => this._selectedGroupBy === groupBy,
-          onClick: (groupBy) => this._onGroupByChipClick(groupBy)
-        })}
-
-        ${this._renderChipOptions({
-          title: 'Past Days',
-          items: pastDaysChoices,
-          selectItem: (days) => days === this._selectedPastDays,
-          formatItem: (day) => html`${day} Days`,
-          onClick: (day) => this._onPastDaysChipClick(day)
+          items: groupByChoices,
+          selectItem: (item) => this._selectedGroupBy === item.type,
+          formatItem: (item) => item.name,
+          onClick: (item) => this._onGroupByChipClick(item.type)
         })}
 
         ${this._renderChipOptions({
           title: 'Count Type',
           items: countTypeChoices,
-          selectItem: (choice) => choice.type === this._selectedCountType,
-          formatItem: (choice) => choice.name,
-          onClick: (choice) => this._onCountTypeChipClick(choice.type)
+          selectItem: (item) => item.type === this._selectedCountType,
+          formatItem: (item) => item.name,
+          onClick: (item) => this._onCountTypeChipClick(item.type)
+        })}
+
+        ${this._renderChipOptions({
+          title: 'Chart Style',
+          items: chartStyleChoices,
+          selectItem: (item) => item.type === this._selectedChartStyle,
+          formatItem: (item) => item.name,
+          onClick: (item) => this._onChartStyleChipClick(item.type)
         })}
 
       </div>
@@ -342,55 +526,60 @@ export class MachinesPage extends LitElement {
 
   private _renderLineChart(): TemplateResult {
     return html`
-      <div class="${classes.chartCards}">
+      <div class="${classes.charts}">
         <inno-chart-card>
-          <inno-line-chart
+          <inno-line-chart-2
             class="${classes.lineChart}"
-            .data="${this._lineChartData}">
-            <span slot="title">Machine Usage History</span>
-          </inno-line-chart>
+            .ys="${this._chartYs}"
+            .dashedStartIndex="${this._chartDashedStartIndex}"
+            .xLabels="${this._chartXLabels}"
+            .lineLabels="${this._chartLineLabels}"
+            .formatXLabel="${this._formatLineChartLabel}"
+            .stacked="${this._selectedChartStyle === 'stacked'}"
+            .fill="${this._selectedChartStyle === 'stacked'}"
+          >
+            <span slot="title">Reusable Inventory Member Count History & Forecast</span>
+          </inno-line-chart-2>
         </inno-chart-card>
       </div>
     `;
   }
 
-  private _onTypeChipClick(typeId: string | null): void {
-    if (this._selectedTypeIds !== null) {
-      if (typeId === null) {
-        this._selectedTypeIds = emptyArray;
-      } else {
-        this._selectedTypeIds = this._toggleArray(this._selectedTypeIds, typeId);
-      }
-    }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private _formatLineChartLabel(time: Date, i: number): string {
+    return formatDate(time, 'd/M');
   }
 
-  private _onInstanceChipClick(instanceId: string | null): void {
-    if (this._selectedInstanceIds !== null) {
-      if (instanceId === null) {
-        this._selectedInstanceIds = emptyArray;
-      } else {
-        this._selectedInstanceIds = this._toggleArray(this._selectedInstanceIds, instanceId);
-      }
-    }
-  }
-
-  private _onGroupByChipClick(groupBy: MachineMemberCountHistoryGroupByValues): void {
-    this._selectedGroupBy = groupBy;
-  }
 
   private _onPastDaysChipClick(day: number): void {
     this._selectedPastDays = day;
   }
 
-  private _onCountTypeChipClick(type: CountType): void {
+  private _onTypeChipClick(typeId: string | null): void {
+    if (typeId === null) {
+      this._selectedTypeIds = emptyArray;
+    } else {
+      this._selectedTypeIds = toggleNullableArray(this._selectedTypeIds, typeId);
+    }
+  }
+
+  private _onInstanceChipClick(instanceId: string | null): void {
+    if (instanceId === null) {
+      this._selectedInstanceIds = emptyArray;
+    } else {
+      this._selectedInstanceIds = toggleNullableArray(this._selectedInstanceIds, instanceId);
+    }
+  }
+
+  private _onGroupByChipClick(groupBy: MachineMemberCountHistoryGroupBy | null): void {
+    this._selectedGroupBy = groupBy;
+  }
+
+  private _onCountTypeChipClick(type: MachineMemberCountHistoryCountType): void {
     this._selectedCountType = type;
   }
 
-  private _toggleArray<T>(array: ReadonlyArray<T>, item: T): ReadonlyArray<T> {
-    const index = array.indexOf(item);
-    if (index >= 0) {
-      return [...array.slice(0, index), ...array.slice(index + 1)];
-    }
-    return [...array, item];
+  private _onChartStyleChipClick(groupBy: ChartStyle): void {
+    this._selectedChartStyle = groupBy;
   }
 }

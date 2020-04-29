@@ -1,7 +1,7 @@
-name: GetMemberCountHistory
+name: GetMemberCountForecast
 
 method: post
-path: /api/machines/member-count-history
+path: /api/machines/member-count-forecast
 
 authentication:
   type: bearer
@@ -12,15 +12,10 @@ requestBody:
     type: object
     required:
       - fromTime
-      - toTime
     additionalProperties: false
     properties:
       fromTime:
         type: date
-      toTime:
-        type: date
-      timeStepMs:
-        type: integer
       filterTypeIds:
         anyOf:
           - type: 'null'
@@ -79,4 +74,4 @@ responseBody:
           items:
             type: array
             items:
-              type: integer
+              type: number

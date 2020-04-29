@@ -1,60 +1,64 @@
 import { injectableConstructor, singleton } from '@innolens/resolver/web';
+import { subHours } from 'date-fns';
 
 import { stringTag } from '../utils/class';
 import { Debouncer } from '../utils/debouncer';
+import { deprecated } from '../utils/method-deprecator';
+import { PromiseValue } from '../utils/promise';
 
-import { EffectQueue } from './effect-queue';
 import { FileService } from './file';
 import * as MachineGlue from './glues/machine';
 import { OAuth2Service } from './oauth2';
 
 
-const computeKey = (name: string, params: Readonly<Record<string, string>>): string =>
-  `${name}?${new URLSearchParams(params).toString()}`;
+export type MachineType =
+  PromiseValue<ReturnType<typeof MachineGlue.GetTypes.handleResponse>>[number];
+
+export type MachineInstance =
+  PromiseValue<ReturnType<typeof MachineGlue.GetInstances.handleResponse>>[number];
 
 
-export interface MachineType {
-  readonly typeId: string;
-  readonly typeName: string;
-}
+export type MachineMemberCountHistoryGroupBy =
+  Exclude<Parameters<typeof MachineGlue.GetMemberCountHistory.createRequest>[0]['body']['groupBy'], undefined>;
 
-export interface MachineInstance {
-  readonly instanceId: string;
-  readonly instanceName: string;
-}
+export type MachineMemberCountHistoryCountType =
+  Exclude<Parameters<typeof MachineGlue.GetMemberCountHistory.createRequest>[0]['body']['countType'], undefined>;
+
+export type MachineMemberCountHistory =
+  PromiseValue<ReturnType<typeof MachineGlue.GetMemberCountHistory.handleResponse>>;
 
 
-export const machineMemberCountHistoryGroupByValues = [
-  'all',
-  'department',
-  'typeOfStudy',
-  'studyProgramme',
-  'yearOfStudy',
-  'affiliatedStudentInterestGroup'
-] as const;
+export type MachineMemberCountForecastGroupBy =
+  Exclude<Parameters<typeof MachineGlue.GetMemberCountForecast.createRequest>[0]['body']['groupBy'], undefined>;
 
-export type MachineMemberCountHistoryGroupByValues =
-  (typeof machineMemberCountHistoryGroupByValues)[number];
+export type MachineMemberCountForecastCountType =
+  Exclude<Parameters<typeof MachineGlue.GetMemberCountForecast.createRequest>[0]['body']['countType'], undefined>;
 
-export interface MachineMemberCountHistory {
+export type MachineMemberCountForecast =
+  PromiseValue<ReturnType<typeof MachineGlue.GetMemberCountForecast.handleResponse>>;
+
+
+export interface MachineMemberCountHistoryLegacy {
   readonly groups: ReadonlyArray<string>;
-  readonly records: ReadonlyArray<MachineMemberCountRecord>;
+  readonly records: ReadonlyArray<MachineMemberCountRecordLegacy>;
 }
 
-export interface MachineMemberCountRecord {
+export interface MachineMemberCountRecordLegacy {
   readonly periodStartTime: Date;
   readonly periodEndTime: Date;
-  readonly acquireCounts: MachineMemberCountRecordValues;
-  readonly uniqueAcquireCounts: MachineMemberCountRecordValues;
-  readonly releaseCounts: MachineMemberCountRecordValues;
-  readonly uniqueReleaseCounts: MachineMemberCountRecordValues;
-  readonly useCounts: MachineMemberCountRecordValues;
-  readonly uniqueUseCounts: MachineMemberCountRecordValues;
+  readonly acquireCounts: MachineMemberCountRecordValuesLegacy;
+  readonly uniqueAcquireCounts: MachineMemberCountRecordValuesLegacy;
+  readonly releaseCounts: MachineMemberCountRecordValuesLegacy;
+  readonly uniqueReleaseCounts: MachineMemberCountRecordValuesLegacy;
+  readonly useCounts: MachineMemberCountRecordValuesLegacy;
+  readonly uniqueUseCounts: MachineMemberCountRecordValuesLegacy;
 }
 
-export interface MachineMemberCountRecordValues {
+export interface MachineMemberCountRecordValuesLegacy {
   readonly [group: string]: number;
 }
+
+const legacyToTime = new Date();
 
 
 @injectableConstructor({
@@ -63,31 +67,17 @@ export interface MachineMemberCountRecordValues {
 })
 @singleton()
 @stringTag()
-export class MachineService extends EventTarget {
+export class MachineService {
   private readonly _oauth2Service: OAuth2Service;
   private readonly _fileService: FileService;
 
-  private _typesCache: ReadonlyArray<MachineType> | null = null;
-
-  private _instancesCache: {
-    readonly typeId: string;
-    readonly data: ReadonlyArray<MachineInstance>;
-  } | null = null;
-
-  private _machineMemberCountHistoryCache: {
-    readonly key: string;
-    readonly data: MachineMemberCountHistory | null
-  } | null = null;
-
   private readonly _debouncer = new Debouncer();
-  private readonly _effectQueue = new EffectQueue();
 
 
   public constructor(deps: {
     readonly oauth2Service: OAuth2Service;
     readonly fileService: FileService;
   }) {
-    super();
     ({
       oauth2Service: this._oauth2Service,
       fileService: this._fileService
@@ -98,20 +88,13 @@ export class MachineService extends EventTarget {
   }
 
 
-  public get types(): ReadonlyArray<MachineType> | null {
-    return this._typesCache;
-  }
-
-  public async updateTypes(): Promise<ReadonlyArray<MachineType>> {
+  public async fetchTypes(): Promise<ReadonlyArray<MachineType>> {
     return this._debouncer.debounce('types', async () => {
       const resData = await this._oauth2Service
         .withAccessToken((token) => fetch(MachineGlue.GetTypes.createRequest({
           authentication: { token }
         })))
         .then(MachineGlue.GetTypes.handleResponse);
-
-      this._typesCache = resData;
-      Promise.resolve().then(() => this._notifyUpdated('types'));
       return resData;
     });
   }
@@ -119,136 +102,192 @@ export class MachineService extends EventTarget {
   public async importTypes(file: File): Promise<void> {
     const fileId = await this._fileService.upload(file);
     await this._oauth2Service
-      .withAccessToken((token) => fetch(MachineGlue.PostTypes.createRequest({
+      .withAccessToken((token) => fetch(MachineGlue.ImportTypes.createRequest({
         authentication: { token },
         body: { fileId }
       })))
-      .then(MachineGlue.PostTypes.handleResponse);
+      .then(MachineGlue.ImportTypes.handleResponse);
   }
 
 
-  public getInstances(typeId: string): ReadonlyArray<MachineInstance> | null {
-    if (this._instancesCache !== null && this._instancesCache.typeId === typeId) {
-      return this._instancesCache.data;
-    }
-    return null;
-  }
-
-  public async updateInstances(typeId: string): Promise<ReadonlyArray<MachineInstance>> {
-    const key = computeKey('instances', {
+  public async fetchInstances(typeId: string): Promise<ReadonlyArray<MachineInstance>> {
+    const key = JSON.stringify({
       typeId
     });
-    return this._debouncer.debounce(key, async () =>
-      this._effectQueue.queue('instances', async (applyEffect) => {
-        const resData = await this._oauth2Service
-          .withAccessToken((token) => fetch(MachineGlue.GetInstances.createRequest({
-            params: { typeId },
-            authentication: { token }
-          })))
-          .then(MachineGlue.GetInstances.handleResponse);
-        applyEffect(() => {
-          this._instancesCache = {
-            typeId,
-            data: resData
-          };
-          Promise.resolve().then(() => this._notifyUpdated('types'));
-        });
-        return resData;
-      }));
+
+    return this._debouncer.debounce(`instances:${key}`, async () => {
+      const resData = await this._oauth2Service
+        .withAccessToken((token) => fetch(MachineGlue.GetInstances.createRequest({
+          params: { typeId },
+          authentication: { token }
+        })))
+        .then(MachineGlue.GetInstances.handleResponse);
+      return resData;
+    });
   }
 
   public async importInstances(typeId: string, file: File): Promise<void> {
     const fileId = await this._fileService.upload(file);
     await this._oauth2Service
-      .withAccessToken((token) => fetch(MachineGlue.PostInstances.createRequest({
+      .withAccessToken((token) => fetch(MachineGlue.ImportInstances.createRequest({
         params: { typeId },
         authentication: { token },
         body: { fileId }
       })))
-      .then(MachineGlue.PostInstances.handleResponse);
+      .then(MachineGlue.ImportInstances.handleResponse);
   }
 
-  public async importInstanceAccessRecords(
-    typeId: string,
-    instanceId: string,
-    deleteFromTime: Date | null,
-    deleteToTime: Date | null,
-    file: File
-  ): Promise<void> {
-    const fileId = await this._fileService.upload(file);
+  public async importInstanceAccessRecords(opts: {
+    readonly typeId: string;
+    readonly instanceId: string;
+    readonly deleteFromTime: Date | null;
+    readonly file: File;
+  }): Promise<void> {
+    const fileId = await this._fileService.upload(opts.file);
     await this._oauth2Service
-      .withAccessToken((token) => fetch(MachineGlue.PostInstanceAccessRecords.createRequest({
-        params: { typeId, instanceId },
-        authentication: { token },
-        body: { deleteFromTime, deleteToTime, fileId }
-      })))
-      .then(MachineGlue.PostInstanceAccessRecords.handleResponse);
+      .withAccessToken((token) => fetch(MachineGlue.ImportInstanceAccessRecords
+        .createRequest({
+          params: {
+            typeId: opts.typeId,
+            instanceId: opts.instanceId
+          },
+          authentication: { token },
+          body: {
+            deleteFromTime: opts.deleteFromTime,
+            fileId
+          }
+        })))
+      .then(MachineGlue.ImportInstanceAccessRecords.handleResponse);
   }
 
 
-  private _getMemberCountHistoryKey(
-    typeIds: ReadonlyArray<string> | undefined,
-    instanceIds: ReadonlyArray<string> | undefined,
-    groupBy: MachineMemberCountHistoryGroupByValues,
-    pastHours: number
-  ): string {
-    const params = new URLSearchParams();
-    if (typeIds !== undefined) params.set('typeId', typeIds.map(encodeURIComponent).join(','));
-    if (instanceIds !== undefined) params.set('instanceId', instanceIds.map(encodeURIComponent).join(','));
-    params.set('groupBy', groupBy);
-    params.set('pastHours', String(pastHours));
-    return params.toString();
-  }
+  public async fetchMemberCountHistory(opts: {
+    readonly fromTime: Date;
+    readonly toTime: Date;
+    readonly timeStepMs: number;
+    readonly filterTypeIds: ReadonlyArray<string> | null;
+    readonly filterInstanceIds: ReadonlyArray<string> | null;
+    readonly groupBy: MachineMemberCountHistoryGroupBy;
+    readonly countType: MachineMemberCountHistoryCountType;
+  }): Promise<MachineMemberCountHistory> {
+    const key = JSON.stringify(opts);
 
-  public getMemberCountHistory(
-    typeIds: ReadonlyArray<string> | undefined,
-    instanceIds: ReadonlyArray<string> | undefined,
-    groupBy: MachineMemberCountHistoryGroupByValues,
-    pastHours: number
-  ): MachineMemberCountHistory | null {
-    const key = this._getMemberCountHistoryKey(typeIds, instanceIds, groupBy, pastHours);
-    if (
-      this._machineMemberCountHistoryCache !== null
-      && this._machineMemberCountHistoryCache.key === key
-    ) {
-      return this._machineMemberCountHistoryCache.data;
-    }
-    return null;
-  }
-
-  public async updateMemberCountHistory(
-    typeIds: ReadonlyArray<string> | undefined,
-    instanceIds: ReadonlyArray<string> | undefined,
-    groupBy: MachineMemberCountHistoryGroupByValues,
-    pastHours: number
-  ): Promise<MachineMemberCountHistory> {
-    const key = this._getMemberCountHistoryKey(typeIds, instanceIds, groupBy, pastHours);
-    return this._debouncer.debounce(`history?${key}`, async () =>
-      this._effectQueue.queue('history', async (applyEffect) => {
-        const resData = await this._oauth2Service
-          .withAccessToken((token) => fetch(MachineGlue.GetMemberCountHistory.createRequest({
-            query: {
-              typeIds,
-              instanceIds,
-              groupBy,
-              pastHours
-            },
-            authentication: { token }
+    return this._debouncer.debounce(`member-count-history:${key}`, async () => {
+      const resData = await this._oauth2Service
+        .withAccessToken((token) => fetch(MachineGlue.GetMemberCountHistory
+          .createRequest({
+            authentication: { token },
+            body: {
+              fromTime: opts.fromTime,
+              toTime: opts.toTime,
+              timeStepMs: opts.timeStepMs,
+              filterTypeIds: opts.filterTypeIds,
+              filterInstanceIds: opts.filterInstanceIds,
+              groupBy: opts.groupBy,
+              countType: opts.countType
+            }
           })))
-          .then(MachineGlue.GetMemberCountHistory.handleResponse);
-        applyEffect(() => {
-          this._machineMemberCountHistoryCache = {
-            key,
-            data: resData
-          };
-          Promise.resolve().then(() => this._notifyUpdated('member-count-history'));
-        });
-        return resData;
-      }));
+        .then(MachineGlue.GetMemberCountHistory.handleResponse);
+      return resData;
+    });
   }
 
+  @deprecated()
+  public async updateMemberCountHistoryLegacy(
+    filterTypeIds: ReadonlyArray<string> | undefined,
+    filterInstanceIds: ReadonlyArray<string> | undefined,
+    groupBy: MachineMemberCountHistoryGroupBy,
+    pastHours: number
+  ): Promise<MachineMemberCountHistoryLegacy> {
+    const toTime = legacyToTime;
+    const fromTime = subHours(toTime, pastHours);
+    const timeStepMs = 30 * 60 * 1000;
+    const key = JSON.stringify({
+      fromTime,
+      toTime,
+      timeStepMs,
+      filterTypeIds,
+      filterInstanceIds,
+      groupBy
+    });
 
-  private _notifyUpdated(type: string): void {
-    this.dispatchEvent(new Event(`${type}-updated`));
+    return this._debouncer.debounce(`update-member-count-history:${key}`, async () => {
+      const legacyCountTypes = [
+        ['acquireCounts', 'acquire'],
+        ['uniqueAcquireCounts', 'uniqueAcquire'],
+        ['releaseCounts', 'release'],
+        ['uniqueReleaseCounts', 'uniqueRelease'],
+        ['useCounts', 'use'],
+        ['uniqueUseCounts', 'uniqueUse']
+      ] as const;
+
+      const histories = new Map(await Promise.all(
+        legacyCountTypes.map(async ([legacyCountType, countType]) => {
+          const history = await this.fetchMemberCountHistory({
+            fromTime,
+            toTime,
+            timeStepMs,
+            filterTypeIds: filterTypeIds ?? null,
+            filterInstanceIds: filterInstanceIds ?? null,
+            groupBy,
+            countType
+          });
+          return [legacyCountType, history] as const;
+        })
+      ));
+
+      const { timeSpans } = histories.get('useCounts')!;
+      const groups = Array.from(new Set(
+        Array.from(histories.values()).flatMap((history) => history.groups)
+      ));
+      const records = timeSpans.map(([periodStartTime, periodEndTime], t) => ({
+        periodStartTime,
+        periodEndTime,
+        ...Object.fromEntries(legacyCountTypes.map(([legacyCountType]) => {
+          const history = histories.get(legacyCountType)!;
+          const groupValues = Object.fromEntries(groups.map((group) => {
+            const g = history.groups.indexOf(group);
+            const value = g < 0
+              ? 0
+              : history.values[g][t];
+            return [group, value];
+          }));
+          return [legacyCountType, groupValues];
+        })) as Record<'acquireCounts' | 'uniqueAcquireCounts' | 'releaseCounts' | 'uniqueReleaseCounts' | 'useCounts' | 'uniqueUseCounts', MachineMemberCountRecordValuesLegacy>
+      }));
+
+      return {
+        timeSpans,
+        groups,
+        records
+      };
+    });
+  }
+
+  public async fetchMemberCountForecast(opts: {
+    readonly fromTime: Date;
+    readonly filterTypeIds: ReadonlyArray<string> | null;
+    readonly filterInstanceIds: ReadonlyArray<string> | null;
+    readonly groupBy: MachineMemberCountForecastGroupBy;
+    readonly countType: MachineMemberCountForecastCountType;
+  }): Promise<MachineMemberCountForecast> {
+    const key = JSON.stringify(opts);
+
+    return this._debouncer.debounce(`member-count-forecast:${key}`, async () => {
+      const resData = await this._oauth2Service
+        .withAccessToken((token) => fetch(MachineGlue.GetMemberCountForecast
+          .createRequest({
+            authentication: { token },
+            body: {
+              fromTime: opts.fromTime,
+              filterTypeIds: opts.filterTypeIds,
+              filterInstanceIds: opts.filterInstanceIds,
+              groupBy: opts.groupBy,
+              countType: opts.countType
+            }
+          })))
+        .then(MachineGlue.GetMemberCountForecast.handleResponse);
+      return resData;
+    });
   }
 }

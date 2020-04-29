@@ -13,6 +13,7 @@ export interface MachineType {
   readonly typeName: string;
 }
 
+
 export interface MachineTypeCollection extends Collection<MachineType> {}
 
 export const MachineTypeCollection = decorate(

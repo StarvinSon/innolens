@@ -7,24 +7,25 @@ import { ObjectId, Collection } from 'mongodb';
 import { Db } from './db';
 
 
-export interface MachineAccessRecord {
+export interface MachineMemberRecord {
   readonly _id: ObjectId;
   readonly typeId: string;
   readonly instanceId: string;
-  readonly memberId: string;
   readonly time: Date;
   readonly action: 'acquire' | 'release';
+  readonly actionMemberId: string;
+  readonly memberIds: ReadonlyArray<string>;
 }
 
 
-export interface MachineAccessRecordCollection extends Collection<MachineAccessRecord> {}
+export interface MachineMemberRecordCollection extends Collection<MachineMemberRecord> {}
 
-export const MachineAccessRecordCollection = decorate(
-  name('MachineAccessRecordCollection'),
+export const MachineMemberRecordCollection = decorate(
+  name('MachineMemberRecordCollection'),
   injectableFactory(Db),
   singleton(),
-  async (db: Db): Promise<MachineAccessRecordCollection> =>
-    db.defineCollection('machineAccessRecords', {
+  async (db: Db): Promise<MachineMemberRecordCollection> =>
+    db.defineCollection('machineMemberRecords', {
       validationLevel: 'strict',
       validationAction: 'error',
       validator: {
@@ -35,18 +36,16 @@ export const MachineAccessRecordCollection = decorate(
             '_id',
             'typeId',
             'instanceId',
-            'memberId',
             'time',
-            'action'
+            'action',
+            'actionMemberId',
+            'memberIds'
           ],
           properties: {
             _id: {
               bsonType: 'objectId'
             },
             typeId: {
-              bsonType: 'string'
-            },
-            memberId: {
               bsonType: 'string'
             },
             instanceId: {
@@ -57,13 +56,33 @@ export const MachineAccessRecordCollection = decorate(
             },
             action: {
               enum: ['acquire', 'release']
+            },
+            actionMemberId: {
+              bsonType: 'string'
+            },
+            memberIds: {
+              bsonType: 'array',
+              items: {
+                type: 'string'
+              }
             }
           }
         }
       },
       indexes: [
         {
-          key: { typeId: 1, instanceId: 1, time: 1 }
+          key: {
+            time: 1,
+            _id: 1
+          }
+        },
+        {
+          key: {
+            typeId: 1,
+            instanceId: 1,
+            time: 1,
+            _id: 1
+          }
         }
       ]
     })
