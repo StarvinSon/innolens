@@ -1,7 +1,7 @@
-name: GetMemberHistoryFeatures
+name: GetMemberFeaturesHistory
 
 method: post
-path: /api/member-clusters/member-history-features
+path: /api/member-clusters/member-features-history
 
 authentication:
   type: bearer

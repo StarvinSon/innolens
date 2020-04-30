@@ -8,7 +8,7 @@ import { SpaceService } from './space';
 import { timeSpanRange } from './time';
 
 
-export interface MemberHistoryFeatures {
+export interface MemberFeaturesHistory {
   readonly timeSpans: ReadonlyArray<readonly [Date, Date]>;
   readonly memberIds: ReadonlyArray<string>;
   readonly features: ReadonlyArray<string>;
@@ -16,7 +16,7 @@ export interface MemberHistoryFeatures {
 }
 
 
-export interface MemberClusterResult extends MemberHistoryFeatures {
+export interface MemberClusterResult extends MemberFeaturesHistory {
   readonly clusters: ReadonlyArray<{
     readonly clusterId: number;
     readonly memberId: string | null;
@@ -47,13 +47,13 @@ export class MemberClusterService {
   }
 
 
-  public async getMemberHistoryFeatures(opts: {
+  public async getMemberFeaturesHistory(opts: {
     readonly fromTime: Date;
     readonly toTime: Date;
     readonly timeStepMs: number;
     readonly filterMemberIds: ReadonlyArray<string> | null;
     readonly filterSpaceIds: ReadonlyArray<string> | null;
-  }): Promise<MemberHistoryFeatures> {
+  }): Promise<MemberFeaturesHistory> {
     const {
       fromTime,
       toTime,
@@ -126,7 +126,7 @@ export class MemberClusterService {
       filterSpaceIds
     } = opts;
 
-    const history = await this.getMemberHistoryFeatures({
+    const history = await this.getMemberFeaturesHistory({
       fromTime,
       toTime,
       timeStepMs,

@@ -30,10 +30,10 @@ export class MemberClusterController extends MemberClusterControllerGlue {
   }
 
 
-  protected async handleGetMemberHistoryFeatures(
-    ctx: MemberClusterControllerGlue.GetMemberHistoryFeaturesContext
+  protected async handleGetMemberFeaturesHistory(
+    ctx: MemberClusterControllerGlue.GetMemberFeaturesHistoryContext
   ): Promise<void> {
-    ctx.responseBodyData = await this._memberClusterService.getMemberHistoryFeatures({
+    ctx.responseBodyData = await this._memberClusterService.getMemberFeaturesHistory({
       fromTime: ctx.requestBody.fromTime,
       toTime: ctx.requestBody.toTime,
       timeStepMs: ctx.requestBody.timeStepMs ?? (30 * 60 * 1000),
