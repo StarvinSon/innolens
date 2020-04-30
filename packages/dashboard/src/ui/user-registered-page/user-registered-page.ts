@@ -90,7 +90,7 @@ export class UserRegisteredPage extends LitElement {
             }, []).reverse(),
           /* eslint-enable @typescript-eslint/indent */
           labels: this._countHistory.records.map((record) => record.time),
-          formatLabel: (time) => formatDate(time, 'd/L')
+          formatLabel: (time) => formatDate(time, 'MMM yyyy')
         };
       }
       this._lineChartDataDeps = [this._countHistory];
@@ -159,6 +159,7 @@ export class UserRegisteredPage extends LitElement {
         <inno-line-chart
           class="${classes.lineChart}"
           .data="${this._lineChartData}"
+          .labels="${6}"
           showArea>
           <span slot="title">Growth of our users</span>
         </inno-line-chart>

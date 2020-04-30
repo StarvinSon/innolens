@@ -33,12 +33,12 @@ export class UserExpendableInventoriesPage extends LitElement {
   public expendableInventoryTypes: ReadonlyArray<ExpendableInventoryType> | null = null;
 
   @property({ attribute: false })
-  private _countHistory: ReadonlyArray<ExpendableInventoryQuantityHistoryLegacy> | null = null;
+  private _countHistory: ExpendableInventoryQuantityHistoryLegacy | null = null;
 
   private _forecastKey: string | null = null;
 
   @property({ attribute: false })
-  private _forecast: ReadonlyArray<ExpendableInventoryQuantityForecast> | null = null;
+  private _forecast: ExpendableInventoryQuantityForecast | null = null;
 
   @property({ attribute: false })
   private _lineChartData: import('../line-chart').LineChartData<Date> | null = null;
@@ -49,17 +49,13 @@ export class UserExpendableInventoriesPage extends LitElement {
   @property({ attribute: false })
   private _availabilityBarData: ReadonlyArray<{ name: string; value: number }> | null = null;
 
-  private _lineChartDataDeps: readonly [
-    ReadonlyArray<ExpendableInventoryQuantityHistoryLegacy> | null
-  ] = [null];
+  private _lineChartDataDeps: readonly [ExpendableInventoryQuantityHistoryLegacy | null] = [null];
 
-  private _lineChartPredictionDataDeps: readonly [
-    ReadonlyArray<ExpendableInventoryQuantityForecast> | null
-  ] = [null];
+  // eslint-disable-next-line max-len
+  private _lineChartPredictionDataDeps: readonly [ExpendableInventoryQuantityForecast | null] = [null];
 
-  private _availabilityBarDataDeps: readonly [
-    ReadonlyArray<ExpendableInventoryQuantityHistoryLegacy> | null
-  ] = [null];
+  // eslint-disable-next-line max-len
+  private _availabilityBarDataDeps: readonly [ExpendableInventoryQuantityHistoryLegacy | null] = [null];
 
   private _dataFetched = false;
 
@@ -73,20 +69,19 @@ export class UserExpendableInventoriesPage extends LitElement {
 
     if (!this._dataFetched && this.expendableInventoryTypes !== null) {
       const current = new Date();
-
-      const expendableInventoryCountPromises = this.expendableInventoryTypes.map(
-        async (expendableInventoryType): Promise<ExpendableInventoryQuantityHistoryLegacy> =>
-          this.expendableInventoryService!.fetchQuantityHistoryLegacy(
-            subHours(startOfHour(current), 20),
-            startOfHour(current),
-            1800000,
-            [expendableInventoryType.typeId],
-            null
-          )
-      );
-      Promise.all(expendableInventoryCountPromises).then((expendableInventoryData) => {
-        this._countHistory = expendableInventoryData;
-      });
+      this.expendableInventoryService
+        .fetchQuantityHistoryLegacy(
+          subHours(startOfHour(current), 20),
+          startOfHour(current),
+          1800000,
+          this.expendableInventoryTypes!.map(
+            (expendableInventoryType) => expendableInventoryType.typeId
+          ),
+          'type'
+        )
+        .then((result) => {
+          this._countHistory = result;
+        });
 
       const forecastKey = generateKey({
         fromTime: startOfHour(current).toISOString(),
@@ -95,19 +90,18 @@ export class UserExpendableInventoriesPage extends LitElement {
         countType: 'uniqueStay'
       });
       if (this._forecastKey !== forecastKey) {
-        const forecastPromises = this.expendableInventoryTypes.map(
-          async (expendableInventoryType): Promise<ExpendableInventoryQuantityForecast> =>
-            this.expendableInventoryService!.fetchQuantityForecast({
-              fromTime: startOfHour(current),
-              timeStepMs: 1800000,
-              filterTypeIds: [expendableInventoryType.typeId],
-              groupBy: null,
-              countType: 'quantity'
-            })
-        );
-        Promise.all(forecastPromises)
-          .then((forecastData) => {
-            this._forecast = forecastData;
+        this.expendableInventoryService
+          .fetchQuantityForecast({
+            fromTime: startOfHour(current),
+            timeStepMs: 1800000,
+            filterTypeIds: this.expendableInventoryTypes!.map(
+              (expendableInventoryType) => expendableInventoryType.typeId
+            ),
+            groupBy: 'type',
+            countType: 'quantity'
+          })
+          .then((result) => {
+            this._forecast = result;
           })
           .catch((err) => {
             console.error(err);
@@ -127,13 +121,13 @@ export class UserExpendableInventoriesPage extends LitElement {
         this._lineChartData = null;
       } else {
         this._lineChartData = {
-          lines: this._countHistory.map((history, i) => ({
+          lines: this._countHistory.groups.map((group, i) => ({
             name: this.expendableInventoryTypes![i].typeName,
-            values: history.records.map(
-              (record) => record.counts.total / this.expendableInventoryTypes![i].typeCapacity
+            values: this._countHistory!.records.map(
+              (record) => record.counts[group] / this.expendableInventoryTypes![i].typeCapacity
             )
           })),
-          labels: this._countHistory[0].records.map((record) => startOfHour(record.time)),
+          labels: this._countHistory.records.map((record) => startOfHour(record.time)),
           formatLabel: (time) => formatDate(time, 'HH:mm')
         };
       }
@@ -145,13 +139,13 @@ export class UserExpendableInventoriesPage extends LitElement {
         this._lineChartPredictionData = null;
       } else {
         this._lineChartPredictionData = {
-          lines: this._forecast.map((forecast, i) => ({
+          lines: this._forecast.groups.map((group, i) => ({
             name: this.expendableInventoryTypes![i].typeName,
-            values: forecast.values[0].slice(0, 8).map(
+            values: this._forecast!.values[i].slice(0, 8).map(
               (value) => value / this.expendableInventoryTypes![i].typeCapacity
             )
           })),
-          labels: this._forecast[0].timeSpans.slice(0, 8).map((timeSpan) => timeSpan[0]),
+          labels: this._forecast.timeSpans.slice(0, 8).map((timeSpan) => timeSpan[0]),
           formatLabel: (time) => formatDate(time, 'HH:mm')
         };
       }
@@ -162,10 +156,10 @@ export class UserExpendableInventoriesPage extends LitElement {
       if (this._countHistory === null) {
         this._availabilityBarData = null;
       } else {
-        this._availabilityBarData = this._countHistory.map((history, i) => ({
+        this._availabilityBarData = this._countHistory.groups.map((group, i) => ({
           name: this.expendableInventoryTypes![i].typeName,
           value:
-            history.records[history.records.length - 1].counts.total
+            this._countHistory!.records[this._countHistory!.records.length - 1].counts[group]
             / this.expendableInventoryTypes![i].typeCapacity
         }));
       }

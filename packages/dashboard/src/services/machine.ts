@@ -41,6 +41,7 @@ export type MachineMemberCountForecast =
 export interface MachineMemberCountHistoryLegacy {
   readonly groups: ReadonlyArray<string>;
   readonly records: ReadonlyArray<MachineMemberCountRecordLegacy>;
+  readonly timeSpans: ReadonlyArray<readonly [Date, Date]>;
 }
 
 export interface MachineMemberCountRecordLegacy {

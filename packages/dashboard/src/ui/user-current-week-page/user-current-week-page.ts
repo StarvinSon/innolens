@@ -1,5 +1,5 @@
 import {
-  format as formatDate, addHours, getHours, startOfDay, getDay, subDays, startOfHour
+  format as formatDate, subDays, startOfHour
 } from 'date-fns';
 import {
   customElement, LitElement, TemplateResult,
@@ -8,27 +8,14 @@ import {
 
 // eslint-disable-next-line import/no-duplicates
 import '../line-chart';
-import { SpaceService, SpaceMemberCountHistoryLegacy } from '../../services/space';
+import {
+  SpaceService, SpaceMemberCountHistoryLegacy, SpaceMemberCountForecast
+} from '../../services/space';
+import { generateKey } from '../../utils/key';
 // eslint-disable-next-line import/no-duplicates
 import { LineChartLineData } from '../line-chart';
 
 import { css, classes } from './user-current-week-page.scss';
-
-
-interface SpaceCountPrediction {
-  readonly groups: ReadonlyArray<string>;
-  readonly records: ReadonlyArray<SpaceCountPredictionRecord>;
-}
-
-interface SpaceCountPredictionRecord {
-  readonly startTime: Date;
-  readonly endTime: Date;
-  readonly counts: SpaceCountPredictionRecordValues;
-}
-
-interface SpaceCountPredictionRecordValues {
-  readonly [group: string]: number;
-}
 
 const TAG_NAME = 'inno-user-current-week-page';
 
@@ -49,8 +36,10 @@ export class UserCurrentWeekPage extends LitElement {
   @property({ attribute: false })
   private _countHistory: SpaceMemberCountHistoryLegacy | null = null;
 
+  private _forecastKey: string | null = null;
+
   @property({ attribute: false })
-  private _countPrediction: SpaceCountPrediction | null = null;
+  private _forecast: SpaceMemberCountForecast | null = null;
 
   @property({ attribute: false })
   private _lineChartData: import('../line-chart').LineChartData<Date> | null = null;
@@ -60,7 +49,7 @@ export class UserCurrentWeekPage extends LitElement {
 
   private _lineChartDataDeps: readonly [SpaceMemberCountHistoryLegacy | null] = [null];
 
-  private _lineChartPredictionDataDeps: readonly [SpaceCountPrediction | null] = [null];
+  private _lineChartPredictionDataDeps: readonly [SpaceMemberCountForecast | null] = [null];
 
   private _dataFetched = false;
 
@@ -76,37 +65,28 @@ export class UserCurrentWeekPage extends LitElement {
     if (!this._dataFetched) {
       const current = new Date();
       this._countHistory = await this.spaceService!.fetchMemberCountHistoryLegacy(
-        subDays(startOfDay(current), getDay(current)),
+        subDays(startOfHour(current), 7),
         startOfHour(current),
-        3600000,
+        1800000,
         ['inno_wing'],
         'department',
         'uniqueStay'
       );
-      // Hard coded predictions
-      const time = startOfHour(new Date());
-      this._countPrediction = {
-        groups: [
-          'Biomedical Engineering',
-          'Civil Engineering',
-          'Computer Science',
-          'Electrical and Electronic Engineering',
-          'Industrial and Manufacturing Systems Engineering',
-          'Mechanical Engineering'
-        ],
-        records: [...Array(24 * (7 - getDay(time)) - getHours(time) + 1)].map((_, i) => ({
-          startTime: addHours(time, i),
-          endTime: addHours(time, i + 1),
-          counts: {
-            'Biomedical Engineering': Math.sin(i / 4 + Math.random()) / 2 + 4,
-            'Civil Engineering': Math.cos(i / 4 + Math.random()) / 2 + 4,
-            'Computer Science': Math.sin(i / 4 + Math.random()) / 2 + 4,
-            'Electrical and Electronic Engineering': Math.cos(i / 4 + Math.random()) / 2 + 4,
-            'Industrial and Manufacturing Systems Engineering': Math.sin(i / 4 + Math.random()) / 2 + 4,
-            'Mechanical Engineering': Math.cos(i / 4 + Math.random()) / 2 + 4
-          }
-        }))
-      };
+
+      const forecastKey = generateKey({
+        fromTime: startOfHour(current).toISOString(),
+        timeStepMs: '1800000',
+        spaceIds: 'inno_wing',
+        countType: 'uniqueStay'
+      });
+      if (this._forecastKey !== forecastKey) {
+        this._forecast = await this.spaceService!.fetchMemberCountForecast({
+          fromTime: startOfHour(current),
+          filterSpaceIds: ['inno_wing'],
+          groupBy: 'department',
+          countType: 'uniqueStay'
+        });
+      }
 
       this._dataFetched = true;
     }
@@ -142,35 +122,31 @@ export class UserCurrentWeekPage extends LitElement {
       this._lineChartDataDeps = [this._countHistory];
     }
 
-    if (this._lineChartPredictionDataDeps[0] !== this._countPrediction) {
-      if (this._countPrediction === null) {
+    if (this._lineChartPredictionDataDeps[0] !== this._forecast) {
+      if (this._forecast === null) {
         this._lineChartPredictionData = null;
       } else {
         this._lineChartPredictionData = {
-          /* eslint-disable @typescript-eslint/indent */
-          lines: this._countPrediction.groups
+          lines: this._forecast.groups
             .slice()
             .sort()
             .reverse()
-            .reduce<Array<LineChartLineData>>((lines, group) => {
+            .reduce((lines: Array<LineChartLineData>, group) => {
               const line = {
                 name: group,
-                values: this._countPrediction!.records.map(
-                  (record, index) =>
-                    record.counts[group]
-                    + (lines.length ? lines[lines.length - 1].values[index] : 0)
+                values: this._forecast!.values[0].map(
+                  (value, i) => value + (lines.length ? lines[lines.length - 1].values[i] : 0)
                 )
               };
               lines.push(line);
               return lines;
             }, [])
             .reverse(),
-          /* eslint-enable @typescript-eslint/indent */
-          labels: this._countPrediction.records.map((record) => record.startTime),
+          labels: this._forecast.timeSpans.map((timeSpan) => timeSpan[0]),
           formatLabel: (time) => formatDate(time, 'L/d')
         };
       }
-      this._lineChartPredictionDataDeps = [this._countPrediction];
+      this._lineChartPredictionDataDeps = [this._forecast];
     }
   }
 
@@ -189,7 +165,7 @@ export class UserCurrentWeekPage extends LitElement {
           class="${classes.lineChart}"
           .data="${this._lineChartData}"
           .predictionData="${this._lineChartPredictionData}"
-          .labels="${7}"
+          .labels="${9}"
           showArea>
           <span slot="title">No. of users this week</span>
         </inno-line-chart>

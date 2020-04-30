@@ -1,5 +1,5 @@
 import {
-  format as formatDate, addHours, startOfHour, getHours
+  format as formatDate, startOfHour
 } from 'date-fns';
 import {
   customElement, LitElement, TemplateResult, html, property, PropertyValues
@@ -7,25 +7,12 @@ import {
 
 import '../gauge';
 import {
-  ReusableInventoryService, ReusableInventoryType, ReusableInventoryMemberCountHistoryLegacy
+  ReusableInventoryService, ReusableInventoryType,
+  ReusableInventoryMemberCountHistoryLegacy, ReusableInventoryMemberCountForecast
 } from '../../services/reusable-inventory';
+import { generateKey } from '../../utils/key';
 
 import { css, classes } from './user-reusable-inventories-page.scss';
-
-interface ReusableInventoryMemberCountPrediction {
-  readonly groups: ReadonlyArray<string>;
-  readonly records: ReadonlyArray<ReusableInventoryMemberCountPredictionRecord>;
-}
-
-interface ReusableInventoryMemberCountPredictionRecord {
-  readonly periodStartTime: Date;
-  readonly periodEndTime: Date;
-  readonly counts: ReusableInventoryMemberCountPredictionRecordValues;
-}
-
-interface ReusableInventoryMemberCountPredictionRecordValues {
-  readonly [group: string]: number;
-}
 
 const TAG_NAME = 'inno-user-reusable-inventories-page';
 
@@ -49,10 +36,12 @@ export class UserReusableInventoriesPage extends LitElement {
   public reusableInventoryTypeCapacity: Readonly<Record<string, number>> | null = null;
 
   @property({ attribute: false })
-  private _countHistory: ReadonlyArray<ReusableInventoryMemberCountHistoryLegacy> | null = null;
+  private _countHistory: ReusableInventoryMemberCountHistoryLegacy | null = null;
+
+  private _forecastKey: string | null = null;
 
   @property({ attribute: false })
-  private _countPrediction: ReadonlyArray<ReusableInventoryMemberCountPrediction> | null = null;
+  private _forecast: ReusableInventoryMemberCountForecast | null = null;
 
   @property({ attribute: false })
   private _lineChartData: import('../line-chart').LineChartData<Date> | null = null;
@@ -63,17 +52,12 @@ export class UserReusableInventoriesPage extends LitElement {
   @property({ attribute: false })
   private _gaugeData: ReadonlyArray<{ name: string; value: number }> | null = null;
 
-  private _lineChartDataDeps: readonly [
-    ReadonlyArray<ReusableInventoryMemberCountHistoryLegacy> | null
-  ] = [null];
+  private _lineChartDataDeps: readonly [ReusableInventoryMemberCountHistoryLegacy | null] = [null];
 
-  private _lineChartPredictionDataDeps: readonly [
-    ReadonlyArray<ReusableInventoryMemberCountPrediction> | null
-  ] = [null];
+  // eslint-disable-next-line max-len
+  private _lineChartPredictionDataDeps: readonly [ReusableInventoryMemberCountForecast | null] = [null];
 
-  private _gaugeDataDeps: readonly [
-    ReadonlyArray<ReusableInventoryMemberCountHistoryLegacy> | null
-  ] = [null];
+  private _gaugeDataDeps: readonly [ReusableInventoryMemberCountHistoryLegacy | null] = [null];
 
   private _dataFetched = false;
 
@@ -107,30 +91,51 @@ export class UserReusableInventoriesPage extends LitElement {
         );
       });
 
-      const reusableInventoryCountPromises = this.reusableInventoryTypes.map(
-        async (reusableInventoryType): Promise<ReusableInventoryMemberCountHistoryLegacy> =>
-          this.reusableInventoryService!.updateMemberCountHistoryLegacy(
-            getHours(new Date()),
-            [reusableInventoryType.typeId],
-            undefined,
-            undefined,
-            'uniqueUse'
-          )
-      );
-      Promise.all(reusableInventoryCountPromises).then((reusableInventoryData) => {
-        this._countHistory = reusableInventoryData;
-      });
+      this.reusableInventoryService!
+        .updateMemberCountHistoryLegacy(
+          20,
+          this.reusableInventoryTypes.map((reusableInventoryType) => reusableInventoryType.typeId),
+          undefined,
+          'type',
+          'uniqueUse'
+        )
+        .then((result) => {
+          this._countHistory = result;
+        });
 
-      // Hard coded predictions
-      const time = startOfHour(new Date());
-      this._countPrediction = this.reusableInventoryTypes.map(() => ({
-        groups: ['total'],
-        records: [...Array(25 - getHours(time))].map((_, i) => ({
-          periodStartTime: addHours(time, i),
-          periodEndTime: addHours(time, i + 1),
-          counts: { total: Math.round(Math.random()) }
-        }))
-      }));
+      const current = new Date();
+      const forecastKey = generateKey({
+        fromTime: startOfHour(current).toISOString(),
+        timeStepMs: '1800000',
+        typeIds: this.reusableInventoryTypes
+          .map((reusableInventoryType) => reusableInventoryType.typeId)
+          .map(encodeURIComponent)
+          .join(','),
+        countType: 'uniqueUse'
+      });
+      if (this._forecastKey !== forecastKey) {
+        this.reusableInventoryService
+          .fetchMemberCountForecast({
+            fromTime: startOfHour(current),
+            filterTypeIds: this.reusableInventoryTypes.map(
+              (reusableInventoryType) => reusableInventoryType.typeId
+            ),
+            filterInstanceIds: null,
+            groupBy: 'type',
+            countType: 'uniqueUse'
+          })
+          .then((result) => {
+            this._forecast = result;
+          })
+          .catch((err) => {
+            console.error(err);
+            if (this._forecastKey === forecastKey) {
+              this._forecast = null;
+            }
+          });
+
+        this._forecastKey = forecastKey;
+      }
 
       this._dataFetched = true;
     }
@@ -140,60 +145,48 @@ export class UserReusableInventoriesPage extends LitElement {
         this._lineChartData = null;
       } else {
         this._lineChartData = {
-          lines: this._countHistory.map((history, i) => {
-            const { typeId, typeName } = this.reusableInventoryTypes![i];
-            return {
-              name: typeName,
-              values: history.records.map(
-                (record) => record.counts.total / this.reusableInventoryTypeCapacity![typeId]
-              )
-            };
-          }),
-          labels: this._countHistory[0].records.map(
-            (record) => startOfHour(record.periodStartTime)
-          ),
+          lines: this._countHistory.groups.map((group, i) => ({
+            name: this.reusableInventoryTypes![i].typeName,
+            values: this._countHistory!.records.map(
+              (record) => record.counts[group] / this.reusableInventoryTypeCapacity![group]
+            )
+          })),
+          labels: this._countHistory.records.map((record) => startOfHour(record.periodStartTime)),
           formatLabel: (time) => formatDate(time, 'HH:mm')
         };
       }
       this._lineChartDataDeps = [this._countHistory];
     }
 
-    if (this._lineChartPredictionDataDeps[0] !== this._countPrediction) {
-      if (this._countPrediction === null) {
+    if (this._lineChartPredictionDataDeps[0] !== this._forecast) {
+      if (this._forecast === null) {
         this._lineChartPredictionData = null;
       } else {
         this._lineChartPredictionData = {
-          lines: this._countPrediction.map((history, i) => {
-            const { typeId, typeName } = this.reusableInventoryTypes![i];
-            return {
-              name: typeName,
-              values: history.records.map(
-                (record) => record.counts.total / this.reusableInventoryTypeCapacity![typeId]
-              )
-            };
-          }),
-          labels: this._countPrediction[0].records.map(
-            (record) => startOfHour(record.periodStartTime)
-          ),
+          lines: this._forecast.groups.map((group, i) => ({
+            name: this.reusableInventoryTypes![i].typeName,
+            values: this._forecast!.values[i].slice(0, 8).map(
+              (value) =>
+                value / this.reusableInventoryTypeCapacity![this.reusableInventoryTypes![i].typeId]
+            )
+          })),
+          labels: this._forecast.timeSpans.slice(0, 8).map((timeSpan) => timeSpan[0]),
           formatLabel: (time) => formatDate(time, 'HH:mm')
         };
       }
-      this._lineChartPredictionDataDeps = [this._countPrediction];
+      this._lineChartPredictionDataDeps = [this._forecast];
     }
 
     if (this._gaugeDataDeps[0] !== this._countHistory) {
       if (this._countHistory === null) {
         this._gaugeData = null;
       } else {
-        this._gaugeData = this._countHistory.map((history, i) => {
-          const { typeId, typeName } = this.reusableInventoryTypes![i];
-          return {
-            name: typeName,
-            value:
-              history.records[history.records.length - 1].counts.total
-              / this.reusableInventoryTypeCapacity![typeId]
-          };
-        });
+        this._gaugeData = this._countHistory.groups.map((group, i) => ({
+          name: this.reusableInventoryTypes![i].typeName,
+          value:
+            this._countHistory!.records[this._countHistory!.records.length - 1].counts[group]
+            / this.reusableInventoryTypeCapacity![this.reusableInventoryTypes![i].typeId]
+        }));
       }
       this._gaugeDataDeps = [this._countHistory];
     }
@@ -233,7 +226,7 @@ export class UserReusableInventoriesPage extends LitElement {
           class="${classes.lineChart}"
           .data="${this._lineChartData}"
           .predictionData="${this._lineChartPredictionData}"
-          .labels="${8}"
+          .labels="${12}"
           showPercentage
         >
           <span slot="title">Utilization rate of reusable inventories</span>

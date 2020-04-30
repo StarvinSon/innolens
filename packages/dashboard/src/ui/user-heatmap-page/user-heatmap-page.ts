@@ -5,7 +5,7 @@ import {
 
 import { SpaceService, Space } from '../../services/space';
 import '../heatmap'; // eslint-disable-line import/no-duplicates
-import { HeatmapData, HeatmapSpaceData } from '../heatmap'; // eslint-disable-line import/no-duplicates
+import { HeatmapData } from '../heatmap'; // eslint-disable-line import/no-duplicates
 
 import { css, classes } from './user-heatmap-page.scss';
 
@@ -48,27 +48,24 @@ export class UserHeatMapPage extends LitElement {
 
     if (!this._heatmapDataFetched && this.spaces !== null) {
       const time = new Date();
-      const spaceCountPromises = this.spaces.map(
-        async (space): Promise<HeatmapSpaceData> => {
-          const countData = await this.spaceService!.fetchMemberCountLegacy(
-            time,
-            [space.spaceId],
-            'uniqueMember',
-            null
-          );
-          return {
-            spaceId: space.spaceId,
-            spaceCapacity: space.spaceCapacity,
-            currentUserCount: countData.counts[countData.groups[0]]
+      this.spaceService!
+        .fetchMemberCountLegacy(
+          time,
+          this.spaces!.map((space) => space.spaceId),
+          'total',
+          'space'
+        )
+        .then((result) => {
+          this._heatmapData = {
+            spaces: result.groups.map((group, i) => ({
+              spaceId: group,
+              spaceCapacity: this.spaces![i].spaceCapacity,
+              currentUserCount: result.counts[group] ?? 0
+            }))
           };
-        }
-      );
-      Promise.all(spaceCountPromises).then((spaceData) => {
-        this._heatmapData = {
-          spaces: spaceData
-        };
-      });
-      this._heatmapDataFetched = true;
+
+          this._heatmapDataFetched = true;
+        });
     }
   }
 

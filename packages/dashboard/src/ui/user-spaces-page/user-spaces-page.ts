@@ -32,12 +32,12 @@ export class UserSpacesPage extends LitElement {
   public spaces: ReadonlyArray<Space> | null = null;
 
   @property({ attribute: false })
-  private _countHistory: ReadonlyArray<SpaceMemberCountHistoryLegacy> | null = null;
+  private _countHistory: SpaceMemberCountHistoryLegacy | null = null;
 
   private _forecastKey: string | null = null;
 
   @property({ attribute: false })
-  private _forecast: ReadonlyArray<SpaceMemberCountForecast> | null = null;
+  private _forecast: SpaceMemberCountForecast | null = null;
 
   @property({ attribute: false })
   private _lineChartData: import('../line-chart').LineChartData<Date> | null = null;
@@ -48,15 +48,11 @@ export class UserSpacesPage extends LitElement {
   @property({ attribute: false })
   private _gaugeData: ReadonlyArray<{ name: string; value: number }> | null = null;
 
-  private _lineChartDataDeps: readonly [
-    ReadonlyArray<SpaceMemberCountHistoryLegacy> | null
-  ] = [null];
+  private _lineChartDataDeps: readonly [SpaceMemberCountHistoryLegacy | null] = [null];
 
-  private _lineChartPredictionDataDeps: readonly [
-    ReadonlyArray<SpaceMemberCountForecast> | null
-  ] = [null];
+  private _lineChartPredictionDataDeps: readonly [SpaceMemberCountForecast | null] = [null];
 
-  private _gaugeDataDeps: readonly [ReadonlyArray<SpaceMemberCountHistoryLegacy> | null] = [null];
+  private _gaugeDataDeps: readonly [SpaceMemberCountHistoryLegacy | null] = [null];
 
   private _dataFetched = false;
 
@@ -70,20 +66,18 @@ export class UserSpacesPage extends LitElement {
 
     if (!this._dataFetched && this.spaces !== null) {
       const current = new Date();
-      const spaceCountPromises = this.spaces.map(
-        async (space): Promise<SpaceMemberCountHistoryLegacy> =>
-          this.spaceService!.fetchMemberCountHistoryLegacy(
-            subHours(startOfHour(current), 20),
-            startOfHour(current),
-            1800000,
-            [space.spaceId],
-            null,
-            'uniqueStay'
-          )
-      );
-      Promise.all(spaceCountPromises).then((spaceData) => {
-        this._countHistory = spaceData;
-      });
+      this.spaceService
+        .fetchMemberCountHistoryLegacy(
+          subHours(startOfHour(current), 20),
+          startOfHour(current),
+          1800000,
+          this.spaces!.map((space) => space.spaceId),
+          'space',
+          'uniqueStay'
+        )
+        .then((result) => {
+          this._countHistory = result;
+        });
 
       const forecastKey = generateKey({
         fromTime: startOfHour(current).toISOString(),
@@ -92,18 +86,15 @@ export class UserSpacesPage extends LitElement {
         countType: 'uniqueStay'
       });
       if (this._forecastKey !== forecastKey) {
-        const forecastPromises = this.spaces.map(
-          async (space): Promise<SpaceMemberCountForecast> =>
-            this.spaceService!.fetchMemberCountForecast({
-              fromTime: startOfHour(current),
-              filterSpaceIds: [space.spaceId],
-              groupBy: null,
-              countType: 'uniqueStay'
-            })
-        );
-        Promise.all(forecastPromises)
-          .then((forecastData) => {
-            this._forecast = forecastData;
+        this.spaceService
+          .fetchMemberCountForecast({
+            fromTime: startOfHour(current),
+            filterSpaceIds: this.spaces!.map((space) => space.spaceId),
+            groupBy: 'space',
+            countType: 'uniqueStay'
+          })
+          .then((result) => {
+            this._forecast = result;
           })
           .catch((err) => {
             console.error(err);
@@ -123,13 +114,13 @@ export class UserSpacesPage extends LitElement {
         this._lineChartData = null;
       } else {
         this._lineChartData = {
-          lines: this._countHistory.map((history, i) => ({
+          lines: this._countHistory.groups.map((group, i) => ({
             name: this.spaces![i].spaceName,
-            values: history.records.map(
-              (record) => record.counts.total / this.spaces![i].spaceCapacity
+            values: this._countHistory!.records.map(
+              (record) => record.counts[group] / this.spaces![i].spaceCapacity
             )
           })),
-          labels: this._countHistory[0].records.map((record) => record.startTime),
+          labels: this._countHistory.records.map((record) => record.startTime),
           formatLabel: (time) => formatDate(time, 'HH:mm')
         };
       }
@@ -141,13 +132,13 @@ export class UserSpacesPage extends LitElement {
         this._lineChartPredictionData = null;
       } else {
         this._lineChartPredictionData = {
-          lines: this._forecast.map((forecast, i) => ({
+          lines: this._forecast.groups.map((group, i) => ({
             name: this.spaces![i].spaceName,
-            values: forecast.values[0].slice(0, 8).map(
+            values: this._forecast!.values[i].slice(0, 8).map(
               (value) => value / this.spaces![i].spaceCapacity
             )
           })),
-          labels: this._forecast[0].timeSpans.slice(0, 8).map((timeSpan) => timeSpan[0]),
+          labels: this._forecast.timeSpans.slice(0, 8).map((timeSpan) => timeSpan[0]),
           formatLabel: (time) => formatDate(time, 'HH:mm')
         };
       }
@@ -158,13 +149,12 @@ export class UserSpacesPage extends LitElement {
       if (this._countHistory === null) {
         this._gaugeData = null;
       } else {
-        this._gaugeData = this._countHistory.map((history, i) => {
-          const { spaceName, spaceCapacity } = this.spaces![i];
-          return {
-            name: spaceName,
-            value: history.records[history.records.length - 1].counts.total / spaceCapacity
-          };
-        });
+        this._gaugeData = this._countHistory.groups.map((group, i) => ({
+          name: this.spaces![i].spaceName,
+          value:
+            this._countHistory!.records[this._countHistory!.records.length - 1].counts[group]
+            / this.spaces![i].spaceCapacity
+        }));
       }
       this._gaugeDataDeps = [this._countHistory];
     }
