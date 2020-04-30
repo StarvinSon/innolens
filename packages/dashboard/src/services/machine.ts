@@ -211,7 +211,7 @@ export class MachineService {
       groupBy
     });
 
-    return this._debouncer.debounce(`update-member-count-history:${key}`, async () => {
+    return this._debouncer.debounce(`update-member-count-history-legacy:${key}`, async () => {
       const legacyCountTypes = [
         ['acquireCounts', 'acquire'],
         ['uniqueAcquireCounts', 'uniqueAcquire'],

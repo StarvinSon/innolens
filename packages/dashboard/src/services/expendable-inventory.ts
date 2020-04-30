@@ -123,7 +123,7 @@ export class ExpendableInventoryService {
     readonly countType: ExpendableInventoryQuantityHistoryCountType
   }): Promise<ExpendableInventoryQuantityHistory> {
     const key = JSON.stringify(opts);
-    return this._debouncer.debounce(`quantityHistory:${key}`, async () =>
+    return this._debouncer.debounce(`quantity-history:${key}`, async () =>
       this._oauth2Service
         .withAccessToken((token) => fetch(ExpendableInventoryGlue.GetQuantityHistory
           .createRequest({
@@ -173,7 +173,7 @@ export class ExpendableInventoryService {
     readonly countType: ExpendableInventoryQuantityForecastCountType
   }): Promise<ExpendableInventoryQuantityForecast> {
     const key = JSON.stringify(opts);
-    return this._debouncer.debounce(`quantityForecast:${key}`, async () =>
+    return this._debouncer.debounce(`quantity-forecast:${key}`, async () =>
       this._oauth2Service
         .withAccessToken((token) => fetch(ExpendableInventoryGlue.GetQuantityForecast
           .createRequest({

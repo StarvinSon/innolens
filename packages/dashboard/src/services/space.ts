@@ -172,7 +172,7 @@ export class SpaceService {
       groupBy
     });
 
-    return this._debouncer.debounce(`member-count:${key}`, async () => {
+    return this._debouncer.debounce(`member-count-legacy:${key}`, async () => {
       const history = await this.fetchMemberCountHistory({
         fromTime: time,
         toTime: addMilliseconds(time, 1),
@@ -210,7 +210,7 @@ export class SpaceService {
       countType
     });
 
-    return this._debouncer.debounce(`member-count-history:${key}`, async () => {
+    return this._debouncer.debounce(`member-count-history-legacy:${key}`, async () => {
       const history = await this.fetchMemberCountHistory({
         fromTime,
         toTime,
