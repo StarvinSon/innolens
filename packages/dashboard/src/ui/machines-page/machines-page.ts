@@ -703,7 +703,7 @@ export class MachinesPage extends LitElement {
       this._selectedTypeIds = toggleNullableArray(this._selectedTypeIds, typeId);
     }
 
-    if (this._selectedTypeIds === null || this._selectedTypeIds.length > 1) {
+    if (this._selectedTypeIds === null || this._selectedTypeIds.length !== 1) {
       this._selectedCorrelationTypeId = null;
     }
   }
