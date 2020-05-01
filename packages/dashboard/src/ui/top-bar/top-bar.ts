@@ -3,6 +3,7 @@ import {
   customElement
 } from 'lit-element';
 
+import logo from '../../images/logo-2-white-horizontal.png';
 import '../icon-button';
 import '../theme';
 import '../typography';
@@ -33,7 +34,7 @@ export class TopBar extends LitElement {
         @click="${this._onDrawerButtonClick}">
         ${menuIcon(classes.drawerIcon_svg)}
       </inno-icon-button>
-      <h1 class="${classes.logo}">InnoLens</h1>
+      <img src="${logo}" width="214" height="40" />
     `;
   }
 

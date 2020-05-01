@@ -3,6 +3,8 @@ import {
   html
 } from 'lit-element';
 
+import logo from '../../images/logo-2-white.png';
+
 import '../theme';
 import '../typography';
 import { css, classes } from './about-page.scss';
@@ -22,7 +24,7 @@ export class AboutPage extends LitElement {
 
   protected render(): TemplateResult {
     return html`
-      <h1 class="${classes.title}">InnoLens</h1>
+      <img class="${classes.logo}" src="${logo}" width="364" height="434" />
       <p class="${classes.slogan}">A smart user management system for the Innovation Wing</p>
     `;
   }

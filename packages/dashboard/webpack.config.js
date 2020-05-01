@@ -156,7 +156,8 @@ module.exports = (env, { publicPath = '/static/' }) => {
           html5: true,
           quoteCharacter: '"',
           removeComments: true
-        }
+        },
+        favicon: resolve(srcPath, 'images/favicon.ico')
       })
     ],
 

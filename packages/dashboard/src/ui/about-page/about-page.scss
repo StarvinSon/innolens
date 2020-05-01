@@ -10,12 +10,9 @@
   display: none;
 }
 
-.title {
-  @include typography.h1();
-
-  margin: 0rem;
-  text-align: center;
-  color: var(theme.$on-background);
+.logo {
+  display: block;
+  margin: 4rem auto;
 }
 
 .slogan {
@@ -23,5 +20,6 @@
 
   margin: 0rem;
   text-align: center;
+  font-size: 2rem;
   color: var(theme.$on-background);
 }
