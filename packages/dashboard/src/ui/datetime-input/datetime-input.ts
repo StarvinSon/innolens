@@ -1,7 +1,8 @@
-import { parseISO, formatISO } from 'date-fns';
+import { parseISO, formatISO, format as formatDate } from 'date-fns';
+import { zonedTimeToUtc } from 'date-fns-tz';
 import {
   customElement, LitElement, TemplateResult,
-  html, property, query
+  html, property, query, PropertyValues
 } from 'lit-element';
 
 import { css, classes } from './datetime-input.scss';
@@ -15,6 +16,9 @@ declare global {
   }
 }
 
+/**
+ * @event selected-time-changed
+ */
 @customElement(TAG_NAME)
 export class DatetimeInput extends LitElement {
   public static readonly styles = css;
@@ -38,35 +42,25 @@ export class DatetimeInput extends LitElement {
 
   public set time(newVal: Date | null) {
     this._time = newVal;
-    this._dateInputTime = newVal;
-    this._timeInputTime = newVal;
+    this._dateInputTime = newVal === null ? '' : formatDate(newVal, 'yyyy-MM-dd');
+    this._timeInputTime = newVal === null ? '' : formatDate(newVal, 'HH:mm');
   }
 
-  @property({ attribute: false })
-  private _dateInputTime: Date | null = null;
+  @property({ type: Number })
+  public timeStepSec = 60;
+
+  @property({ type: String })
+  public timezone = 'Asia/Hong_Kong';
+
 
   @property({ attribute: false })
-  private _timeInputTime: Date | null = null;
+  private _dateInputTime = '';
+
+  @property({ attribute: false })
+  private _timeInputTime = '';
 
 
   private _selectedTime: Date | null = null;
-
-  private _updateSelectedTime(): void {
-    const oldSelectedTime = this._selectedTime;
-
-    const time = this._dateInputTime === null || this._timeInputTime === null
-      ? null
-      : new Date(this._dateInputTime.getTime() + this._timeInputTime.getTime());
-    if (time === null) {
-      this._selectedTime = null;
-    } else if (this._selectedTime === null || this._selectedTime.getTime() !== time.getTime()) {
-      this._selectedTime = time;
-    }
-
-    if (oldSelectedTime !== this._selectedTime) {
-      this.dispatchEvent(new Event('selected-time-changed'));
-    }
-  }
 
   public get selectedTime(): Date | null {
     return this._selectedTime === null ? null : new Date(this._selectedTime);
@@ -87,26 +81,44 @@ export class DatetimeInput extends LitElement {
     });
   }
 
+  protected update(changedProps: PropertyValues): void {
+    this._updateProperties();
+    super.update(changedProps);
+  }
+
+  private _updateProperties(): void {
+    if (this._dateInputTime === '' || this._timeInputTime === '') {
+      this._selectedTime = null;
+    } else {
+      let time = parseISO(`${this._dateInputTime}T${this._timeInputTime}`);
+      time = zonedTimeToUtc(time, this.timezone);
+      if (this._selectedTime === null || this._selectedTime.getTime() !== time.getTime()) {
+        this._selectedTime = time;
+        Promise.resolve().then(() => this.dispatchEvent(new Event('selected-time-changed')));
+      }
+    }
+  }
+
   protected render(): TemplateResult {
     return html`
       <input
         class="${classes.dateInput}"
         type="date"
-        .valueAsDate="${this._dateInputTime}"
+        .value="${this._dateInputTime}"
         .required="${this.required}"
         @input="${this._onInputChanged}">
       <input
         class="${classes.timeInput}"
         type="time"
-        .valueAsDate="${this._timeInputTime}"
+        .value="${this._timeInputTime}"
+        .step="${String(this.timeStepSec)}"
         .required="${this.required}"
         @input="${this._onInputChanged}">
     `;
   }
 
   private _onInputChanged(): void {
-    this._dateInputTime = this._dateInputElement.valueAsDate;
-    this._timeInputTime = this._timeInputElement.valueAsDate;
-    this._updateSelectedTime();
+    this._dateInputTime = this._dateInputElement.value;
+    this._timeInputTime = this._timeInputElement.value;
   }
 }

@@ -68,7 +68,7 @@ responseBody:
             items:
               type: array
               items:
-                type: number
+                type: integer
         clusters:
           type: array
           items:

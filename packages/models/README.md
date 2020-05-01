@@ -75,7 +75,8 @@ python -m innolens_models user_count evaluate --model-dir ./tensorflow_models/us
 ## 3.1. Server
 
 ```shell
-python -m innolens_models serve --forecast-checkpoint-dir ./checkpoints/history_forecast
+python -m innolens_models serve
+# Use -h to see more options
 ```
 
 ## 4. Notes

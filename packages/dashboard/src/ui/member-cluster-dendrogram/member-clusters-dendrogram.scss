@@ -39,15 +39,15 @@
 }
 
 .link {
-  stroke: red;
-  stroke-width: 1;
+  stroke: var(theme.$chart-0);
+  stroke-width: 0.125rem;
   fill: none;
   vector-effect: non-scaling-stroke;
 }
 
 .label-tick {
-  stroke: red;
-  stroke-width: 1;
+  stroke: var(theme.$chart-0);
+  stroke-width: 0.125rem;
   vector-effect: non-scaling-stroke;
 }
 

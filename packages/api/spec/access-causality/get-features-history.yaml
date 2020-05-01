@@ -1,7 +1,7 @@
-name: GetFeatureHistory
+name: GetFeaturesHistory
 
 method: post
-path: /api/access-causality/feature-history
+path: /api/access-causality/features-history
 
 authentication:
   type: bearer
@@ -11,7 +11,6 @@ requestBody:
   schema:
     type: object
     required:
-      - fromTime
       - toTime
     additionalProperties: false
     properties:
@@ -27,18 +26,20 @@ responseBody:
     schema:
       type: object
       required:
-        - timeSpans
+        - startTimes
+        - endTimes
         - features
         - values
       additionalProperties: false
       properties:
-        timeSpans:
+        startTimes:
           type: array
           items:
-            type: array
-            items:
-              - type: date
-              - type: date
+            type: date
+        endTimes:
+          type: array
+          items:
+            type: date
         features:
           type: array
           items:
@@ -48,4 +49,4 @@ responseBody:
           items:
             type: array
             items:
-              type: number
+              type: integer

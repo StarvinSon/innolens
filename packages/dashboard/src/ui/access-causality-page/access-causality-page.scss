@@ -1,0 +1,121 @@
+@use '../layout';
+@use '../typography';
+@use '../theme';
+@use '../line-chart-2' as line-chart;
+
+
+:host {
+  display: grid;
+  grid-template-areas: options charts;
+  grid-template-columns: 1fr 3fr;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.options {
+  position: sticky;
+  top: layout.$top-bar-height;
+  height: calc(100vh - #{layout.$top-bar-height});
+  box-sizing: border-box;
+  padding: 2rem 1rem;
+  overflow-y: auto;
+
+  & > :not(:first-child) {
+    margin-top: 2rem;
+  }
+}
+
+.option {
+  /*! empty */
+
+  &__label {
+    @include typography.base();
+    margin-bottom: 1rem;
+    color: var(theme.$on-background);
+  }
+
+  &__chips {
+    /*! empty */
+  }
+}
+
+.legends {
+  overflow: hidden;
+
+  &__content {
+    display: flex;
+    margin-right: -1rem;
+    margin-bottom: -0.5rem;
+    flex-wrap: wrap;
+
+    & > * {
+      margin-right: 1rem;
+      margin-bottom: 0.5rem;
+    }
+  }
+}
+
+.legend {
+  @include typography.base();
+  display: flex;
+  align-items: center;
+  color: var(theme.$on-background);
+
+  &::before {
+    content: '';
+    display: block;
+    width: 1rem;
+    height: 1rem;
+    margin-right: 0.5rem;
+    border-radius: 50%;
+  }
+
+  &--original::before {
+    background-color: var(theme.$chart-0);
+  }
+
+  &--modified::before {
+    background-color: var(theme.$chart-1);
+  }
+}
+
+.charts {
+  display: grid;
+  padding: 2rem 1rem;
+  grid-template-columns: 1fr 1fr;
+  align-content: start;
+  grid-gap: 0.5rem;
+}
+
+.feature-chart {
+  #{line-chart.$content-aspect-ratio}: 15%;
+}
+
+.feature-history-input {
+  display: flex;
+
+  &__input {
+    flex-grow: 1;
+  }
+
+  &__valid-message {
+    margin-left: 0.5rem;
+    font-size: 1rem;
+
+    &--valid {
+      &::before {
+        content: '✔';
+        color: green;
+      }
+    }
+
+    &--invalid {
+      &::before {
+        content: '❌';
+        color: red;
+      }
+    }
+  }
+}

@@ -86,6 +86,18 @@ export const pageEntries: ReadonlyArray<PageEntry | PageGroupEntry> = [
   },
   {
     type: 'pageEntry',
+    name: 'Access Causality',
+    href: '/access-causality',
+    load: async () => {
+      await import(
+        /* webpackChunkName: 'access-causality-page' */
+        './access-causality-page'
+      );
+    },
+    tagName: 'inno-access-causality-page'
+  },
+  {
+    type: 'pageEntry',
     name: 'Machines',
     href: '/machines',
     pathRegExp: /^\/machines$/,

@@ -23,6 +23,7 @@ import { toggleNullableArray } from '../../utils/array';
 import { mergeArray } from '../../utils/immutable/array';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
+import { stackYs } from '../line-chart-2/stack-ys';
 
 import { css, classes } from './reusable-inventories-page.scss';
 
@@ -140,10 +141,6 @@ export class ReusableInventoriesPage extends LitElement {
 
 
   @property({ attribute: false })
-  public interactable = false;
-
-
-  @property({ attribute: false })
   private _selectedPastDays = 7;
 
   @property({ attribute: false })
@@ -207,8 +204,9 @@ export class ReusableInventoriesPage extends LitElement {
 
   private _chartPropsDeps: readonly [
     ReusableInventoryMemberCountHistory | null,
-    ReusableInventoryMemberCountForecast | null
-  ] = [null, null];
+    ReusableInventoryMemberCountForecast | null,
+    ChartStyle | null
+  ] = [null, null, null];
 
   @property({ attribute: false })
   private _chartYs: ReadonlyArray<ReadonlyArray<number>> | null = null;
@@ -233,10 +231,6 @@ export class ReusableInventoriesPage extends LitElement {
     this.requestUpdate();
   }
 
-
-  protected shouldUpdate(changedProps: PropertyValues): boolean {
-    return super.shouldUpdate(changedProps) && this.interactable;
-  }
 
   protected update(changedProps: PropertyValues): void {
     this._updateProperties();
@@ -436,7 +430,11 @@ export class ReusableInventoriesPage extends LitElement {
       this._correlationKey = correlationKey;
     }
 
-    if (this._chartPropsDeps[0] !== this._history || this._chartPropsDeps[1] !== this._forecast) {
+    if (
+      this._chartPropsDeps[0] !== this._history
+      || this._chartPropsDeps[1] !== this._forecast
+      || this._chartPropsDeps[2] !== this._selectedChartStyle
+    ) {
       if (this._history === null || this._forecast === null) {
         this._chartYs = null;
         this._chartDashedStartIndex = null;
@@ -457,12 +455,15 @@ export class ReusableInventoriesPage extends LitElement {
             : this._forecast!.timeSpans.map(() => 0);
           return historyGroupY.concat(forecastGroupY);
         });
+        if (this._selectedChartStyle === 'stacked') {
+          this._chartYs = stackYs(this._chartYs);
+        }
         this._chartDashedStartIndex = this._history.timeSpans.length - 1;
         this._chartXLabels = this._history.timeSpans.concat(this._forecast.timeSpans)
           .map(([, endTime]) => endTime);
         this._chartLineLabels = groups;
       }
-      this._chartPropsDeps = [this._history, this._forecast];
+      this._chartPropsDeps = [this._history, this._forecast, this._selectedChartStyle];
     }
   }
 
@@ -607,7 +608,6 @@ export class ReusableInventoriesPage extends LitElement {
           .xLabels="${this._chartXLabels}"
           .lineLabels="${this._chartLineLabels}"
           .formatXLabel="${this._formatLineChartLabel}"
-          .stacked="${this._selectedChartStyle === 'stacked'}"
           .fill="${this._selectedChartStyle === 'stacked'}"
         >
           <span slot="title">Reusable Inventory Member Count History & Forecast</span>
@@ -689,7 +689,7 @@ export class ReusableInventoriesPage extends LitElement {
     return html`
       Users are ${tendency} to ${action[0]}
       <span class="${classes.highlight}">${selectedTypes[0].typeName}</span>
-      in ${beforeOrAfter} ${action[1]} 
+      in ${beforeOrAfter} ${action[1]}
       <span class="${classes.highlight}">${selectedTypes[1].typeName}</span>.
     `;
   }

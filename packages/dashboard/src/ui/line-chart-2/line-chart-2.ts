@@ -1,13 +1,15 @@
 import { max } from 'd3-array';
 import { scaleLinear, ScaleLinear } from 'd3-scale';
 import {
-  line, area, Line, Area
+  line, area, Line, Area,
+  CurveFactory, curveMonotoneX
 } from 'd3-shape';
 import {
   customElement, LitElement, TemplateResult,
   html, property, svg, PropertyValues
 } from 'lit-element';
 import { nothing } from 'lit-html';
+import { classMap } from 'lit-html/directives/class-map';
 import { styleMap } from 'lit-html/directives/style-map';
 
 import '../theme';
@@ -31,8 +33,17 @@ export class LineChart2 extends LitElement {
   @property({ attribute: false })
   public ys: ReadonlyArray<ReadonlyArray<number>> | null = null;
 
+  @property({ type: Number, attribute: 'y-max' })
+  public yMax: number | null = null;
+
   @property({ attribute: false })
   public dashedStartIndex: number | null = null;
+
+  @property({ attribute: false })
+  public curveFactory: CurveFactory | null = curveMonotoneX;
+
+  @property({ attribute: false })
+  public xTickIndices: ReadonlyArray<number> | null = null;
 
   @property({ attribute: false })
   public xLabels: ReadonlyArray<any> | null = null;
@@ -47,18 +58,13 @@ export class LineChart2 extends LitElement {
   public lineLabels: ReadonlyArray<string> | null = null;
 
   @property({ type: Boolean })
-  public stacked = false;
-
-  @property({ type: Boolean })
   public fill = false;
-
-  @property({ type: Boolean, attribute: 'no-legend' })
-  public noLegend = false;
 
 
   private _renderingYs: ReadonlyArray<ReadonlyArray<number>> | null = null;
   private _scaleI: ScaleLinear<number, number> | null = null;
   private _scaleY: ScaleLinear<number, number> | null = null;
+  private _xTickIndices: ReadonlyArray<number> | null = null;
   private _computeLinePath: Line<readonly [number, number]> | null = null;
   private _computeLineArea: Area<readonly [number, number, number]> | null = null;
 
@@ -71,18 +77,14 @@ export class LineChart2 extends LitElement {
   private _updateProperties(): void {
     if (this.ys === null || this.ys.length === 0 || this.ys[0].length === 0) {
       this._renderingYs = null;
-    } else if (this.stacked) {
-      const rYs: Array<ReadonlyArray<number>> = this.ys.slice();
-      for (let k = rYs.length - 2; k >= 0; k -= 1) {
-        rYs[k] = rYs[k].map((yi, i) => yi + rYs[k + 1][i]);
-      }
-      this._renderingYs = rYs;
     } else {
       this._renderingYs = this.ys;
     }
 
     let yMax: number | undefined;
-    if (this._renderingYs !== null) {
+    if (this.yMax !== null) {
+      yMax = this.yMax;
+    } else if (this._renderingYs !== null) {
       yMax = max(this._renderingYs.flatMap((y) => y));
       if (yMax !== undefined && yMax < 0) yMax = 0;
     }
@@ -103,12 +105,21 @@ export class LineChart2 extends LitElement {
         .range([1, 0]);
     }
 
+    if (this.xTickIndices !== null) {
+      this._xTickIndices = this.xTickIndices;
+    } else if (this._scaleI !== null) {
+      this._xTickIndices = this._scaleI.ticks(5).filter((i) => Number.isInteger(i));
+    }
+
     if (this._scaleI === null || this._scaleY === null) {
       this._computeLinePath = null;
     } else {
       this._computeLinePath = line<readonly [number, number]>()
         .x(([i]) => this._scaleI!(i))
         .y(([, yi]) => this._scaleY!(yi));
+      if (this.curveFactory !== null) {
+        this._computeLinePath.curve(this.curveFactory);
+      }
     }
 
     if (this._scaleI === null || this._scaleY === null || !this.fill) {
@@ -118,6 +129,9 @@ export class LineChart2 extends LitElement {
         .x(([i]) => this._scaleI!(i))
         .y1(([, yi]) => this._scaleY!(yi))
         .y0(([,, yj]) => this._scaleY!(yj));
+      if (this.curveFactory !== null) {
+        this._computeLineArea.curve(this.curveFactory);
+      }
     }
   }
 
@@ -163,6 +177,16 @@ export class LineChart2 extends LitElement {
                 class="${classes.refLine}"
                 x1="0" y1="${this._scaleY!(yi)}"
                 x2="1" y2="${this._scaleY!(yi)}"
+              ></line>
+            `)}
+
+          ${this._xTickIndices === null
+            ? []
+            : this._xTickIndices.map((i) => svg`
+              <line
+                class="${classes.refLine}"
+                x1="${this._scaleI!(i)}" y1="0"
+                x2="${this._scaleI!(i)}" y2="1"
               ></line>
             `)}
 
@@ -264,9 +288,9 @@ export class LineChart2 extends LitElement {
   private _renderXLabels(): TemplateResult {
     /* eslint-disable @typescript-eslint/indent */
     return html`
-      ${this._scaleI === null
+      ${this._xTickIndices === null
         ? []
-        : this._scaleI.ticks(5).map((i) => html`
+        : this._xTickIndices.map((i) => html`
           <div class="${classes.xLabelBox}">
             <span
               class="${classes.xLabel}"
@@ -288,9 +312,9 @@ export class LineChart2 extends LitElement {
   private _renderLegends(): TemplateResult {
     /* eslint-disable @typescript-eslint/indent */
     return html`
-      <div class="${classes.legends}">
+      <div class="${classMap({ [classes.legends]: true, [classes.legends_$hide]: this.lineLabels === null })}">
         <div class="${classes.legends_content}">
-          ${this.noLegend || this.lineLabels === null
+          ${this.lineLabels === null
             ? []
             : this.lineLabels.map((label, l) => html`
               <div class="${classes.legend}">

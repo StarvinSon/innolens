@@ -10,7 +10,7 @@ import { ExpendableInventoryType, ExpendableInventoryTypeCollection } from '../d
 import { MemberCollection } from '../db/member';
 
 import { HistoryForecastService } from './history-forecast';
-import { timeSpanRange, timeSpanRepeat } from './time';
+import { timeSpanRangeLegacy, timeSpanRepeat } from './time';
 
 
 export class ExpendableInventoryTypeNotFoundError extends Error {
@@ -360,7 +360,7 @@ export class ExpendableInventoryService {
       })
     ]);
 
-    const timeSpans = timeSpanRange(fromTime, toTime, timeStepMs);
+    const timeSpans = timeSpanRangeLegacy(fromTime, toTime, timeStepMs);
     const timeSpanRecords: Array<ReadonlyArray<ExpendableInventoryQuantityRecord>> = [];
     const timeSpanQuantityMaps: Array<ReadonlyMap<string, number>> = [];
 

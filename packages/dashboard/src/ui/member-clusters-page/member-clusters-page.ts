@@ -178,7 +178,7 @@ export class MemberClustersPage extends LitElement {
           .catch((err) => {
             console.error(err);
             if (this._clusterResultKey === clusterResultKey) {
-              this._clusterResultKey = null;
+              this._clusterResult = null;
             }
           });
       }
@@ -348,7 +348,6 @@ export class MemberClustersPage extends LitElement {
               .ys="${chartProps.ys}"
               .xLabels="${chartProps.xLabels}"
               .formatXLabel="${this._formatLineChartLabel}"
-              no-legend
             >
               <span slot="title">${chartProps.name} (${chartProps.ys.length} members)</span>
             </inno-line-chart-2>

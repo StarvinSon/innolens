@@ -3,9 +3,11 @@ import { URL } from 'url';
 import { singleton, injectableConstructor } from '@innolens/resolver/node';
 import fetch from 'node-fetch';
 
+import { Logger } from '../logger';
+
 import { MemberService } from './member';
 import { SpaceService } from './space';
-import { timeSpanRange } from './time';
+import { timeSpanRangeLegacy } from './time';
 
 
 export interface MemberFeaturesHistory {
@@ -29,20 +31,24 @@ export interface MemberClusterResult extends MemberFeaturesHistory {
 
 @injectableConstructor({
   memberService: MemberService,
-  spaceService: SpaceService
+  spaceService: SpaceService,
+  logger: Logger
 })
 @singleton()
 export class MemberClusterService {
   private readonly _memberService: MemberService;
   private readonly _spaceService: SpaceService;
+  private readonly _logger: Logger;
 
   public constructor(deps: {
-    readonly memberService: MemberService,
-    readonly spaceService: SpaceService
+    readonly memberService: MemberService;
+    readonly spaceService: SpaceService;
+    readonly logger: Logger;
   }) {
     ({
       memberService: this._memberService,
-      spaceService: this._spaceService
+      spaceService: this._spaceService,
+      logger: this._logger
     } = deps);
   }
 
@@ -90,7 +96,7 @@ export class MemberClusterService {
       })
     ));
 
-    const timeSpans = timeSpanRange(fromTime, toTime, timeStepMs);
+    const timeSpans = timeSpanRangeLegacy(fromTime, toTime, timeStepMs);
     const features = spaceIds; // concat other features...
     const values = memberIds.map((memberId) => [
       ...spaceIds.map((spaceId) => {
@@ -148,6 +154,10 @@ export class MemberClusterService {
       })
     });
     if (!res.ok) {
+      res.json()
+        .then((data) => {
+          this._logger.error('Model server responded: %O', data);
+        });
       throw new Error('cluster server responds not ok');
     }
     const resData = (await res.json()).data;

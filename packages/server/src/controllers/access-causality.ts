@@ -1,6 +1,11 @@
 import { injectableConstructor } from '@innolens/resolver/node';
+import createHttpError from 'http-errors';
+import { BAD_REQUEST } from 'http-status-codes';
 
-import { AccessCausalityService } from '../services/access-causality';
+import {
+  AccessCausalityService, InvalidAccessCausalityInputFeaturesHistory,
+  AccessCausalityFeatureForecast
+} from '../services/access-causality';
 import { OAuth2Service } from '../services/oauth2';
 
 import { AccessCausalityControllerGlue } from './glues/access-causality';
@@ -30,13 +35,29 @@ export class AccessCausalityController extends AccessCausalityControllerGlue {
   }
 
 
-  protected async handleGetFeatureHistory(
-    ctx: AccessCausalityControllerGlue.GetFeatureHistoryContext
+  protected async handleGetFeaturesHistory(
+    ctx: AccessCausalityControllerGlue.GetFeaturesHistoryContext
   ): Promise<void> {
-    ctx.responseBodyData = await this._accessCausalityService.getFeatureHistory({
+    ctx.responseBodyData = await this._accessCausalityService.getFeaturesHistory({
       fromTime: ctx.requestBody.fromTime,
       toTime: ctx.requestBody.toTime,
       timeStepMs: ctx.requestBody.timeStepMs ?? (30 * 60 * 1000)
     });
+  }
+
+  protected async handleGetFeaturesForecast(
+    ctx: AccessCausalityControllerGlue.GetFeaturesForecastContext
+  ): Promise<void> {
+    const inputHistory = ctx.requestBody;
+    let forecast: AccessCausalityFeatureForecast;
+    try {
+      forecast = await this._accessCausalityService.getFeaturesForecast(inputHistory);
+    } catch (err) {
+      if (err instanceof InvalidAccessCausalityInputFeaturesHistory) {
+        throw createHttpError(BAD_REQUEST, err);
+      }
+      throw err;
+    }
+    ctx.responseBodyData = forecast;
   }
 }

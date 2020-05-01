@@ -10,7 +10,7 @@ import { ReadonlyMap2, Map2 } from '../utils/map2';
 
 import { CorrelationService, CorrelationResult } from './correlation';
 import { HistoryForecastService } from './history-forecast';
-import { timeSpanRange } from './time';
+import { timeSpanRangeLegacy } from './time';
 
 
 export class ReusableInventoryTypeNotFoundError extends Error {
@@ -425,7 +425,7 @@ export class ReusableInventoryService {
       })()
     ]);
 
-    const timeSpans = timeSpanRange(fromTime, toTime, timeStepMs);
+    const timeSpans = timeSpanRangeLegacy(fromTime, toTime, timeStepMs);
     const timeSpansInitialRecords: Array<MemberRecordMap> = [];
     const timeSpansRecords: Array<ReadonlyArray<ReusableInventoryMemberRecord>> = [];
     const timeSpansLatestRecords: Array<MemberRecordMap> = [];
@@ -682,7 +682,11 @@ export class ReusableInventoryService {
     const forecastFromTime = fromTime;
     const forecastToTime = this._historyForecastService.getForecastToTime(forecastFromTime);
     const forecastTimeStepMs = this._historyForecastService.timeStepMs;
-    const forecastTimeSpans = timeSpanRange(forecastFromTime, forecastToTime, forecastTimeStepMs);
+    const forecastTimeSpans = timeSpanRangeLegacy(
+      forecastFromTime,
+      forecastToTime,
+      forecastTimeStepMs
+    );
     const forecast = history.values.length > 0
       ? await this._historyForecastService.predict(history.values)
       : [];

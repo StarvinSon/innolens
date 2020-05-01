@@ -162,7 +162,7 @@
 .line {
   fill: none;
   stroke: var(theme.$on-background);
-  stroke-width: var(variables.$line-width, 0.0625rem);
+  stroke-width: var(variables.$line-width, 0.125rem);
   vector-effect: non-scaling-stroke;
 
   &--dashed {
@@ -286,6 +286,7 @@
   @include _tick();
   display: inline-block;
   position: relative;
+  text-align: center;
   transform: translateX(-50%);
   color: var(theme.$on-background);
 }
@@ -293,6 +294,10 @@
 .legends {
   grid-area: legends;
   padding-top: 1rem;
+
+  &--hide {
+    display: none;
+  }
 
   &__content {
     display: flex;

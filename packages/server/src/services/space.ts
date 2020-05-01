@@ -8,7 +8,7 @@ import { SpaceMemberRecordCollection, SpaceMemberRecord } from '../db/space-memb
 
 import { CorrelationService, CorrelationResult } from './correlation';
 import { HistoryForecastService } from './history-forecast';
-import { timeSpanRange } from './time';
+import { timeSpanRangeLegacy } from './time';
 
 
 export class SpaceNotFoundError extends Error {
@@ -314,7 +314,7 @@ export class SpaceService {
       })()
     ]);
 
-    const timeSpans = timeSpanRange(fromTime, toTime, timeStepMs);
+    const timeSpans = timeSpanRangeLegacy(fromTime, toTime, timeStepMs);
     const timeSpansInitialRecords: Array<MemberRecordMap> = [];
     const timeSpansRecords: Array<ReadonlyArray<SpaceMemberRecord>> = [];
     const timeSpansLatestRecords: Array<MemberRecordMap> = [];
@@ -548,7 +548,11 @@ export class SpaceService {
     const forecastFromTime = fromTime;
     const forecastToTime = this._historyForecastService.getForecastToTime(forecastFromTime);
     const forecastTimeStepMs = this._historyForecastService.timeStepMs;
-    const forecastTimeSpans = timeSpanRange(forecastFromTime, forecastToTime, forecastTimeStepMs);
+    const forecastTimeSpans = timeSpanRangeLegacy(
+      forecastFromTime,
+      forecastToTime,
+      forecastTimeStepMs
+    );
     const forecast = history.values.length > 0
       ? await this._historyForecastService.predict(history.values)
       : [];

@@ -1,0 +1,67 @@
+name: GetFeaturesForecast
+
+method: post
+path: /api/access-causality/features-forecast
+
+authentication:
+  type: bearer
+
+requestBody:
+  contentType: application/json
+  schema:
+    type: object
+    required:
+      - startTimes
+      - endTimes
+      - features
+      - values
+    additionalProperties: false
+    properties:
+      startTimes:
+        type: array
+        items:
+          type: date
+      endTimes:
+        type: array
+        items:
+          type: date
+      features:
+        type: array
+        items:
+          type: string
+      values:
+        type: array
+        items:
+          type: array
+          items:
+            type: integer
+
+responseBody:
+  data:
+    schema:
+      type: object
+      required:
+        - startTimes
+        - endTimes
+        - features
+        - values
+      additionalProperties: false
+      properties:
+        startTimes:
+          type: array
+          items:
+            type: date
+        endTimes:
+          type: array
+          items:
+            type: date
+        features:
+          type: array
+          items:
+            type: string
+        values:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
