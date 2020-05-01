@@ -38,6 +38,13 @@ export type ReusableInventoryMemberCountForecast =
   PromiseValue<ReturnType<typeof ReusableInventoryGlue.GetMemberCountForecast.handleResponse>>;
 
 
+export type ReusableInventoryCorrelationCountType =
+  Exclude<Parameters<typeof ReusableInventoryGlue.GetCorrelation.createRequest>[0]['body']['countType'], undefined>;
+
+export type ReusableInventoryCorrelation =
+  PromiseValue<ReturnType<typeof ReusableInventoryGlue.GetCorrelation.handleResponse>>;
+
+
 export interface ReusableInventoryMemberCountHistoryLegacy {
   readonly groups: ReadonlyArray<string>;
   readonly records: ReadonlyArray<ReusableInventoryMemberCountRecordLegacy>;
@@ -250,6 +257,30 @@ export class ReusableInventoryService {
           })))
         .then(ReusableInventoryGlue.GetMemberCountForecast.handleResponse);
       return resData;
+    });
+  }
+
+  public async fetchCorrelation(opts: {
+    readonly fromTime: Date;
+    readonly timeStepMs?: 7200000;
+    readonly filterTypeIds: ReadonlyArray<string>;
+    readonly countType?: ReusableInventoryCorrelationCountType;
+  }): Promise<ReusableInventoryCorrelation> {
+    const key = JSON.stringify(opts);
+
+    return this._debouncer.debounce(`correlation:${key}`, async () => {
+      const data = await this._oauth2Service
+        .withAccessToken((token) => fetch(ReusableInventoryGlue.GetCorrelation.createRequest({
+          authentication: { token },
+          body: {
+            fromTime: opts.fromTime,
+            timeStepMs: opts.timeStepMs,
+            filterTypeIds: opts.filterTypeIds,
+            countType: opts.countType
+          }
+        })))
+        .then(ReusableInventoryGlue.GetCorrelation.handleResponse);
+      return data;
     });
   }
 }

@@ -38,6 +38,13 @@ export type MachineMemberCountForecast =
   PromiseValue<ReturnType<typeof MachineGlue.GetMemberCountForecast.handleResponse>>;
 
 
+export type MachineCorrelationCountType =
+  Exclude<Parameters<typeof MachineGlue.GetCorrelation.createRequest>[0]['body']['countType'], undefined>;
+
+export type MachineCorrelation =
+  PromiseValue<ReturnType<typeof MachineGlue.GetCorrelation.handleResponse>>;
+
+
 export interface MachineMemberCountHistoryLegacy {
   readonly groups: ReadonlyArray<string>;
   readonly records: ReadonlyArray<MachineMemberCountRecordLegacy>;
@@ -289,6 +296,30 @@ export class MachineService {
           })))
         .then(MachineGlue.GetMemberCountForecast.handleResponse);
       return resData;
+    });
+  }
+
+  public async fetchCorrelation(opts: {
+    readonly fromTime: Date;
+    readonly timeStepMs?: 7200000;
+    readonly filterTypeIds: ReadonlyArray<string>;
+    readonly countType?: MachineCorrelationCountType;
+  }): Promise<MachineCorrelation> {
+    const key = JSON.stringify(opts);
+
+    return this._debouncer.debounce(`correlation:${key}`, async () => {
+      const data = await this._oauth2Service
+        .withAccessToken((token) => fetch(MachineGlue.GetCorrelation.createRequest({
+          authentication: { token },
+          body: {
+            fromTime: opts.fromTime,
+            timeStepMs: opts.timeStepMs,
+            filterTypeIds: opts.filterTypeIds,
+            countType: opts.countType
+          }
+        })))
+        .then(MachineGlue.GetCorrelation.handleResponse);
+      return data;
     });
   }
 }

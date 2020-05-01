@@ -51,3 +51,28 @@
 .line-chart {
   #{line-chart.$content-aspect-ratio}: 50%;
 }
+
+.correlation {
+  display: grid;
+  grid-template-areas: corrcoef description;
+  grid-template-columns: 1fr 3fr;
+}
+
+.corrcoef {
+  text-align: center;
+}
+
+.description {
+  @include typography.base();
+
+  display: flex;
+  align-items: center;
+  padding: 3rem;
+  color: var(theme.$on-background);
+  font-size: 2rem;
+}
+
+.highlight {
+  color: var(theme.$primary);
+  font-weight: 900;
+}

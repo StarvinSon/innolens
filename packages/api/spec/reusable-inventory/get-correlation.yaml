@@ -1,0 +1,49 @@
+name: GetCorrelation
+
+method: post
+path: /api/reusable-inventories/correlate
+
+authentication:
+  type: bearer
+
+requestBody:
+  contentType: 'application/json'
+  schema:
+    type: object
+    required:
+      - fromTime
+      - filterTypeIds
+    additionalProperties: false
+    properties:
+      fromTime:
+        type: date
+      timeStepMs:
+        enum:
+          - 7200000
+      filterTypeIds:
+        anyOf:
+          - type: array
+            items:
+              type: string
+      countType:
+        enum:
+          - acquire
+          - uniqueAcquire
+          - release
+          - uniqueRelease
+          - use
+          - uniqueUse
+
+responseBody:
+  data:
+    schema:
+      type: object
+      required:
+        - offset
+        - corrcoef
+      additionalProperties: false
+      properties:
+        offset:
+          type: number
+        corrcoef:
+          type: number

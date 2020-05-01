@@ -442,7 +442,7 @@ export class ExpendableInventoriesPage extends LitElement {
             .stacked="${this._selectedChartStyle === 'stacked'}"
             .fill="${this._selectedChartStyle === 'stacked'}"
           >
-            <span slot="title">Space Member Count History</span>
+            <span slot="title">Expendable Inventory Member Count History & Forecast</span>
           </inno-line-chart-2>
         </inno-chart-card>
       </div>

@@ -1,4 +1,5 @@
 import { singleton, injectableConstructor } from '@innolens/resolver/node';
+import { addDays } from 'date-fns';
 import { ObjectId } from 'mongodb';
 
 import { MachineInstanceCollection, MachineInstance } from '../db/machine-instance';
@@ -7,6 +8,7 @@ import { MachineType, MachineTypeCollection } from '../db/machine-type';
 import { MemberCollection } from '../db/member';
 import { ReadonlyMap2, Map2 } from '../utils/map2';
 
+import { CorrelationService, CorrelationResult } from './correlation';
 import { HistoryForecastService } from './history-forecast';
 import { timeSpanRange } from './time';
 
@@ -79,6 +81,7 @@ export type MachineMemberCountForecast =
   machineInstanceCollection: MachineInstanceCollection,
   machineAccessRecordCollection: MachineMemberRecordCollection,
   memberCollection: MemberCollection,
+  correlationService: CorrelationService,
   historyForecastService: HistoryForecastService
 })
 @singleton()
@@ -88,6 +91,7 @@ export class MachineService {
   private readonly _memberRecordCollection: MachineMemberRecordCollection;
 
   private readonly _memberCollection: MemberCollection;
+  private readonly _correlationService: CorrelationService;
   private readonly _historyForecastService: HistoryForecastService;
 
   public constructor(deps: {
@@ -95,6 +99,7 @@ export class MachineService {
     machineInstanceCollection: MachineInstanceCollection;
     machineAccessRecordCollection: MachineMemberRecordCollection;
     memberCollection: MemberCollection;
+    correlationService: CorrelationService;
     historyForecastService: HistoryForecastService;
   }) {
     ({
@@ -102,6 +107,7 @@ export class MachineService {
       machineInstanceCollection: this._instanceCollection,
       machineAccessRecordCollection: this._memberRecordCollection,
       memberCollection: this._memberCollection,
+      correlationService: this._correlationService,
       historyForecastService: this._historyForecastService
     } = deps);
   }
@@ -678,5 +684,29 @@ export class MachineService {
       groups: history.groups,
       values: forecast
     };
+  }
+
+  public async getCorrelation(opts: {
+    readonly fromTime: Date;
+    readonly timeStepMs: number;
+    readonly filterTypeIds: ReadonlyArray<string>;
+    readonly countType: MachineMemberCountHistoryCountType;
+  }): Promise<CorrelationResult> {
+    const historyToTime = addDays(opts.fromTime, 14);
+    const historyPromises = opts.filterTypeIds.map((typeId) => this.getMemberCountHistory({
+      ...opts,
+      toTime: historyToTime,
+      filterTypeIds: [typeId],
+      filterInstanceIds: null,
+      groupBy: null
+    }));
+    const histories = await Promise.all(historyPromises);
+
+    const correlation = await this._correlationService.correlate([
+      histories[0].values[0],
+      histories[1].values[0]
+    ]);
+
+    return correlation;
   }
 }

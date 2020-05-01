@@ -243,4 +243,22 @@ export class MachineController extends FileController(MachineControllerGlue) {
 
     ctx.responseBodyData = forecast;
   }
+
+  protected async handleGetCorrelation(
+    ctx: MachineControllerGlue.GetCorrelationContext
+  ): Promise<void> {
+    try {
+      ctx.responseBodyData = await this._machineService.getCorrelation({
+        fromTime: ctx.requestBody.fromTime,
+        timeStepMs: ctx.requestBody.timeStepMs ?? (2 * 60 * 60 * 1000),
+        filterTypeIds: ctx.requestBody.filterTypeIds,
+        countType: ctx.requestBody.countType ?? 'uniqueUse'
+      });
+    } catch (err) {
+      if (err instanceof MachineTypeNotFoundError) {
+        throw createHttpError(BAD_REQUEST, err);
+      }
+      throw err;
+    }
+  }
 }

@@ -243,4 +243,22 @@ export class ReusableInventoryController extends FileController(ReusableInventor
 
     ctx.responseBodyData = forecast;
   }
+
+  protected async handleGetCorrelation(
+    ctx: ReusableInventoryControllerGlue.GetCorrelationContext
+  ): Promise<void> {
+    try {
+      ctx.responseBodyData = await this._reusableInventoryService.getCorrelation({
+        fromTime: ctx.requestBody.fromTime,
+        timeStepMs: ctx.requestBody.timeStepMs ?? (2 * 60 * 60 * 1000),
+        filterTypeIds: ctx.requestBody.filterTypeIds,
+        countType: ctx.requestBody.countType ?? 'uniqueUse'
+      });
+    } catch (err) {
+      if (err instanceof ReusableInventoryTypeNotFoundError) {
+        throw createHttpError(BAD_REQUEST, err);
+      }
+      throw err;
+    }
+  }
 }
