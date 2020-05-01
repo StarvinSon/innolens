@@ -27,6 +27,9 @@ export class ChoiceChip extends LitElement {
   @property({ type: Boolean })
   public selected = false;
 
+  @property({ type: Boolean })
+  public disabled = false;
+
 
   private readonly _rippleController = new RippleController();
 
@@ -41,6 +44,7 @@ export class ChoiceChip extends LitElement {
   protected render(): TemplateResult {
     const {
       selected,
+      disabled,
       _rippleController: rippleCtr
     } = this;
 
@@ -51,7 +55,8 @@ export class ChoiceChip extends LitElement {
           [classes.button]: true,
           [classes.button_$selected]: selected
         })}"
-        data-ripple-host="${rippleCtr.bindHost()}">
+        data-ripple-host="${rippleCtr.bindHost()}"
+        .disabled="${disabled}">
         <div
           class="${classMap({
             [classes.button_background]: true,
@@ -70,7 +75,7 @@ export class ChoiceChip extends LitElement {
           })}"></div>
         <slot></slot>
       </button>
-     `;
+    `;
     /* eslint-enable @typescript-eslint/indent */
   }
 }

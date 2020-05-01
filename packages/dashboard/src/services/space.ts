@@ -61,6 +61,12 @@ export type SpaceMemberCountForecast =
   PromiseValue<ReturnType<typeof SpaceGlue.GetMemberCountForecast.handleResponse>>;
 
 
+export type SpaceCorrelationCountType =
+  Exclude<Parameters<typeof SpaceGlue.GetCorrelation.createRequest>[0]['body']['countType'], undefined>;
+
+export type SpaceCorrelation =
+  PromiseValue<ReturnType<typeof SpaceGlue.GetCorrelation.handleResponse>>;
+
 @injectableConstructor({
   oauth2Service: OAuth2Service,
   fileService: FileService
@@ -254,6 +260,30 @@ export class SpaceService {
           }
         })))
         .then(SpaceGlue.GetMemberCountForecast.handleResponse);
+      return data;
+    });
+  }
+
+  public async fetchCorrelation(opts: {
+    readonly fromTime: Date;
+    readonly timeStepMs?: 7200000;
+    readonly filterSpaceIds: ReadonlyArray<string>;
+    readonly countType?: SpaceCorrelationCountType;
+  }): Promise<SpaceCorrelation> {
+    const key = JSON.stringify(opts);
+
+    return this._debouncer.debounce(`correlation:${key}`, async () => {
+      const data = await this._oauth2Service
+        .withAccessToken((token) => fetch(SpaceGlue.GetCorrelation.createRequest({
+          authentication: { token },
+          body: {
+            fromTime: opts.fromTime,
+            timeStepMs: opts.timeStepMs,
+            filterSpaceIds: opts.filterSpaceIds,
+            countType: opts.countType
+          }
+        })))
+        .then(SpaceGlue.GetCorrelation.handleResponse);
       return data;
     });
   }

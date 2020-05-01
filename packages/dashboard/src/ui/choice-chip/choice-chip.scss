@@ -42,6 +42,23 @@
     outline: none;
   }
 
+  &:disabled {
+    color: var(theme.$on-background);
+    opacity: 0.5;
+
+    .button__background {
+      &--hide {
+        background-color: var(theme.$on-background);
+        opacity: 0.2;
+        display: block;
+      }
+    }
+
+    .button__ripple {
+      display: none;
+    }
+  }
+
   &--selected {
     color: var(theme.$primary);
   }

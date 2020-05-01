@@ -13,11 +13,12 @@ import {
 import '../chart-card';
 import '../choice-chips';
 import '../choice-chip';
+import '../figure';
 import '../line-chart-2';
 import {
   SpaceService, Space,
   SpaceMemberCountHistoryGroupBy, SpaceMemberCountHistoryCountType, SpaceMemberCountForecast,
-  SpaceMemberCountHistory
+  SpaceMemberCountHistory, SpaceCorrelation
 } from '../../services/space';
 import { toggleNullableArray } from '../../utils/array';
 import { injectableProperty } from '../../utils/property-injector';
@@ -138,6 +139,9 @@ export class SpacesPage extends LitElement {
   private _selectedSpaceIds: ReadonlyArray<string> | null = null;
 
   @property({ attribute: false })
+  private _selectedCorrelationSpaceId: string | null = null;
+
+  @property({ attribute: false })
   private _selectedGroupBy: SpaceMemberCountHistoryGroupBy | null = null;
 
   @property({ attribute: false })
@@ -173,6 +177,12 @@ export class SpacesPage extends LitElement {
 
   @property({ attribute: false })
   private _forecast: SpaceMemberCountForecast | null = null;
+
+
+  private _correlationKey: string | null = null;
+
+  @property({ attribute: false })
+  private _correlation: SpaceCorrelation | null = null;
 
 
   private _chartPropsDeps: readonly [
@@ -247,7 +257,9 @@ export class SpacesPage extends LitElement {
       fromTime: this._fromTime,
       toTime: this._toTime,
       timeStepMs: this._timeStepMs,
-      filterSpaceIds: this._selectedSpaceIds,
+      filterSpaceIds: this._selectedCorrelationSpaceId === null
+        ? this._selectedSpaceIds
+        : [...this._selectedSpaceIds!, this._selectedCorrelationSpaceId],
       groupBy: this._selectedGroupBy,
       countType: this._selectedCountType
     });
@@ -260,7 +272,9 @@ export class SpacesPage extends LitElement {
             fromTime: this._fromTime,
             toTime: this._toTime,
             timeStepMs: this._timeStepMs,
-            filterSpaceIds: this._selectedSpaceIds,
+            filterSpaceIds: this._selectedCorrelationSpaceId === null
+              ? this._selectedSpaceIds
+              : [...this._selectedSpaceIds!, this._selectedCorrelationSpaceId],
             groupBy: this._selectedGroupBy,
             countType: this._selectedCountType
           })
@@ -281,7 +295,9 @@ export class SpacesPage extends LitElement {
 
     const forecastKey = JSON.stringify({
       fromTime: this._toTime,
-      filterSpaceIds: this._selectedSpaceIds,
+      filterSpaceIds: this._selectedCorrelationSpaceId === null
+        ? this._selectedSpaceIds
+        : [...this._selectedSpaceIds!, this._selectedCorrelationSpaceId],
       groupBy: this._selectedGroupBy,
       countType: this._selectedCountType
     });
@@ -292,7 +308,9 @@ export class SpacesPage extends LitElement {
         this.spaceService
           .fetchMemberCountForecast({
             fromTime: this._toTime,
-            filterSpaceIds: this._selectedSpaceIds,
+            filterSpaceIds: this._selectedCorrelationSpaceId === null
+              ? this._selectedSpaceIds
+              : [...this._selectedSpaceIds!, this._selectedCorrelationSpaceId],
             groupBy: this._selectedGroupBy,
             countType: this._selectedCountType
           })
@@ -309,6 +327,38 @@ export class SpacesPage extends LitElement {
           });
       }
       this._forecastKey = forecastKey;
+    }
+
+    if (this._selectedCorrelationSpaceId === null) {
+      this._correlation = null;
+    } else {
+      const correlationKey = JSON.stringify({
+        fromTime: subDays(this._toTime, 14),
+        timeStepMs: 7200000,
+        filterSpaceIds: [this._selectedSpaceIds![0], this._selectedCorrelationSpaceId],
+        countType: this._selectedCountType
+      });
+      if (this._correlationKey !== correlationKey) {
+        this.spaceService
+          .fetchCorrelation({
+            fromTime: subDays(this._toTime, 14),
+            timeStepMs: 7200000,
+            filterSpaceIds: [this._selectedSpaceIds![0], this._selectedCorrelationSpaceId],
+            countType: this._selectedCountType
+          })
+          .then((data) => {
+            if (this._correlationKey === correlationKey) {
+              this._correlation = data;
+            }
+          })
+          .catch((err) => {
+            console.error(err);
+            if (this._correlationKey === correlationKey) {
+              this._correlation = null;
+            }
+          });
+      }
+      this._correlationKey = correlationKey;
     }
 
     if (this._chartPropsDeps[0] !== this._history || this._chartPropsDeps[1] !== this._forecast) {
@@ -343,65 +393,86 @@ export class SpacesPage extends LitElement {
 
   protected render(): TemplateResult {
     return html`
-      ${this._renderOptions()}
-      ${this._renderLineChart()}
+      <div class="${classes.options}">
+        ${this._renderOptions()}
+      </div>
+      <div class="${classes.charts}">
+        ${this._renderLineChart()}
+        ${this._renderCorrelation()}
+      </div>
     `;
   }
 
   private _renderOptions(): TemplateResult {
     /* eslint-disable @typescript-eslint/indent */
     return html`
-      <div class="${classes.options}">
+      ${this._renderChipOptions({
+        title: 'Past Days',
+        items: pastDaysChoices,
+        selectItem: (item) => item === this._selectedPastDays,
+        formatItem: (item) => html`${item} Days`,
+        onClick: (item) => this._onPastDaysChipClick(item)
+      })}
 
-        ${this._renderChipOptions({
-          title: 'Past Days',
-          items: pastDaysChoices,
-          selectItem: (item) => item === this._selectedPastDays,
-          formatItem: (item) => html`${item} Days`,
-          onClick: (item) => this._onPastDaysChipClick(item)
-        })}
+      ${this._renderChipOptions({
+        title: 'Space',
+        items: [
+          {
+            spaceId: null,
+            spaceName: 'All'
+          },
+          ...this._spaces ?? []
+        ],
+        selectItem: (item) => item.spaceId === null
+          ? this._selectedSpaceIds === null
+          : this._selectedSpaceIds !== null && this._selectedSpaceIds.includes(item.spaceId),
+        formatItem: (item) => item.spaceName,
+        onClick: (item) => this._onSpaceChipClick(item.spaceId)
+      })}
 
-        ${this._renderChipOptions({
-          title: 'Space',
-          items: [
-            {
-              spaceId: null,
-              spaceName: 'All'
-            },
-            ...this._spaces ?? []
-          ],
-          selectItem: (item) => item.spaceId === null
-            ? this._selectedSpaceIds === null
-            : this._selectedSpaceIds !== null && this._selectedSpaceIds.includes(item.spaceId),
-          formatItem: (item) => item.spaceName,
-          onClick: (item) => this._onSpaceChipClick(item.spaceId)
-        })}
+      ${this._renderChipOptions({
+        title: 'Correlate with',
+        items: [
+          {
+            spaceId: null,
+            spaceName: 'None'
+          },
+          ...this._spaces ?? []
+        ],
+        selectItem: (item) => item.spaceId === null
+          ? this._selectedCorrelationSpaceId === null
+          : this._selectedCorrelationSpaceId === item.spaceId,
+        disableItem: (item) => item.spaceId !== null
+          && (this._selectedSpaceIds === null
+          || this._selectedSpaceIds.length > 1
+          || this._selectedSpaceIds.includes(item.spaceId)),
+        formatItem: (item) => item.spaceName,
+        onClick: (item) => this._onCorrelationChipClick(item.spaceId)
+      })}
 
-        ${this._renderChipOptions({
-          title: 'Group By',
-          items: groupByChoices,
-          selectItem: (item) => item.type === this._selectedGroupBy,
-          formatItem: (item) => item.name,
-          onClick: (item) => this._onGroupByChipClick(item.type)
-        })}
+      ${this._renderChipOptions({
+        title: 'Group By',
+        items: groupByChoices,
+        selectItem: (item) => item.type === this._selectedGroupBy,
+        formatItem: (item) => item.name,
+        onClick: (item) => this._onGroupByChipClick(item.type)
+      })}
 
-        ${this._renderChipOptions({
-          title: 'Count Type',
-          items: countTypeChoices,
-          selectItem: (item) => item.type === this._selectedCountType,
-          formatItem: (item) => item.name,
-          onClick: (item) => this._onCountTypeChipClick(item.type)
-        })}
+      ${this._renderChipOptions({
+        title: 'Count Type',
+        items: countTypeChoices,
+        selectItem: (item) => item.type === this._selectedCountType,
+        formatItem: (item) => item.name,
+        onClick: (item) => this._onCountTypeChipClick(item.type)
+      })}
 
-        ${this._renderChipOptions({
-          title: 'Chart Style',
-          items: chartStyleChoices,
-          selectItem: (item) => item.type === this._selectedChartStyle,
-          formatItem: (item) => item.name,
-          onClick: (item) => this._onChartStyleChipClick(item.type)
-        })}
-
-      </div>
+      ${this._renderChipOptions({
+        title: 'Chart Style',
+        items: chartStyleChoices,
+        selectItem: (item) => item.type === this._selectedChartStyle,
+        formatItem: (item) => item.name,
+        onClick: (item) => this._onChartStyleChipClick(item.type)
+      })}
     `;
     /* eslint-enable @typescript-eslint/indent */
   }
@@ -410,6 +481,7 @@ export class SpacesPage extends LitElement {
     readonly title: unknown,
     readonly items: ReadonlyArray<T>,
     readonly selectItem: (item: T) => boolean,
+    readonly disableItem?: (item: T) => boolean,
     readonly formatItem?: (item: T) => unknown,
     readonly onClick: (item: T) => void
   }): TemplateResult {
@@ -422,6 +494,7 @@ export class SpacesPage extends LitElement {
           ${options.items.map((item) => html`
             <inno-choice-chip
               .selected="${options.selectItem(item)}"
+              .disabled="${options.disableItem?.(item) ?? false}"
               @click="${() => options.onClick(item)}">
               ${options.formatItem === undefined ? item : options.formatItem(item)}
             </inno-choice-chip>
@@ -433,22 +506,98 @@ export class SpacesPage extends LitElement {
 
   private _renderLineChart(): TemplateResult {
     return html`
-      <div class="${classes.charts}">
-        <inno-chart-card>
-          <inno-line-chart-2
-            class="${classes.lineChart}"
-            .ys="${this._chartYs}"
-            .dashedStartIndex="${this._chartDashedStartIndex}"
-            .xLabels="${this._chartXLabels}"
-            .lineLabels="${this._chartLineLabels}"
-            .formatXLabel="${this._formatLineChartLabel}"
-            .stacked="${this._selectedChartStyle === 'stacked'}"
-            .fill="${this._selectedChartStyle === 'stacked'}"
-          >
-            <span slot="title">Space Member Count History</span>
-          </inno-line-chart-2>
+      <inno-chart-card>
+        <inno-line-chart-2
+          class="${classes.lineChart}"
+          .ys="${this._chartYs}"
+          .dashedStartIndex="${this._chartDashedStartIndex}"
+          .xLabels="${this._chartXLabels}"
+          .lineLabels="${this._chartLineLabels}"
+          .formatXLabel="${this._formatLineChartLabel}"
+          .stacked="${this._selectedChartStyle === 'stacked'}"
+          .fill="${this._selectedChartStyle === 'stacked'}"
+        >
+          <span slot="title">Space Member Count History & Forecast</span>
+        </inno-line-chart-2>
+      </inno-chart-card>
+    `;
+  }
+
+  private _renderCorrelation(): TemplateResult {
+    if (this._correlation === null) return html``;
+
+    /* eslint-disable @typescript-eslint/indent */
+    return html`
+      <div class="${classes.correlation}">
+        <inno-chart-card class="${classes.corrcoef}">
+          <inno-figure>
+            <span slot="title">Correlation Coefficient</span>
+            <span slot="value">
+              ${this._correlation.corrcoef === -2
+                ? 'N/A'
+                : Math.round(this._correlation.corrcoef * 100) / 100}
+            </span>
+          </inno-figure>
         </inno-chart-card>
+
+        <div class="${classes.description}">
+          <span>${this._getDescription()}</span>
+        </div>
       </div>
+    `;
+    /* eslint-enable @typescript-eslint/indent */
+  }
+
+  private _getDescription(): TemplateResult {
+    const { offset, corrcoef } = this._correlation!;
+
+    const selectedSpaces = this._spaces!.filter(
+      (space) =>
+        space.spaceId === this._selectedSpaceIds![0]
+        || space.spaceId === this._selectedCorrelationSpaceId
+    );
+
+    if (corrcoef === -2) {
+      return html`There are not enough access records available to calculate the correlation coefficient.`;
+    }
+
+    let tendency;
+    if (corrcoef < -0.7) {
+      tendency = 'very unlikely';
+    } else if (corrcoef < -0.3) {
+      tendency = 'unlikely';
+    } else if (corrcoef < 0.3) {
+      return html`${selectedSpaces[0].spaceName} and ${selectedSpaces[1].spaceName} have no particular relationship between their access records.`;
+    } else if (corrcoef < 0.7) {
+      tendency = 'likely';
+    } else {
+      tendency = 'very likely';
+    }
+
+    let action;
+    if (this._selectedCountType === 'enter' || this._selectedCountType === 'uniqueEnter') {
+      action = ['enter', 'entering'];
+    } else if (this._selectedCountType === 'exit' || this._selectedCountType === 'uniqueExit') {
+      action = ['exit', 'exiting'];
+    } else {
+      action = ['stay in', 'staying in'];
+    }
+
+    const hours = Math.abs(offset) * 2;
+    let beforeOrAfter;
+    if (offset < 0) {
+      beforeOrAfter = `${hours - 1} to ${hours + 1} hours before`;
+    } else if (offset === 0) {
+      beforeOrAfter = 'less than 1 hour before or after';
+    } else {
+      beforeOrAfter = `${hours - 1} to ${hours + 1} hours after`;
+    }
+
+    return html`
+      Users are ${tendency} to ${action[0]}
+      <span class="${classes.highlight}">${selectedSpaces[0].spaceName}</span>
+      in ${beforeOrAfter} ${action[1]} 
+      <span class="${classes.highlight}">${selectedSpaces[1].spaceName}</span>.
     `;
   }
 
@@ -467,6 +616,19 @@ export class SpacesPage extends LitElement {
       this._selectedSpaceIds = null;
     } else {
       this._selectedSpaceIds = toggleNullableArray(this._selectedSpaceIds, spaceId);
+    }
+
+    if (this._selectedSpaceIds === null || this._selectedSpaceIds.length > 1) {
+      this._selectedCorrelationSpaceId = null;
+    }
+  }
+
+  private _onCorrelationChipClick(spaceId: string | null): void {
+    if (spaceId === null) {
+      this._selectedCorrelationSpaceId = null;
+    } else {
+      this._selectedCorrelationSpaceId = spaceId;
+      this._selectedGroupBy = 'space';
     }
   }
 

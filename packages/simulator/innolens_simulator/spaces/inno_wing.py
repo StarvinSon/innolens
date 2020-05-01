@@ -34,7 +34,7 @@ from ..machines.computer import Computer
 
 class InnoWing(Space):
   space_id = 'inno_wing'
-  space_name = 'Innoation Wing Facility'
+  space_name = 'Innovation Wing Facility'
 
   def __init__(self, attached_object: Object):
     super().__init__(attached_object)
