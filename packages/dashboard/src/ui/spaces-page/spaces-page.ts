@@ -525,7 +525,7 @@ export class SpacesPage extends LitElement {
           .formatXLabel="${this._formatLineChartLabel}"
           .fill="${this._selectedChartStyle === 'stacked'}"
         >
-          <span slot="title">Space Member Count History</span>
+          <span slot="title">Space Member Count History & Forecast</span>
         </inno-line-chart-2>
       </inno-chart-card>
     `;
@@ -559,11 +559,15 @@ export class SpacesPage extends LitElement {
   private _getDescription(): TemplateResult {
     const { offset, corrcoef } = this._correlation!;
 
-    const selectedSpaces = this._spaces!.filter(
-      (space) =>
-        space.spaceId === this._selectedSpaceIds![0]
-        || space.spaceId === this._selectedCorrelationSpaceId
-    );
+    let selectedSpaceName;
+    let selectedCorrelationSpaceName;
+    for (const space of this._spaces!) {
+      if (space.spaceId === this._selectedSpaceIds![0]) {
+        selectedSpaceName = space.spaceName;
+      } else if (space.spaceId === this._selectedCorrelationSpaceId) {
+        selectedCorrelationSpaceName = space.spaceName;
+      }
+    }
 
     if (corrcoef === -2) {
       return html`There are not enough access records available to calculate the correlation coefficient.`;
@@ -575,7 +579,7 @@ export class SpacesPage extends LitElement {
     } else if (corrcoef < -0.3) {
       tendency = 'unlikely';
     } else if (corrcoef < 0.3) {
-      return html`${selectedSpaces[0].spaceName} and ${selectedSpaces[1].spaceName} have no particular relationship between their access records.`;
+      return html`${selectedSpaceName} and ${selectedCorrelationSpaceName} have no particular relationship between their access records.`;
     } else if (corrcoef < 0.7) {
       tendency = 'likely';
     } else {
@@ -603,9 +607,9 @@ export class SpacesPage extends LitElement {
 
     return html`
       Users are ${tendency} to ${action[0]}
-      <span class="${classes.highlight}">${selectedSpaces[0].spaceName}</span>
+      <span class="${classes.highlight}">${selectedSpaceName}</span>
       in ${beforeOrAfter} ${action[1]}
-      <span class="${classes.highlight}">${selectedSpaces[1].spaceName}</span>.
+      <span class="${classes.highlight}">${selectedCorrelationSpaceName}</span>.
     `;
   }
 

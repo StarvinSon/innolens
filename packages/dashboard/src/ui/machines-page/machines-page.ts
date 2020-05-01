@@ -610,7 +610,7 @@ export class MachinesPage extends LitElement {
           .formatXLabel="${this._formatLineChartLabel}"
           .fill="${this._selectedChartStyle === 'stacked'}"
         >
-          <span slot="title">Reusable Inventory Member Count History & Forecast</span>
+          <span slot="title">Machine Member Count History & Forecast</span>
         </inno-line-chart-2>
       </inno-chart-card>
     `;
@@ -644,11 +644,15 @@ export class MachinesPage extends LitElement {
   private _getDescription(): TemplateResult {
     const { offset, corrcoef } = this._correlation!;
 
-    const selectedTypes = this._types!.filter(
-      (type) =>
-        type.typeId === this._selectedTypeIds![0]
-        || type.typeId === this._selectedCorrelationTypeId
-    );
+    let selectedTypeName;
+    let selectedCorrelationTypeName;
+    for (const type of this._types!) {
+      if (type.typeId === this._selectedTypeIds![0]) {
+        selectedTypeName = type.typeName;
+      } else if (type.typeId === this._selectedCorrelationTypeId) {
+        selectedCorrelationTypeName = type.typeName;
+      }
+    }
 
     if (corrcoef === -2) {
       return html`There are not enough usage data available to calculate the correlation coefficient.`;
@@ -660,7 +664,7 @@ export class MachinesPage extends LitElement {
     } else if (corrcoef < -0.3) {
       tendency = 'unlikely';
     } else if (corrcoef < 0.3) {
-      return html`${selectedTypes[0].typeName} and ${selectedTypes[1].typeName} have no particular relationship between their usage data.`;
+      return html`${selectedTypeName} and ${selectedCorrelationTypeName} have no particular relationship between their usage data.`;
     } else if (corrcoef < 0.7) {
       tendency = 'likely';
     } else {
@@ -688,9 +692,9 @@ export class MachinesPage extends LitElement {
 
     return html`
       Users are ${tendency} to ${action[0]}
-      <span class="${classes.highlight}">${selectedTypes[0].typeName}</span>
+      <span class="${classes.highlight}">${selectedTypeName}</span>
       in ${beforeOrAfter} ${action[1]}
-      <span class="${classes.highlight}">${selectedTypes[1].typeName}</span>.
+      <span class="${classes.highlight}">${selectedCorrelationTypeName}</span>.
     `;
   }
 
