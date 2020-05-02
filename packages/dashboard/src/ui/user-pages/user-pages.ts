@@ -113,12 +113,13 @@ export class UserPages extends LitElement {
     if (this.spaceService !== null && !this._spaceFetched) {
       this.spaceService.fetchSpaces().then((data) => {
         this._spaces = data.filter((space) => space.spaceId !== 'inno_wing');
+        const itemsPerPage = Math.ceil(this._spaces.length / Math.ceil(this._spaces.length / 8));
         this._spaceGroups = this._spaces.reduce(
           (groups: Array<Array<Space>>, space, i) => {
-            if (i % 8 === 0) {
+            if (i % itemsPerPage === 0) {
               groups.push([space]);
             } else {
-              groups[Math.floor(i / 8)].push(space);
+              groups[Math.floor(i / itemsPerPage)].push(space);
             }
             return groups;
           },
@@ -131,12 +132,15 @@ export class UserPages extends LitElement {
     if (this.machineService !== null && !this._machineTypeFetched) {
       this.machineService.fetchTypes().then((data) => {
         this._machineTypes = data;
+        const itemsPerPage = Math.ceil(
+          this._machineTypes.length / Math.ceil(this._machineTypes.length / 8)
+        );
         this._machineTypeGroups = this._machineTypes.reduce(
           (groups: Array<Array<MachineType>>, machineType, i) => {
-            if (i % 8 === 0) {
+            if (i % itemsPerPage === 0) {
               groups.push([machineType]);
             } else {
-              groups[Math.floor(i / 8)].push(machineType);
+              groups[Math.floor(i / itemsPerPage)].push(machineType);
             }
             return groups;
           },
@@ -149,12 +153,15 @@ export class UserPages extends LitElement {
     if (this.reusableInventoryService !== null && !this._reusableInventoryTypeFetched) {
       this.reusableInventoryService.fetchTypes().then((data) => {
         this._reusableInventoryTypes = data;
+        const itemsPerPage = Math.ceil(
+          this._reusableInventoryTypes.length / Math.ceil(this._reusableInventoryTypes.length / 8)
+        );
         this._reusableInventoryTypeGroups = this._reusableInventoryTypes.reduce(
           (groups: Array<Array<ReusableInventoryType>>, reusableInventoryType, i) => {
-            if (i % 8 === 0) {
+            if (i % itemsPerPage === 0) {
               groups.push([reusableInventoryType]);
             } else {
-              groups[Math.floor(i / 8)].push(reusableInventoryType);
+              groups[Math.floor(i / itemsPerPage)].push(reusableInventoryType);
             }
             return groups;
           },

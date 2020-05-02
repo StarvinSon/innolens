@@ -204,7 +204,7 @@ export class UserExpendableInventoriesPage extends LitElement {
           .labels="${12}"
           showPercentage
         >
-          <span slot="title">Utilization rate of expendable inventories</span>
+          <span slot="title">Availability of expendable inventories</span>
         </inno-line-chart>
       </div>
     `;

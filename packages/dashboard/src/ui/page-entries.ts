@@ -72,29 +72,34 @@ export const pageEntries: ReadonlyArray<PageEntry | PageGroupEntry> = [
     ]
   },
   {
-    type: 'pageEntry',
+    type: 'pageGroupEntry',
     name: 'Spaces',
-    href: '/spaces',
-    pathRegExp: /^\/spaces$/,
-    load: async () => {
-      await import(
-        /* webpackChunkName: 'spaces-page' */
-        './spaces-page'
-      );
-    },
-    tagName: 'inno-spaces-page'
-  },
-  {
-    type: 'pageEntry',
-    name: 'Access Causality',
-    href: '/access-causality',
-    load: async () => {
-      await import(
-        /* webpackChunkName: 'access-causality-page' */
-        './access-causality-page'
-      );
-    },
-    tagName: 'inno-access-causality-page'
+    pages: [
+      {
+        type: 'pageEntry',
+        name: 'Overall',
+        href: '/spaces/overall',
+        load: async () => {
+          await import(
+            /* webpackChunkName: 'spaces-page' */
+            './spaces-page'
+          );
+        },
+        tagName: 'inno-spaces-page'
+      },
+      {
+        type: 'pageEntry',
+        name: 'Access Causality',
+        href: '/spaces/access-causality',
+        load: async () => {
+          await import(
+            /* webpackChunkName: 'access-causality-page' */
+            './access-causality-page'
+          );
+        },
+        tagName: 'inno-access-causality-page'
+      }
+    ]
   },
   {
     type: 'pageEntry',
@@ -111,7 +116,7 @@ export const pageEntries: ReadonlyArray<PageEntry | PageGroupEntry> = [
   },
   {
     type: 'pageEntry',
-    name: 'Reusable Inventory',
+    name: 'Reusable Inventories',
     href: '/reusable-inventories',
     load: async () => {
       await import(
@@ -123,7 +128,7 @@ export const pageEntries: ReadonlyArray<PageEntry | PageGroupEntry> = [
   },
   {
     type: 'pageEntry',
-    name: 'Expendable Inventory',
+    name: 'Expendable Inventories',
     href: '/expendable-inventories',
     load: async () => {
       await import(
