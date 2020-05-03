@@ -1,5 +1,5 @@
 import { injectableConstructor, singleton } from '@innolens/resolver/web';
-import { addMilliseconds } from 'date-fns';
+import { subSeconds } from 'date-fns';
 
 import { stringTag } from '../utils/class';
 import { Debouncer } from '../utils/debouncer';
@@ -180,9 +180,9 @@ export class SpaceService {
 
     return this._debouncer.debounce(`member-count-legacy:${key}`, async () => {
       const history = await this.fetchMemberCountHistory({
-        fromTime: time,
-        toTime: addMilliseconds(time, 1),
-        timeStepMs: 1,
+        fromTime: subSeconds(time, 1),
+        toTime: time,
+        timeStepMs: 1000,
         filterSpaceIds,
         groupBy: 'space',
         countType: 'stay'
