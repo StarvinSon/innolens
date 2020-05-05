@@ -128,7 +128,7 @@ class AccessCausalityModel:
     '''
     model = keras.models.Sequential([
       keras.layers.Dense(
-        1024, # (len(self.features) * self.history_window_size) ** 2,
+        256, # (len(self.features) * self.history_window_size) ** 2,
         input_shape=(len(self.features) * self.history_window_size,),
         activation=keras.activations.relu
       ),
@@ -172,7 +172,7 @@ class AccessCausalityModel:
     show_ui: bool = False
   ) -> None:
     if epochs is None:
-      epochs = 10
+      epochs = 20
     if steps_per_epoch is None:
       steps_per_epoch = 20
     if validation_steps is None:
@@ -193,8 +193,8 @@ class AccessCausalityModel:
 
     ds = self.__load_dataset(path)
     # Use the first 30 days as the validation set
-    train_ds = ds.skip(30 * 24 * 2).cache().shuffle(10000).batch(128).repeat()
-    val_ds = ds.take(30 * 24 * 2).cache().batch(128).repeat()
+    train_ds = ds.skip(30 * 24 * 2).shuffle(10000).batch(128).repeat()
+    val_ds = ds.take(30 * 24 * 2).batch(128).repeat()
 
     callbacks = []
     callbacks.append(keras.callbacks.ModelCheckpoint(

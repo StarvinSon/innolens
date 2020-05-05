@@ -5,6 +5,7 @@ from ..engine.object import Object
 from .space import Space
 from .ar_vr_room import ArVrRoom
 from .brainstorming_area import BrainstormingArea
+from .common_makerspace_area import CommonMakerspaceArea
 from .common_makerspace_area_1 import CommonMakerspaceArea1
 from .common_makerspace_area_2 import CommonMakerspaceArea2
 from .digital_learning_lab import DigitalLearningLab
@@ -42,6 +43,7 @@ class InnoWing(Space):
     for space_class in (
       ArVrRoom,
       BrainstormingArea,
+      CommonMakerspaceArea,
       CommonMakerspaceArea1,
       CommonMakerspaceArea2,
       DigitalLearningLab,

@@ -20,13 +20,13 @@ class UserMixin(Component):
 
   __entered_spaces: Final[MutableSet[Space]]
   __acquired_machines: Final[MutableSet[Machine]]
-  __acquired_inventories: Final[MutableSet[ReusableInventory]]
+  __acquired_reusable_inventories: Final[MutableSet[ReusableInventory]]
 
   def __init__(self, attached_object: Object):
     super().__init__(attached_object)
     self.__entered_spaces = set()
     self.__acquired_machines = set()
-    self.__acquired_inventories = set()
+    self.__acquired_reusable_inventories = set()
 
   def _on_late_init(self) -> None:
     super()._on_late_init()
@@ -81,7 +81,7 @@ class UserMixin(Component):
 
     return False
 
-  def _release_acquired_machines(self, machines: Iterable[Machine]) -> bool:
+  def _release_machines(self, machines: Iterable[Machine]) -> bool:
     '''
     Release any machine that is acquired by this user in the given list.
     '''
@@ -92,42 +92,51 @@ class UserMixin(Component):
         released = True
     return released
 
+  def _release_all_machines(self) -> None:
+    for machine in self.__acquired_machines:
+      machine.release(self.__member)
+    self.__acquired_machines.clear()
 
-  def _acquire_inventory(self, inventory: ReusableInventory) -> None:
-    if inventory in self.__acquired_inventories:
+
+  def _acquire_reusable_inventory(self, inventory: ReusableInventory) -> None:
+    if inventory in self.__acquired_reusable_inventories:
       raise ValueError(f'Already acquired {inventory.type_name} {inventory.instance_name}')
-    self.__acquired_inventories.add(inventory)
+    self.__acquired_reusable_inventories.add(inventory)
     inventory.acquire(self.__member)
 
-  def _release_inventory(self, inventory: ReusableInventory) -> None:
-    if inventory not in self.__acquired_inventories:
+  def _release_reusable_inventory(self, inventory: ReusableInventory) -> None:
+    if inventory not in self.__acquired_reusable_inventories:
       raise ValueError(f'Has not acquired {inventory.type_name} {inventory.instance_name}')
-    self.__acquired_inventories.remove(inventory)
+    self.__acquired_reusable_inventories.remove(inventory)
     inventory.release(self.__member)
 
-  def _acquire_first_free_inventory(self, inventories: Iterable[ReusableInventory]) -> bool:
+  def _acquire_first_free_reusable_inventory(self, inventories: Iterable[ReusableInventory]) -> bool:
     '''
     Acquire the first inventory in the list that is not in use.
     '''
     for inventory in inventories:
-      if inventory in self.__acquired_inventories:
+      if inventory in self.__acquired_reusable_inventories:
         raise ValueError(f'Already acquired {inventory.type_name} {inventory.instance_name}')
 
     for inventory in inventories:
       if not inventory.in_use:
-        self._acquire_inventory(inventory)
+        self._acquire_reusable_inventory(inventory)
         return True
 
     return False
 
-  def _release_acquired_inventories(self, inventories: Iterable[ReusableInventory]) -> bool:
+  def _release_reusable_inventories(self, inventories: Iterable[ReusableInventory]) -> bool:
     '''
     Release any inventory that is acquired by this user in the given list.
     '''
     released = False
     for inventory in inventories:
-      if inventory in self.__acquired_inventories:
-        self._release_inventory(inventory)
+      if inventory in self.__acquired_reusable_inventories:
+        self._release_reusable_inventory(inventory)
         released = True
     return released
 
+  def _release_all_reusable_inventories(self) -> None:
+    for inventory in self.__acquired_reusable_inventories:
+      inventory.release(self.__member)
+    self.__acquired_machines.clear()

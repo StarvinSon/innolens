@@ -11,6 +11,8 @@ from .general_user import GeneralUser
 from .inno_lens import InnoLensMember
 from .comp3356_robotics import COMP3356RoboticsMember
 from .comp1117 import COMP1117Classmate
+from .elec2346 import ELEC2346Classmate
+from .random import RandomUser
 
 from ..engine.object import Object
 from ..utils.random.time import randtime_nd
@@ -20,6 +22,9 @@ from ..utils.time import hk_timezone
 def add_users(container: Object) -> None:
   add_comp1117_classmates(container, 'a')
   add_comp1117_classmates(container, 'b')
+  add_elec2346_classmates(container, 'a')
+  add_elec2346_classmates(container, 'b')
+  add_random_users(container)
   # add_general_users(container)
   # add_inno_lens_members(container)
   # add_comp3356_robotics_members(container)
@@ -31,9 +36,11 @@ def add_comp1117_classmates(container: Object, subclass: Literal['a', 'b']) -> N
     member = obj.add_component(Member)
     member.randomize_fields(
       department_choices=['Computer Science', 'Electrical and Electronic Engineering'],
+      department_choice_weights=[8, 2],
       type_of_study_choices=['Undergraduate'],
       study_programme_choices=['JS6963'],
-      year_of_study_choices=[2, 3, 4],
+      year_of_study_choices=[2, 3],
+      year_of_study_choice_weights=[6, 4],
       affiliated_student_interest_groups_choices=[f'COMP1117_{subclass.upper()}'],
       membership_start_time=randtime_nd(
         lower=datetime(2020, 1, 1, tzinfo=hk_timezone),
@@ -48,6 +55,50 @@ def add_comp1117_classmates(container: Object, subclass: Literal['a', 'b']) -> N
     comp1117 = obj.add_component(COMP1117Classmate)
     comp1117.subclass = subclass
 
+    container.add_object(obj)
+
+def add_elec2346_classmates(container: Object, subclass: Literal['a', 'b']) -> None:
+  for _ in range(60):
+    obj = container.engine.create_object()
+
+    member = obj.add_component(Member)
+    member.randomize_fields(
+      department_choices=['Electrical and Electronic Engineering', 'Mechanical Engineering'],
+      department_choice_weights=[8, 2],
+      type_of_study_choices=['Undergraduate'],
+      study_programme_choices=['JS6963'],
+      year_of_study_choices=[2, 3, 4],
+      year_of_study_choice_weights=[6, 2, 2],
+      affiliated_student_interest_groups_choices=[f'ELEC2346_{subclass.upper()}'],
+      membership_start_time=randtime_nd(
+        lower=datetime(2020, 1, 1, tzinfo=hk_timezone),
+        upper=datetime(2020, 1, 20, tzinfo=hk_timezone),
+        step=timedelta(days=1),
+        mean=datetime(2020, 1, 5, tzinfo=hk_timezone),
+        stddev=timedelta(days=3)
+      ),
+      membership_end_time=datetime(2020, 6, 1, tzinfo=hk_timezone)
+    )
+
+    elec2346 = obj.add_component(ELEC2346Classmate)
+    elec2346.subclass = subclass
+
+    container.add_object(obj)
+
+def add_random_users(container: Object) -> None:
+  for _ in range(60):
+    obj = container.engine.create_object()
+    member = obj.add_component(Member)
+    member.randomize_fields(
+      membership_start_time=randtime_nd(
+        lower=datetime(2019, 9, 1, tzinfo=hk_timezone),
+        upper=datetime(2020, 5, 1, tzinfo=hk_timezone),
+        step=timedelta(days=1),
+        mean=datetime(2019, 11, 1, tzinfo=hk_timezone),
+        stddev=timedelta(days=30)
+      )
+    )
+    obj.add_component(RandomUser)
     container.add_object(obj)
 
 def add_general_users(container: Object) -> None:

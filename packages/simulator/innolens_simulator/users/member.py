@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from random import randrange
+import random
 from typing import Optional, Sequence, TypeVar
 from datetime import datetime
 
@@ -9,8 +9,8 @@ from ..utils.time import hk_timezone
 
 
 T = TypeVar('T')
-def rand_element(choices: Sequence[T]) -> T:
-  return choices[randrange(len(choices))]
+def rand_element(choices: Sequence[T], *, weights: Optional[Sequence[float]] = None) -> T:
+  return random.choices(choices, weights=weights, k=1)[0]
 
 
 _last_member_id = '0'
@@ -5046,9 +5046,13 @@ class Member(Component):
     self,
     *,
     department_choices: Optional[Sequence[str]] = None,
+    department_choice_weights: Optional[Sequence[float]] = None,
     type_of_study_choices: Optional[Sequence[str]] = None,
+    type_of_study_choice_weights: Optional[Sequence[float]] = None,
     study_programme_choices: Optional[Sequence[str]] = None,
+    study_programme_choice_weights: Optional[Sequence[float]] = None,
     year_of_study_choices: Optional[Sequence[int]] = None,
+    year_of_study_choice_weights: Optional[Sequence[float]] = None,
     affiliated_student_interest_groups_choices: Optional[Sequence[str]] = None,
     membership_start_time: Optional[datetime] = None,
     membership_end_time: Optional[datetime] = None
@@ -5058,22 +5062,22 @@ class Member(Component):
     self.department = (
       rand_department()
       if department_choices is None
-      else rand_element(department_choices)
+      else rand_element(department_choices, weights=department_choice_weights)
     )
     self.type_of_study = (
       rand_type_of_study()
       if type_of_study_choices is None
-      else rand_element(type_of_study_choices)
+      else rand_element(type_of_study_choices, weights=type_of_study_choice_weights)
     )
     self.study_programme = (
       rand_study_programme()
       if study_programme_choices is None
-      else rand_element(study_programme_choices)
+      else rand_element(study_programme_choices, weights=study_programme_choice_weights)
     )
     self.year_of_study = (
       rand_year_of_study()
       if year_of_study_choices is None
-      else rand_element(year_of_study_choices)
+      else rand_element(year_of_study_choices, weights=year_of_study_choice_weights)
     )
     self.affiliated_student_interest_group = (
       rand_affiliated_student_interest_group()
