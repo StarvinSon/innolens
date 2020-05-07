@@ -4,10 +4,16 @@ import { injectableConstructor, singleton } from '@innolens/resolver/web';
 import { mergeArray } from '../utils/immutable/array';
 import { mergeObject } from '../utils/immutable/object';
 import { mergeObjectMap } from '../utils/immutable/object-map';
+import { PromiseValue } from '../utils/promise';
 
+import * as MemberGlue from './glues/member';
+import { OAuth2Service } from './oauth2';
 import { ServerService } from './server';
 import { Action, AnyAction } from './state-types';
 import { Store } from './store';
+
+
+export type Member = PromiseValue<ReturnType<typeof MemberGlue.GetMembers.handleResponse>>[number];
 
 
 export interface MemberCountFilter {
@@ -98,21 +104,23 @@ declare global {
 
 const KEY = 'member';
 
-@injectableConstructor(Store, ServerService)
+@injectableConstructor(Store, ServerService, OAuth2Service)
 @singleton()
 export class MemberService extends EventTarget {
   private readonly _store: Store;
   private readonly _serverClient: ServerService;
+  private readonly _oauth2Service: OAuth2Service;
 
   private readonly _updatingPromises: Map<string, Promise<any>> = new Map();
 
-  public constructor(store: Store, oauth2Service: ServerService) {
+  public constructor(store: Store, serverService: ServerService, oauth2Service: OAuth2Service) {
     super();
     this._reduce = this._reduce.bind(this);
     this._onStateUpdated = this._onStateUpdated.bind(this);
 
     this._store = store;
-    this._serverClient = oauth2Service;
+    this._serverClient = serverService;
+    this._oauth2Service = oauth2Service;
     store.addReducer(KEY, this._reduce);
     store.addHandler(KEY, this._onStateUpdated);
   }
@@ -226,6 +234,19 @@ export class MemberService extends EventTarget {
       });
       return data;
     });
+  }
+
+  public async fetchMembers(opts: {
+    readonly memberIds: ReadonlyArray<string>;
+  }): Promise<ReadonlyArray<Member>> {
+    return this._oauth2Service
+      .withAccessToken((token) => fetch(MemberGlue.GetMembers.createRequest({
+        authentication: { token },
+        body: {
+          memberIds: opts.memberIds
+        }
+      })))
+      .then(MemberGlue.GetMembers.handleResponse);
   }
 
   public async updateCount(filter: MemberCountFilter): Promise<number> {

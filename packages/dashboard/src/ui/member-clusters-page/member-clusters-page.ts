@@ -5,25 +5,30 @@ import {
   LitElement, TemplateResult, html,
   customElement, PropertyValues, property
 } from 'lit-element';
+import { classMap } from 'lit-html/directives/class-map';
 
 import '../chart-card';
 import '../choice-chip';
 import '../choice-chips';
 import '../line-chart-2';
 import '../member-cluster-dendrogram';
+import '../pie-chart'; // eslint-disable-line import/no-duplicates
+import { Member, MemberService } from '../../services/member';
 import { MemberClusterService, MemberClustersResult } from '../../services/member-cluster';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
+import { PieChartData } from '../pie-chart'; // eslint-disable-line import/no-duplicates
 
 import { css, classes } from './member-clusters-page.scss';
 
 
-interface MemberClusterResultWithHierarchicalNode extends MemberClustersResult {
+interface ExtendedMemberClusterResult extends MemberClustersResult {
+  readonly members: Readonly<Record<string, Member>>;
   readonly rootHierarchicalNode: HierarchyNode<MemberClustersResult['clusters'][number]>;
 }
 
 
-interface FlatMemberClusterResult extends MemberClusterResultWithHierarchicalNode {
+interface FlatMemberClusterResult extends ExtendedMemberClusterResult {
   readonly flatClusters: ReadonlyArray<{
     readonly memberIds: ReadonlyArray<string>;
   }>;
@@ -44,6 +49,45 @@ const pastDaysChoices: ReadonlyArray<number> = [
 ];
 
 
+type ChartType =
+  'department'
+  | 'typeOfStudy'
+  | 'yearOfStudy'
+  | 'studyProgramme'
+  | 'affiliatedStudentInterestGroup'
+  | 'access';
+
+const chartTypeChoices: ReadonlyArray<{
+  readonly type: ChartType;
+  readonly name: string;
+}> = [
+  {
+    type: 'department',
+    name: 'Department'
+  },
+  {
+    type: 'typeOfStudy',
+    name: 'Type of Study'
+  },
+  {
+    type: 'yearOfStudy',
+    name: 'Year of Study'
+  },
+  {
+    type: 'studyProgramme',
+    name: 'Study Programme'
+  },
+  {
+    type: 'affiliatedStudentInterestGroup',
+    name: 'Affiliated Student Interest Group'
+  },
+  {
+    type: 'access',
+    name: 'Access'
+  }
+];
+
+
 const TAG_NAME = 'inno-member-clusters-page';
 
 declare global {
@@ -59,7 +103,11 @@ export class MemberClustersPage extends LitElement {
 
   @injectableProperty(MemberClusterService)
   @observeProperty('_onServiceInjected')
-  public memberClusterService: MemberClusterService | null = null;
+  public memberClusterService: MemberClusterService | null;
+
+  @injectableProperty(MemberService)
+  @observeProperty('_onServiceInjected')
+  public memberService: MemberService | null;
 
 
   @property({ attribute: false })
@@ -69,7 +117,10 @@ export class MemberClustersPage extends LitElement {
   private _distanceThreshold: number | null = null;
 
   @property({ attribute: false })
-  private _selectedFeature: string | null = null;
+  private _selectedChartType: ChartType = 'department';
+
+  @property({ attribute: false })
+  private _selectedAccessFeature: string | null = null;
 
 
   @property({ attribute: false })
@@ -85,11 +136,11 @@ export class MemberClustersPage extends LitElement {
   private _clusterResultKey: string | null = null;
 
   @property({ attribute: false })
-  private _clusterResult: MemberClusterResultWithHierarchicalNode | null = null;
+  private _clusterResult: ExtendedMemberClusterResult | null = null;
 
 
   private _flatClustersDeps: readonly [
-    MemberClusterResultWithHierarchicalNode | null,
+    ExtendedMemberClusterResult | null,
     number | null
   ] = [null, null];
 
@@ -97,13 +148,21 @@ export class MemberClustersPage extends LitElement {
   private _flatClusterResult: FlatMemberClusterResult | null = null;
 
 
-  private _clusterLineChartPropsDeps: readonly [
+  private _clustersChartPropsDeps: readonly [
     FlatMemberClusterResult | null,
-    string | null
-  ] = [null, null];
+    ChartType | null,
+    string | null // selected feature, only applicable to chartType=access
+  ] = [null, null, null];
 
-  private _clusterLineChartProps: ReadonlyArray<{
+  private _clustersChartProps: ReadonlyArray<{
+    readonly type: Exclude<ChartType, 'access'>;
     readonly name: string;
+    readonly size: number;
+    readonly data: PieChartData;
+  } | {
+    readonly type: 'access';
+    readonly name: string;
+    readonly size: number;
     readonly ys: ReadonlyArray<ReadonlyArray<number>>;
     readonly xLabels: ReadonlyArray<Date>;
   }> | null = null;
@@ -112,6 +171,8 @@ export class MemberClustersPage extends LitElement {
   public constructor() {
     super();
     this._formatLineChartLabel = this._formatLineChartLabel.bind(this);
+    this.memberClusterService = null;
+    this.memberService = null;
   }
 
 
@@ -126,7 +187,7 @@ export class MemberClustersPage extends LitElement {
   }
 
   private _updateProperties(): void {
-    if (this.memberClusterService === null) return;
+    if (this.memberClusterService === null || this.memberService === null) return;
 
     if (this._toTime === null) {
       let toTime = new Date();
@@ -161,9 +222,19 @@ export class MemberClustersPage extends LitElement {
             filterMemberIds: null,
             filterSpaceIds: null
           })
+          .then(async (data) => {
+            const memberIds = data.clusters
+              .map((c) => c.memberId)
+              .filter((id): id is Exclude<typeof id, null> => id !== null);
+            const members = await this.memberService!.fetchMembers({ memberIds });
+            return {
+              ...data,
+              members: Object.fromEntries(members.map((m) => [m.memberId, m]))
+            };
+          })
           .then((data) => {
             if (this._clusterResultKey === clusterResultKey) {
-              const rootNode = stratify<MemberClusterResultWithHierarchicalNode['clusters'][number]>()
+              const rootNode = stratify<ExtendedMemberClusterResult['clusters'][number]>()
                 .id((c) => String(c.clusterId))
                 .parentId((c, i, clusters) => clusters.find((pc) =>
                   pc.childClusterIds.includes(c.clusterId))?.clusterId.toString())
@@ -215,12 +286,31 @@ export class MemberClustersPage extends LitElement {
       this._flatClustersDeps = [this._clusterResult, this._distanceThreshold];
     }
 
-    if (
-      this._clusterLineChartPropsDeps[0] !== this._flatClusterResult
-      || this._clusterLineChartPropsDeps[1] !== this._selectedFeature
+    if (this._flatClusterResult === null) {
+      this._selectedAccessFeature = null;
+    } else if (
+      this._selectedChartType === 'access'
+      && (
+        this._selectedAccessFeature === null
+        || (
+          this._selectedAccessFeature !== null
+          && !this._flatClusterResult.features.includes(this._selectedAccessFeature)
+        )
+      )
     ) {
-      if (this._flatClusterResult === null || this._selectedFeature === null) {
-        this._clusterLineChartProps = null;
+      this._selectedAccessFeature = this._flatClusterResult.features[0] ?? null;
+    }
+
+    if (
+      this._clustersChartPropsDeps[0] !== this._flatClusterResult
+      || this._clustersChartPropsDeps[1] !== this._selectedChartType
+      || this._clustersChartPropsDeps[2] !== this._selectedAccessFeature
+    ) {
+      if (
+        this._flatClusterResult === null
+        || (this._selectedChartType === 'access' && this._selectedAccessFeature === null)
+      ) {
+        this._clustersChartProps = null;
       } else {
         const outlierMemberIds: Array<string> = [];
         const allClusters: Array<readonly [string, ReadonlyArray<string>]> = [];
@@ -241,17 +331,43 @@ export class MemberClustersPage extends LitElement {
           ]);
         }
 
-        this._clusterLineChartProps = allClusters.map(([clusterName, clusterMemberIds]) => ({
-          name: clusterName,
-          ys: clusterMemberIds.map((memberId) => {
-            const memberIdx = this._flatClusterResult!.memberIds.indexOf(memberId);
-            const featureIdx = this._flatClusterResult!.features.indexOf(this._selectedFeature!);
-            return this._flatClusterResult!.values[memberIdx][featureIdx];
-          }),
-          xLabels: this._flatClusterResult!.timeSpans.map(([, endTime]) => endTime)
-        }));
+        this._clustersChartProps = allClusters.map(([clusterName, clusterMemberIds]) => {
+          if (this._selectedChartType !== 'access') {
+            const groups = new Map<string, number>();
+            for (const memberId of clusterMemberIds) {
+              const group = this._flatClusterResult!.members[memberId][this._selectedChartType];
+              groups.set(group, (groups.get(group) ?? 0) + 1);
+            }
+            return {
+              type: this._selectedChartType,
+              name: clusterName,
+              size: clusterMemberIds.length,
+              data: {
+                pies: Array.from(groups).map(([group, count]) => ({
+                  name: group,
+                  value: count
+                }))
+              }
+            };
+          }
+          return {
+            type: this._selectedChartType,
+            name: clusterName,
+            size: clusterMemberIds.length,
+            ys: clusterMemberIds.map((memberId) => {
+              const memberIdx = this._flatClusterResult!.memberIds.indexOf(memberId);
+              const featureIdx = this._flatClusterResult!.features.indexOf(this._selectedAccessFeature!); // eslint-disable-line max-len
+              return this._flatClusterResult!.values[memberIdx][featureIdx];
+            }),
+            xLabels: this._flatClusterResult!.timeSpans.map(([, endTime]) => endTime)
+          };
+        });
       }
-      this._clusterLineChartPropsDeps = [this._flatClusterResult, this._selectedFeature];
+      this._clustersChartPropsDeps = [
+        this._flatClusterResult,
+        this._selectedChartType,
+        this._selectedAccessFeature
+      ];
     }
   }
 
@@ -276,10 +392,19 @@ export class MemberClustersPage extends LitElement {
         })}
 
         ${this._renderChipOptions({
-          title: 'Features',
+          title: 'Chart Type',
+          items: chartTypeChoices,
+          selectItem: (item) => item.type === this._selectedChartType,
+          formatItem: (item) => item.name,
+          onClick: (item) => this._onChartTypeChipClick(item.type)
+        })}
+
+        ${this._renderChipOptions({
+          title: 'Access Features',
           items: this._clusterResult?.features ?? [],
-          selectItem: (feature) => feature === this._selectedFeature,
-          onClick: (feature) => this._onFeatureChipClick(feature)
+          selectItem: (item) => item === this._selectedAccessFeature,
+          onClick: (item) => this._onAccessFeatureChipClick(item),
+          hide: this._selectedChartType !== 'access'
         })}
 
       </div>
@@ -288,14 +413,15 @@ export class MemberClustersPage extends LitElement {
   }
 
   private _renderChipOptions<T>(options: {
-    readonly title: unknown,
-    readonly items: ReadonlyArray<T>,
-    readonly selectItem: (item: T) => boolean,
-    readonly formatItem?: (item: T) => unknown,
-    readonly onClick: (item: T) => void
+    readonly title: unknown;
+    readonly items: ReadonlyArray<T>;
+    readonly selectItem: (item: T) => boolean;
+    readonly formatItem?: (item: T) => unknown;
+    readonly onClick: (item: T) => void;
+    readonly hide?: boolean;
   }): TemplateResult {
     return html`
-      <div class="${classes.option}">
+      <div class="${classMap({ [classes.option]: true, [classes.option_$hide]: options.hide ?? false })}">
         <div class="${classes.option_label}">${options.title}</div>
         <inno-choice-chips
           class="${classes.option_chips}"
@@ -316,7 +442,7 @@ export class MemberClustersPage extends LitElement {
     return html`
       <div class="${classes.charts}">
         ${this._renderDendrogram()}
-        ${this._renderClusterFeatureCharts()}
+        ${this._renderClusterCharts()}
       </div>
     `;
   }
@@ -336,23 +462,36 @@ export class MemberClustersPage extends LitElement {
     `;
   }
 
-  private _renderClusterFeatureCharts(): TemplateResult {
+  private _renderClusterCharts(): TemplateResult {
     /* eslint-disable @typescript-eslint/indent */
     return html`
-      ${this._clusterLineChartProps === null
-        ? []
-        : this._clusterLineChartProps.map((chartProps) => html`
-          <inno-chart-card>
-            <inno-line-chart-2
-              class="${classes.featureChart}"
-              .ys="${chartProps.ys}"
-              .xLabels="${chartProps.xLabels}"
-              .formatXLabel="${this._formatLineChartLabel}"
-            >
-              <span slot="title">${chartProps.name} (${chartProps.ys.length} members)</span>
-            </inno-line-chart-2>
-          </inno-chart-card>
-        `)}
+      <div class="${classes.clusterCharts}">
+        ${this._clustersChartProps === null
+          ? []
+          : this._clustersChartProps.map((clusterChartProps) => html`
+            <inno-chart-card>
+              ${clusterChartProps.type !== 'access'
+                ? html`
+                  <inno-pie-chart
+                    class="${classes.clusterPieChart}"
+                    .data="${clusterChartProps.data}"
+                  >
+                    <span slot="title">${clusterChartProps.name} (${clusterChartProps.size} members)</span>
+                  </inno-pie-chart>
+                `
+                : html`
+                  <inno-line-chart-2
+                    class="${classes.clusterLineChart}"
+                    .ys="${clusterChartProps.ys}"
+                    .xLabels="${clusterChartProps.xLabels}"
+                    .formatXLabel="${this._formatLineChartLabel}"
+                  >
+                    <span slot="title">${clusterChartProps.name} (${clusterChartProps.size} members)</span>
+                  </inno-line-chart-2>
+                `}
+            </inno-chart-card>
+          `)}
+      </div>
     `;
     /* eslint-enable @typescript-eslint/indent */
   }
@@ -367,8 +506,12 @@ export class MemberClustersPage extends LitElement {
     this._selectedPastDays = day;
   }
 
-  private _onFeatureChipClick(feature: string): void {
-    this._selectedFeature = feature;
+  private _onChartTypeChipClick(type: ChartType): void {
+    this._selectedChartType = type;
+  }
+
+  private _onAccessFeatureChipClick(feature: string): void {
+    this._selectedAccessFeature = feature;
   }
 
   private _onDendrogramHandleMoved(event: import('../member-cluster-dendrogram').HandleMovedEvent): void {

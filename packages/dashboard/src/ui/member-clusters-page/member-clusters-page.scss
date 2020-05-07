@@ -30,6 +30,10 @@
 .option {
   /* empty */
 
+  &--hide {
+    display: none;
+  }
+
   &__label {
     @include typography.base();
     color: var(theme.$on-background);
@@ -52,6 +56,12 @@
   height: 30rem;
 }
 
-.feature-chart {
+.cluster-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.cluster-line-chart {
   #{line-chart.$content-aspect-ratio}: 15%;
 }

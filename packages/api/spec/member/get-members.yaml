@@ -1,0 +1,51 @@
+name: GetMembers
+
+method: post
+path: /api/members/search
+
+authentication:
+  type: bearer
+
+requestBody:
+  contentType: application/json
+  schema:
+    type: object
+    required:
+      - memberIds
+    additionalProperties: false
+    properties:
+      memberIds:
+        type: array
+        items:
+          type: string
+
+responseBody:
+  data:
+    schema:
+      type: array
+      items:
+        type: object
+        required:
+          - memberId
+          - name
+          - department
+          - typeOfStudy
+          - yearOfStudy
+          - studyProgramme
+          - affiliatedStudentInterestGroup
+        additionalProperties: false
+        properties:
+          memberId:
+            type: string
+          name:
+            type: string
+          department:
+            type: string
+          typeOfStudy:
+            type: string
+          yearOfStudy:
+            type: string
+          studyProgramme:
+            type: string
+          affiliatedStudentInterestGroup:
+            type: string

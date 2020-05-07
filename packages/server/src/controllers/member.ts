@@ -1,16 +1,17 @@
 import * as Api from '@innolens/api/legacy/node';
 import { singleton, injectableConstructor } from '@innolens/resolver/node';
-import { BadRequest } from 'http-errors';
-import { CREATED } from 'http-status-codes';
+import createHttpError, { BadRequest } from 'http-errors';
+import { CREATED, BAD_REQUEST } from 'http-status-codes';
 
 import { Logger } from '../logger';
 import { ClientService } from '../services/client';
-import { MemberService } from '../services/member';
+import { MemberService, Member, MemberNotFoundError } from '../services/member';
 import { OAuth2Service } from '../services/oauth2';
 import { UserService } from '../services/user';
 import { Writable } from '../utils/object';
 
 import { Context } from './context';
+import { MemberControllerGlue } from './glues/member';
 import { getRequestBody } from './utils/request-body';
 import { parseRequestBodyCsv } from './utils/request-body-csv-parser';
 import {
@@ -32,8 +33,11 @@ import {
   logger: Logger
 })
 @singleton()
-export class MemberController extends useParseRequestBody(useAuthenticateUser(Object)) {
+// eslint-disable-next-line max-len
+export class MemberController extends useParseRequestBody(useAuthenticateUser(MemberControllerGlue)) {
   private readonly _memberService: MemberService;
+
+  private readonly _oauth2Service: OAuth2Service;
 
   protected readonly [useAuthenticateUser$oauth2ServiceSym]: OAuth2Service;
   protected readonly [useAuthenticateUser$userServiceSym]: UserService;
@@ -50,12 +54,18 @@ export class MemberController extends useParseRequestBody(useAuthenticateUser(Ob
     super();
     ({
       memberService: this._memberService,
+      oauth2Service: this._oauth2Service,
       oauth2Service: this[useAuthenticateUser$oauth2ServiceSym],
       userService: this[useAuthenticateUser$userServiceSym],
       clientService: this[useAuthenticateUser$clientServiceSym],
       logger: this[useParseRequestBody$loggerSym]
     } = deps);
   }
+
+  protected checkBearerToken(token: string): Promise<boolean> {
+    return this._oauth2Service.checkAccessToken(token);
+  }
+
 
   @authenticateUser()
   @validateResponseBody(Api.Members.GetDepartments.responseBodyJsonSchema)
@@ -100,6 +110,27 @@ export class MemberController extends useParseRequestBody(useAuthenticateUser(Ob
     ctx.body = Api.Members.GetAffiliatedStudentInterestGroups.toResponseBodyJson({
       data: interestGroups
     });
+  }
+
+  protected async handleGetMembers(ctx: MemberControllerGlue.GetMembersContext): Promise<void> {
+    let members: ReadonlyArray<Member>;
+    try {
+      members = await this._memberService.findByMemberIds(ctx.requestBody.memberIds);
+    } catch (err) {
+      if (err instanceof MemberNotFoundError) {
+        throw createHttpError(BAD_REQUEST, err);
+      }
+      throw err;
+    }
+    ctx.responseBodyData = members.map((member) => ({
+      memberId: member.memberId,
+      name: member.name,
+      department: member.department,
+      typeOfStudy: member.typeOfStudy,
+      yearOfStudy: member.yearOfStudy,
+      studyProgramme: member.studyProgramme,
+      affiliatedStudentInterestGroup: member.affiliatedStudentInterestGroup
+    }));
   }
 
   @authenticateUser()

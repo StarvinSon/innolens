@@ -9,6 +9,13 @@ import { Member, MemberCollection } from '../db/member';
 import { Writable } from '../utils/object';
 
 
+export class MemberNotFoundError extends Error {
+  public constructor(memberIds: ReadonlyArray<string>) {
+    super(`Cannot find member ids: ${memberIds.join(', ')}`);
+  }
+}
+
+
 export { Member };
 
 
@@ -62,6 +69,33 @@ export class MemberService {
 
   public async getAffiliatedStudentInterestGroups(): Promise<ReadonlyArray<string>> {
     return this._memberCollection.distinct('affiliatedStudentInterestGroup');
+  }
+
+  public async findByMemberIds(memberIds: ReadonlyArray<string>): Promise<ReadonlyArray<Member>> {
+    const memberMap = await this._memberCollection
+      .find({
+        memberId: {
+          $in: memberIds.slice()
+        }
+      })
+      .toArray()
+      .then((result) => new Map(result.map((m) => [m.memberId, m])));
+
+    const members: Array<Member> = [];
+    const notFoundIds: Array<string> = [];
+    for (const memberId of memberIds) {
+      const member = memberMap.get(memberId);
+      if (member === undefined) {
+        notFoundIds.push(memberId);
+      } else {
+        members.push(member);
+      }
+    }
+
+    if (notFoundIds.length > 0) {
+      throw new MemberNotFoundError(notFoundIds);
+    }
+    return members;
   }
 
   public async getCount(filter: {
