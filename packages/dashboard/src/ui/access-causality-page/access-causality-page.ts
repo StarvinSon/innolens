@@ -24,6 +24,7 @@ import { mergeObject } from '../../utils/immutable/object';
 import { strictParseInt } from '../../utils/number';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
+import { getTime } from '../../utils/time';
 
 import { css, classes } from './access-causality-page.scss';
 
@@ -137,7 +138,7 @@ export class AccessCausalityPage extends LitElement {
     if (this.accessCausalityService === null) return;
 
     if (this._selectedTime === null) {
-      let time = new Date();
+      let time = getTime();
       time = startOfMinute(time);
       time = setMinutes(time, Math.floor(getMinutes(time) / 30) * 30);
       this._selectedTime = time;

@@ -5,6 +5,7 @@ import {
 
 import { SpaceService, Space } from '../../services/space';
 import '../heatmap'; // eslint-disable-line import/no-duplicates
+import { getTime } from '../../utils/time';
 import { HeatmapData } from '../heatmap'; // eslint-disable-line import/no-duplicates
 
 import { css, classes } from './user-heatmap-page.scss';
@@ -47,7 +48,7 @@ export class UserHeatMapPage extends LitElement {
     if (this.spaceService === null) return;
 
     if (!this._heatmapDataFetched && this.spaces !== null) {
-      const time = new Date();
+      const time = getTime();
       this.spaceService!
         .fetchMemberCountLegacy(
           time,

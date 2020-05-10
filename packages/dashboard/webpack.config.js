@@ -3,6 +3,7 @@ const { resolve } = require('path');
 
 const DartSass = require('dart-sass');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const { DefinePlugin } = require('webpack');
 
 const rootPath = __dirname;
 const srcPath = resolve(rootPath, 'src');
@@ -158,6 +159,11 @@ module.exports = (env, { publicPath = '/static/' }) => {
           removeComments: true
         },
         favicon: resolve(srcPath, 'images/favicon.ico')
+      }),
+      new DefinePlugin({
+        ...process.env.TIME === undefined ? {} : {
+          'process.env.TIME': JSON.stringify(process.env.TIME)
+        }
       })
     ],
 

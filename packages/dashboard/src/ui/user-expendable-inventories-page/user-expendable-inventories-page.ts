@@ -11,6 +11,7 @@ import {
   ExpendableInventoryQuantityHistoryLegacy, ExpendableInventoryQuantityForecast
 } from '../../services/expendable-inventory';
 import { generateKey } from '../../utils/key';
+import { getTime } from '../../utils/time';
 
 import { css, classes } from './user-expendable-inventories-page.scss';
 
@@ -68,7 +69,7 @@ export class UserExpendableInventoriesPage extends LitElement {
     if (this.expendableInventoryService === null) return;
 
     if (!this._dataFetched && this.expendableInventoryTypes !== null) {
-      const current = new Date();
+      const current = getTime();
       this.expendableInventoryService
         .fetchQuantityHistoryLegacy(
           subHours(startOfHour(current), 20),

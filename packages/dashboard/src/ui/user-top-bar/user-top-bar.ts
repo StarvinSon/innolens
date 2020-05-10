@@ -4,11 +4,12 @@ import {
   customElement, property, PropertyValues
 } from 'lit-element';
 
-import logo from '../../images/logo-2-horizontal.png';
-import { CurrentWeather, WeatherService } from '../../services/weather';
 import '../button';
 import '../theme';
 import '../typography';
+import logo from '../../images/logo-2-horizontal.png';
+import { CurrentWeather, WeatherService } from '../../services/weather';
+import { getTime } from '../../utils/time';
 
 import { css, classes } from './user-top-bar.scss';
 
@@ -32,7 +33,7 @@ export class UserTopBar extends LitElement {
   public weatherService: WeatherService | null = null;
 
   @property({ attribute: false })
-  private _currentTime: string = formatDate(new Date(), 'eee d MMM  HH:mm');
+  private _currentTime: string = formatDate(getTime(), 'eee d MMM  HH:mm');
 
   @property({ attribute: false })
   private _currentWeather: CurrentWeather | null = null;
@@ -40,7 +41,7 @@ export class UserTopBar extends LitElement {
   public constructor() {
     super();
     setInterval(() => {
-      this._currentTime = formatDate(new Date(), 'eee d MMM  HH:mm');
+      this._currentTime = formatDate(getTime(), 'eee d MMM  HH:mm');
     }, 1000);
   }
 

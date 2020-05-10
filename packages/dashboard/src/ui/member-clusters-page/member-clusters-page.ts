@@ -17,6 +17,7 @@ import { Member, MemberService } from '../../services/member';
 import { MemberClusterService, MemberClustersResult } from '../../services/member-cluster';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
+import { getTime } from '../../utils/time';
 import { PieChartData } from '../pie-chart'; // eslint-disable-line import/no-duplicates
 
 import { css, classes } from './member-clusters-page.scss';
@@ -190,7 +191,7 @@ export class MemberClustersPage extends LitElement {
     if (this.memberClusterService === null || this.memberService === null) return;
 
     if (this._toTime === null) {
-      let toTime = new Date();
+      let toTime = getTime();
       toTime = utcToZonedTime(toTime, 'Asia/Hong_Kong');
       toTime = startOfWeek(toTime);
       toTime = zonedTimeToUtc(toTime, 'Asia/Hong_Kong');

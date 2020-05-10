@@ -23,6 +23,7 @@ import { toggleNullableArray } from '../../utils/array';
 import { mergeArray } from '../../utils/immutable/array';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
+import { getTime } from '../../utils/time';
 import { stackYs } from '../line-chart-2/stack-ys';
 
 import { css, classes } from './machines-page.scss';
@@ -241,7 +242,7 @@ export class MachinesPage extends LitElement {
     if (this.machineService === null) return;
 
     if (this._toTime === null) {
-      let toTime = new Date();
+      let toTime = getTime();
       toTime = utcToZonedTime(toTime, 'Asia/Hong_Kong');
       toTime = startOfMinute(toTime);
       toTime = setMinutes(toTime, Math.floor(toTime.getMinutes() / 30) * 30);

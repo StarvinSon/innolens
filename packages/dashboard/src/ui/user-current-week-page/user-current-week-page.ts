@@ -12,6 +12,7 @@ import {
   SpaceService, SpaceMemberCountHistoryLegacy, SpaceMemberCountForecast
 } from '../../services/space';
 import { generateKey } from '../../utils/key';
+import { getTime } from '../../utils/time';
 // eslint-disable-next-line import/no-duplicates
 import { LineChartLineData } from '../line-chart';
 
@@ -63,7 +64,7 @@ export class UserCurrentWeekPage extends LitElement {
     if (this.spaceService === null) return;
 
     if (!this._dataFetched) {
-      const current = new Date();
+      const current = getTime();
       this._countHistory = await this.spaceService!.fetchMemberCountHistoryLegacy(
         subDays(startOfHour(current), 7),
         startOfHour(current),

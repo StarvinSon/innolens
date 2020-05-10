@@ -11,6 +11,7 @@ import {
   ReusableInventoryMemberCountHistoryLegacy, ReusableInventoryMemberCountForecast
 } from '../../services/reusable-inventory';
 import { generateKey } from '../../utils/key';
+import { getTime } from '../../utils/time';
 
 import { css, classes } from './user-reusable-inventories-page.scss';
 
@@ -103,7 +104,7 @@ export class UserReusableInventoriesPage extends LitElement {
           this._countHistory = result;
         });
 
-      const current = new Date();
+      const current = getTime();
       const forecastKey = generateKey({
         fromTime: startOfHour(current).toISOString(),
         timeStepMs: '1800000',

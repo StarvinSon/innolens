@@ -5,6 +5,7 @@ import { stringTag } from '../utils/class';
 import { Debouncer } from '../utils/debouncer';
 import { deprecated } from '../utils/method-deprecator';
 import { PromiseValue } from '../utils/promise';
+import { getTime } from '../utils/time';
 
 import { FileService } from './file';
 import * as ReusableInventoryGlue from './glues/reusable-inventory';
@@ -58,7 +59,7 @@ export interface ReusableInventoryMemberCountRecordLegacy {
   }
 }
 
-const legacyToTime = new Date();
+const legacyToTime = getTime();
 
 
 @injectableConstructor({

@@ -23,6 +23,7 @@ import {
 import { toggleNullableArray } from '../../utils/array';
 import { injectableProperty } from '../../utils/property-injector';
 import { observeProperty } from '../../utils/property-observer';
+import { getTime } from '../../utils/time';
 import { stackYs } from '../line-chart-2/stack-ys';
 
 import { css, classes } from './spaces-page.scss';
@@ -224,7 +225,7 @@ export class SpacesPage extends LitElement {
     if (this.spaceService === null) return;
 
     if (this._toTime === null) {
-      let toTime = new Date();
+      let toTime = getTime();
       toTime = utcToZonedTime(toTime, 'Asia/Hong_Kong');
       toTime = startOfMinute(toTime);
       toTime = setMinutes(toTime, Math.floor(toTime.getMinutes() / 30) * 30);

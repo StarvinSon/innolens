@@ -10,6 +10,7 @@ import {
   SpaceService, Space, SpaceMemberCountHistoryLegacy, SpaceMemberCountForecast
 } from '../../services/space';
 import { generateKey } from '../../utils/key';
+import { getTime } from '../../utils/time';
 
 import { css, classes } from './user-spaces-page.scss';
 
@@ -65,7 +66,7 @@ export class UserSpacesPage extends LitElement {
     if (this.spaceService === null) return;
 
     if (!this._dataFetched && this.spaces !== null) {
-      const current = new Date();
+      const current = getTime();
       this.spaceService
         .fetchMemberCountHistoryLegacy(
           subHours(startOfHour(current), 20),

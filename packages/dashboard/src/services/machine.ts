@@ -5,6 +5,7 @@ import { stringTag } from '../utils/class';
 import { Debouncer } from '../utils/debouncer';
 import { deprecated } from '../utils/method-deprecator';
 import { PromiseValue } from '../utils/promise';
+import { getTime } from '../utils/time';
 
 import { FileService } from './file';
 import * as MachineGlue from './glues/machine';
@@ -66,7 +67,7 @@ export interface MachineMemberCountRecordValuesLegacy {
   readonly [group: string]: number;
 }
 
-const legacyToTime = new Date();
+const legacyToTime = getTime();
 
 
 @injectableConstructor({
