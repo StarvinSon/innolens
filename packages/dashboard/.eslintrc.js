@@ -19,6 +19,7 @@ module.exports = {
         ...opts,
         devDependencies: [
           ...opts.devDependencies,
+          join(__dirname, 'src/**'),
           join(__dirname, 'tools-src/**')
         ]
       }

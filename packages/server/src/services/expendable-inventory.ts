@@ -1,4 +1,4 @@
-import { singleton, injectableConstructor } from '@innolens/resolver/node';
+import { singleton, injectableConstructor } from '@innolens/resolver/lib-node';
 import { addMilliseconds, subMilliseconds } from 'date-fns';
 import { ObjectId } from 'mongodb';
 

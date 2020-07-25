@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig/web.json",
+  "compilerOptions": {
+    "outDir": "./lib-web",
+    "rootDir": "./src",
+    "composite": true,
+    "tsBuildInfoFile": "./tsconfig-web.tsbuildinfo"
+  },
+  "include": [
+    "./src/**/*.ts"
+  ]
+}

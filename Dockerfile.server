@@ -1,0 +1,62 @@
+FROM node:14.5.0-alpine AS base
+
+ARG USER=node
+ARG GROUP=node
+ARG WORKDIR=/code
+
+RUN apk add --no-cache \
+        g++ \
+        jq \
+        make \
+        python \
+    && mkdir ${WORKDIR} \
+    && chown ${USER}:${GROUP} ${WORKDIR}
+
+WORKDIR ${WORKDIR}
+USER ${USER}:${GROUP}
+
+COPY --chown=${USER}:${GROUP} package.json yarn.lock ./
+COPY --chown=${USER}:${GROUP} packages/api-devtools/package.json ./packages/api-devtools/package.json
+COPY --chown=${USER}:${GROUP} packages/api-legacy/package.json ./packages/api-legacy/package.json
+COPY --chown=${USER}:${GROUP} packages/api-runtime/package.json ./packages/api-runtime/package.json
+COPY --chown=${USER}:${GROUP} packages/dashboard/package.json ./packages/dashboard/package.json
+COPY --chown=${USER}:${GROUP} packages/eslint-config/package.json ./packages/eslint-config/package.json
+COPY --chown=${USER}:${GROUP} packages/resolver/package.json ./packages/resolver/package.json
+COPY --chown=${USER}:${GROUP} packages/server/package.json ./packages/server/package.json
+RUN yarn install --frozen-lockfile
+
+COPY --chown=${USER}:${GROUP} . ./
+RUN \
+    #
+    # Build
+    yarn workspace @innolens/server run build \
+    && yarn workspace @innolens/dashboard run build \
+    #
+    # Keep only production dependencies
+    && jq '.workspaces |= map(select(. != "packages/eslint-config" and . != "packages/api-devtools"))' package.json > pacakge.json.tmp \
+    && mv pacakge.json.tmp package.json \
+    && yarn install --frozen-lockfile --production
+
+
+FROM node:14.5.0-alpine
+
+ARG USER=node
+ARG GROUP=node
+ARG WORKDIR=/code
+
+RUN mkdir ${WORKDIR} \
+    && chown ${USER}:${GROUP} ${WORKDIR}
+
+WORKDIR ${WORKDIR}
+USER ${USER}:${GROUP}
+
+COPY --from=base --chown=${USER}:${GROUP} ${WORKDIR}/docker-entrypoint-server.sh ./
+COPY --from=base --chown=${USER}:${GROUP} ${WORKDIR}/node_modules/ ./node_modules/
+COPY --from=base --chown=${USER}:${GROUP} ${WORKDIR}/packages/api-legacy/lib-node/ ./packages/api-legacy/lib-node/
+COPY --from=base --chown=${USER}:${GROUP} ${WORKDIR}/packages/api-runtime/lib-node/ ./packages/api-runtime/lib-node/
+COPY --from=base --chown=${USER}:${GROUP} ${WORKDIR}/packages/dashboard/out/ ./packages/dashboard/out/
+COPY --from=base --chown=${USER}:${GROUP} ${WORKDIR}/packages/resolver/lib-node/ ./packages/resolver/lib-node/
+COPY --from=base --chown=${USER}:${GROUP} ${WORKDIR}/packages/server/out/ ./packages/server/out/
+
+EXPOSE 3000
+ENTRYPOINT [ "./docker-entrypoint-server.sh" ]

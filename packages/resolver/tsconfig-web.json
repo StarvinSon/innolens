@@ -1,9 +1,9 @@
 {
-  "extends": "../tsconfig-web.json",
+  "extends": "../tsconfig/web.json",
   "compilerOptions": {
     "declaration": true,
     "declarationMap": true,
-    "outDir": "./web",
+    "outDir": "./lib-web",
     "rootDir": "./src",
     "composite": true
   }

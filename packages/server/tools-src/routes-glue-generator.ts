@@ -1,9 +1,9 @@
 import { join } from 'path';
 
-import { pascalToCamelCase, pascalToPascalCase, pascalToKebabCase } from '@innolens/api/tools/case';
-import { Imports, getRelativeImportPath } from '@innolens/api/tools/imports';
-import { IndexSpec, EndpointSpec } from '@innolens/api/tools/spec';
-import { variableNameFactory } from '@innolens/api/tools/variable';
+import { pascalToCamelCase, pascalToPascalCase, pascalToKebabCase } from '@innolens/api-devtools/lib/case';
+import { Imports, getRelativeImportPath } from '@innolens/api-devtools/lib/imports';
+import { IndexSpec, EndpointSpec } from '@innolens/api-devtools/lib/spec';
+import { variableNameFactory } from '@innolens/api-devtools/lib/variable';
 import * as tsm from 'ts-morph';
 
 

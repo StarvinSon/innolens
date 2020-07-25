@@ -1,4 +1,4 @@
-import { singleton, injectableConstructor } from '@innolens/resolver/node';
+import { singleton, injectableConstructor } from '@innolens/resolver/lib-node';
 
 import { InventoryService } from '../services/inventory';
 

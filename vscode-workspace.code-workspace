@@ -1,0 +1,52 @@
+{
+  "folders": [
+    {
+      "path": "."
+    },
+    {
+      "path": "packages/api-devtools"
+    },
+    {
+      "path": "packages/api-legacy"
+    },
+    {
+      "path": "packages/api-runtime"
+    },
+    {
+      "path": "packages/dashboard"
+    },
+    {
+      "path": "packages/eslint-config"
+    },
+    {
+      "path": "packages/models"
+    },
+    {
+      "path": "packages/resolver"
+    },
+    {
+      "path": "packages/server"
+    },
+    {
+      "path": "packages/simulator"
+    },
+    {
+      "path": "packages/tsconfig"
+    }
+  ],
+  "settings": {
+    "typescript.tsdk": "workspace/node_modules/typescript/lib",
+    "lit-plugin.strict": true,
+    "lit-plugin.rules.no-unknown-event": "warning",
+    "python.pythonPath": "/usr/local/bin/python",
+    "python.linting.enabled": true,
+    "python.linting.lintOnSave": true,
+    "python.linting.pylintEnabled": false,
+    "python.linting.mypyEnabled": true,
+    "python.linting.mypyArgs": [
+      "--config-file", "mypy.ini",
+      "--follow-imports", "silent",
+      "--no-pretty"
+    ]
+  }
+}

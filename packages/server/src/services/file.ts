@@ -1,9 +1,14 @@
-import { createReadStream, createWriteStream, ReadStream } from 'fs';
+import {
+  createReadStream, createWriteStream, ReadStream,
+  promises as fsPromises
+} from 'fs';
 import { basename, resolve as resolvePath } from 'path';
 import { Readable } from 'stream';
 
-import { injectableConstructor, singleton } from '@innolens/resolver/node';
+import { injectableConstructor, singleton } from '@innolens/resolver/lib-node';
 import { file as tmpFile } from 'tmp-promise';
+
+import { UploadDirPath } from '../server-options';
 
 
 export class FileNotFoundError extends Error {
@@ -13,15 +18,26 @@ export class FileNotFoundError extends Error {
 }
 
 
-@injectableConstructor()
+@injectableConstructor({
+  uploadDirPath: UploadDirPath
+})
 @singleton()
 export class FileService {
-  public readonly directory = resolvePath('./uploads');
+  private readonly _dirPath: UploadDirPath;
+
+  public constructor(deps: {
+    readonly uploadDirPath: UploadDirPath;
+  }) {
+    ({
+      uploadDirPath: this._dirPath
+    } = deps);
+  }
 
   public async saveFile(scope: string, srcStream: Readable): Promise<string> {
+    await fsPromises.mkdir(this._dirPath, { recursive: true });
     const file = await tmpFile({
       template: `${scope}-XXXXXX`,
-      dir: this.directory,
+      dir: this._dirPath,
       discardDescriptor: true
     });
     const fileStream = srcStream.pipe(createWriteStream(file.path));
@@ -45,7 +61,7 @@ export class FileService {
 
   public getFile(scope: string, fileId: string): ReadStream {
     try {
-      return createReadStream(resolvePath(this.directory, `${scope}-${fileId}`));
+      return createReadStream(resolvePath(this._dirPath, `${scope}-${fileId}`));
     } catch (err) {
       if (err.code === 'ENOENT') {
         throw new FileNotFoundError(scope, fileId);

@@ -1,5 +1,5 @@
-import * as Api from '@innolens/api/legacy/node';
-import { singleton, injectableConstructor } from '@innolens/resolver/node';
+import * as Api from '@innolens/api-legacy/lib-node';
+import { singleton, injectableConstructor } from '@innolens/resolver/lib-node';
 import createHttpError, { BadRequest } from 'http-errors';
 import { CREATED, BAD_REQUEST } from 'http-status-codes';
 

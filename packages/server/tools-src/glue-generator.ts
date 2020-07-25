@@ -1,6 +1,6 @@
 import { join } from 'path';
 
-import { getAllSpecs } from '@innolens/api/tools';
+import { getAllSpecs } from '@innolens/api-devtools/lib';
 import * as tsm from 'ts-morph';
 
 import { createControllerGlueFiles } from './controller-glue-generator';
@@ -11,7 +11,7 @@ const main = async (): Promise<void> => {
   const specs = await getAllSpecs();
 
   const project = new tsm.Project({
-    tsConfigFilePath: join(__dirname, '../tsconfig.json'),
+    tsConfigFilePath: join(__dirname, '../tsconfig-server.json'),
     manipulationSettings: {
       indentationText: tsm.IndentationText.TwoSpaces,
       quoteKind: tsm.QuoteKind.Single,

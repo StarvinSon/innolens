@@ -5091,7 +5091,7 @@ class Member(Component):
       else membership_start_time
     )
     self.membership_end_time = (
-      datetime(year=2020, month=6, day=1, tzinfo=hk_timezone)
+      datetime(year=2020, month=9, day=1, tzinfo=hk_timezone)
       if membership_end_time is None
       else membership_end_time
     )

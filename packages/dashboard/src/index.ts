@@ -4,7 +4,7 @@ import './ui/app';
 import {
   createResolver, Token, FactoryOrConstructor,
   decorate, injectableFactory, singleton, name
-} from '@innolens/resolver/web';
+} from '@innolens/resolver/lib-web';
 import { render, html } from 'lit-html';
 import { installRouter } from 'pwa-helpers/router';
 

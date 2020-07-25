@@ -1,5 +1,5 @@
 {
-  "extends": "../tsconfig-node.json",
+  "extends": "../tsconfig/node.json",
   "compilerOptions": {
     "outDir": "./out",
     "rootDir": "./src",
@@ -10,8 +10,8 @@
     "./src/**/*.ts"
   ],
   "references": [
-    { "path": "../api/tsconfig-legacy-node.json" },
-    { "path": "../api/tsconfig-runtime-node.json" },
+    { "path": "../api-legacy/tsconfig-node.json" },
+    { "path": "../api-runtime/tsconfig-node.json" },
     { "path": "../resolver/tsconfig-node.json" }
   ]
 }

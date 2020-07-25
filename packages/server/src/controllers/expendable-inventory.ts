@@ -1,4 +1,4 @@
-import { singleton, injectableConstructor } from '@innolens/resolver/node';
+import { singleton, injectableConstructor } from '@innolens/resolver/lib-node';
 import csvParse from 'csv-parse';
 import createHttpError, { BadRequest } from 'http-errors';
 import { CREATED, BAD_REQUEST, NOT_FOUND } from 'http-status-codes';

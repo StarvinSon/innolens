@@ -1,4 +1,4 @@
-import { singleton, map, injectableConstructor } from '@innolens/resolver/node';
+import { singleton, map, injectableConstructor } from '@innolens/resolver/lib-node';
 import { NOT_FOUND } from 'http-status-codes';
 import send from 'koa-send';
 
@@ -11,7 +11,7 @@ const pagePaths: ReadonlyArray<string> = [
   '/'
 ];
 
-@injectableConstructor(map(ServerOptions, (serOpts) => serOpts.staticRoot))
+@injectableConstructor(map(ServerOptions, (serOpts) => serOpts.staticRootPath))
 @singleton()
 export class StaticController {
   private readonly _root: string;

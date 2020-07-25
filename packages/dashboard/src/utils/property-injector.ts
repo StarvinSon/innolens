@@ -1,4 +1,4 @@
-import { Resolver, Resolvable } from '@innolens/resolver/web';
+import { Resolver, Resolvable } from '@innolens/resolver/lib-web';
 
 
 const injectableKeysSym = Symbol('injectableKeys');

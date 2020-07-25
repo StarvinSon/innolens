@@ -1,13 +1,13 @@
 {
-  "extends": "../tsconfig-web.json",
+  "extends": "../tsconfig/web.json",
   "compilerOptions": {
     "lib": ["ES2020", "DOM"],
     "declaration": false,
     "declarationMap": false
   },
   "references": [
-    { "path": "../api/tsconfig-legacy-web.json" },
-    { "path": "../api/tsconfig-runtime-web.json" },
+    { "path": "../api-legacy/tsconfig-web.json" },
+    { "path": "../api-runtime/tsconfig-web.json" },
     { "path": "../resolver/tsconfig-web.json" }
   ],
   "include": [

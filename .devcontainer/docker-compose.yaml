@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+
+  workspace:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    volumes:
+      - ..:/workspace:cached
+      - /workspace/node_modules
+      - /var/run/docker.sock:/var/run/docker-host.sock
+    command: [ "/bin/sh", "-c", "trap 'exit 0' TERM INT; while { sleep 300 & wait $$!; }; do :; done;" ]
+
+  db:
+    image: mongo:4.2.8-bionic
+    ports:
+      - '27017:27017'

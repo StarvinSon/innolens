@@ -1,4 +1,4 @@
-import { Token, FactoryOrConstructor } from '@innolens/resolver/web';
+import { Token, FactoryOrConstructor } from '@innolens/resolver/lib-web';
 
 
 // eslint-disable-next-line max-len

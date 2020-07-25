@@ -46,4 +46,4 @@ class ServerCli(Cli):
       history_forecast_chkpt_dir_path=history_forecast_checkpoint_dir_path,
       access_causality_chkpt_dir_path=access_causality_checkpoint_dir_path
     )
-    app.run(port=port, debug=debug)
+    app.run(host='0.0.0.0', port=port, debug=debug)

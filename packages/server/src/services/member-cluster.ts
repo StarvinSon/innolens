@@ -1,9 +1,8 @@
-import { URL } from 'url';
-
-import { singleton, injectableConstructor } from '@innolens/resolver/node';
+import { singleton, injectableConstructor } from '@innolens/resolver/lib-node';
 import fetch from 'node-fetch';
 
 import { Logger } from '../logger';
+import { ModelUri } from '../server-options';
 
 import { MemberService } from './member';
 import { SpaceService } from './space';
@@ -32,22 +31,26 @@ export interface MemberClusterResult extends MemberFeaturesHistory {
 @injectableConstructor({
   memberService: MemberService,
   spaceService: SpaceService,
+  modelsUri: ModelUri,
   logger: Logger
 })
 @singleton()
 export class MemberClusterService {
   private readonly _memberService: MemberService;
   private readonly _spaceService: SpaceService;
+  private readonly _modelsUri: ModelUri;
   private readonly _logger: Logger;
 
   public constructor(deps: {
     readonly memberService: MemberService;
     readonly spaceService: SpaceService;
+    readonly modelsUri: ModelUri;
     readonly logger: Logger;
   }) {
     ({
       memberService: this._memberService,
       spaceService: this._spaceService,
+      modelsUri: this._modelsUri,
       logger: this._logger
     } = deps);
   }
@@ -140,8 +143,7 @@ export class MemberClusterService {
       filterSpaceIds
     });
 
-    const url = new URL('http://localhost:5000/cluster-members');
-    const res = await fetch(url.href, {
+    const res = await fetch(`${this._modelsUri}/cluster-members`, {
       method: 'post',
       headers: {
         'Content-Type': 'application/json'

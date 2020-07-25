@@ -49,7 +49,7 @@ def add_comp1117_classmates(container: Object, subclass: Literal['a', 'b']) -> N
         mean=datetime(2020, 1, 5, tzinfo=hk_timezone),
         stddev=timedelta(days=3)
       ),
-      membership_end_time=datetime(2020, 6, 1, tzinfo=hk_timezone)
+      membership_end_time=datetime(2020, 9, 1, tzinfo=hk_timezone)
     )
 
     comp1117 = obj.add_component(COMP1117Classmate)
@@ -77,7 +77,7 @@ def add_elec2346_classmates(container: Object, subclass: Literal['a', 'b']) -> N
         mean=datetime(2020, 1, 5, tzinfo=hk_timezone),
         stddev=timedelta(days=3)
       ),
-      membership_end_time=datetime(2020, 6, 1, tzinfo=hk_timezone)
+      membership_end_time=datetime(2020, 9, 1, tzinfo=hk_timezone)
     )
 
     elec2346 = obj.add_component(ELEC2346Classmate)

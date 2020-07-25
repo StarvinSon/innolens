@@ -5,9 +5,9 @@
   "homepage": "https://i.cs.hku.hk/fyp/2019/fyp19027/",
   "repository": "https://github.com/StarvinSon/innolens/tree/develop/packages/eslint-config",
   "scripts": {
-    "clean": ";",
-    "lint": ";",
-    "build": ";"
+    "clean": "echo",
+    "lint": "echo",
+    "build": "echo"
   },
   "dependencies": {
     "@typescript-eslint/eslint-plugin": "^2.28.0",

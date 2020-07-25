@@ -1,4 +1,4 @@
-import { createToken } from '@innolens/resolver/web';
+import { createToken } from '@innolens/resolver/lib-web';
 
 
 export interface DashboardOptions {

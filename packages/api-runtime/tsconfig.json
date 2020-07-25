@@ -1,0 +1,4 @@
+// This tsconfig.json is for eslint config and VSCode language server
+{
+  "extends": "./tsconfig-node.json"
+}

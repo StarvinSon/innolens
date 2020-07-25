@@ -1,4 +1,4 @@
-import { injectableConstructor, singleton } from '@innolens/resolver/web';
+import { injectableConstructor, singleton } from '@innolens/resolver/lib-web';
 
 import icon50 from '../images/50.png';
 import icon51 from '../images/51.png';

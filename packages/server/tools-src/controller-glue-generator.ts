@@ -1,13 +1,13 @@
 import { join } from 'path';
 
-import { pascalToPascalCase, pascalToCamelCase, pascalToKebabCase } from '@innolens/api/tools/case';
-import { Imports, getRelativeImportPath } from '@innolens/api/tools/imports';
-import { writeJsonDecoder } from '@innolens/api/tools/json-parser';
-import { writeJsonEncoder } from '@innolens/api/tools/json-stringifier';
-import { writeQueryDecoder } from '@innolens/api/tools/query-parser';
-import { writeSchemaType } from '@innolens/api/tools/schema';
-import { IndexSpec, EndpointSpec, parseEndpointSpecPath } from '@innolens/api/tools/spec';
-import { variableNameFactory } from '@innolens/api/tools/variable';
+import { pascalToPascalCase, pascalToCamelCase, pascalToKebabCase } from '@innolens/api-devtools/lib/case';
+import { Imports, getRelativeImportPath } from '@innolens/api-devtools/lib/imports';
+import { writeJsonDecoder } from '@innolens/api-devtools/lib/json-parser';
+import { writeJsonEncoder } from '@innolens/api-devtools/lib/json-stringifier';
+import { writeQueryDecoder } from '@innolens/api-devtools/lib/query-parser';
+import { writeSchemaType } from '@innolens/api-devtools/lib/schema';
+import { IndexSpec, EndpointSpec, parseEndpointSpecPath } from '@innolens/api-devtools/lib/spec';
+import { variableNameFactory } from '@innolens/api-devtools/lib/variable';
 import * as tsm from 'ts-morph';
 
 

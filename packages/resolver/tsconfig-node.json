@@ -1,9 +1,9 @@
 {
-  "extends": "../tsconfig-node.json",
+  "extends": "../tsconfig/node.json",
   "compilerOptions": {
     "declaration": true,
     "declarationMap": true,
-    "outDir": "./node",
+    "outDir": "./lib-node",
     "rootDir": "./src",
     "composite": true
   }

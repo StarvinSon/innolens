@@ -1,5 +1,5 @@
-import * as Api from '@innolens/api/legacy/web';
-import { injectableConstructor } from '@innolens/resolver/web';
+import * as Api from '@innolens/api-legacy/lib-web';
+import { injectableConstructor } from '@innolens/resolver/lib-web';
 
 import { ServerService } from './server';
 

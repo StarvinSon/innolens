@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig/node.json",
+  "compilerOptions": {
+    "outDir": "./lib-node",
+    "rootDir": "./src",
+    "composite": true,
+    "tsBuildInfoFile": "./tsconfig-node.tsbuildinfo"
+  },
+  "include": [
+    "./src/**/*.ts"
+  ]
+}

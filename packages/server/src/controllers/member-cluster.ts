@@ -1,4 +1,4 @@
-import { injectableConstructor } from '@innolens/resolver/node';
+import { injectableConstructor } from '@innolens/resolver/lib-node';
 
 import { MemberClusterService } from '../services/member-cluster';
 import { OAuth2Service } from '../services/oauth2';

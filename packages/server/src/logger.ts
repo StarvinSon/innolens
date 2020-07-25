@@ -1,7 +1,7 @@
 import {
   decorate, singleton, name,
   injectableFactory
-} from '@innolens/resolver/node';
+} from '@innolens/resolver/lib-node';
 import {
   Logger as WinstonLogger, createLogger as createWinstonLogger,
   format, transports
@@ -25,15 +25,15 @@ export const Logger = decorate(
     transports: [
       new transports.Console({
         handleExceptions: true
-      }),
-      new transports.File({
-        filename: 'server.log',
-        maxsize: 10 * 1024 * 1024, // 10MB
-        maxFiles: 3,
-        tailable: true,
-        handleExceptions: true,
-        format: format.uncolorize()
-      })
+      }) // ,
+      // new transports.File({
+      //   filename: 'server.log',
+      //   maxsize: 10 * 1024 * 1024, // 10MB
+      //   maxFiles: 3,
+      //   tailable: true,
+      //   handleExceptions: true,
+      //   format: format.uncolorize()
+      // })
     ]
   })
 );

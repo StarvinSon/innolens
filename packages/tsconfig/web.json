@@ -1,0 +1,7 @@
+{
+  "extends": "./common.json",
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext"
+  }
+}

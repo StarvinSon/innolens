@@ -1,8 +1,8 @@
-import * as Api from '@innolens/api/legacy/node';
+import * as Api from '@innolens/api-legacy/lib-node';
 import {
   decorate, singleton, name,
   injectableFactory
-} from '@innolens/resolver/node';
+} from '@innolens/resolver/lib-node';
 import KoaRouter from '@koa/router';
 import { DefaultState, DefaultContext } from 'koa';
 

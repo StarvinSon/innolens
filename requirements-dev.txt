@@ -1,0 +1,2 @@
+-r ./packages/models/requirements-dev.txt
+-r ./packages/simulator/requirements-dev.txt

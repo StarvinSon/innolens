@@ -1,8 +1,9 @@
-import { singleton, injectableConstructor } from '@innolens/resolver/node';
+import { singleton, injectableConstructor } from '@innolens/resolver/lib-node';
 import { addHours, subMilliseconds } from 'date-fns';
 import fetch from 'node-fetch';
 
 import { Logger } from '../logger';
+import { ModelUri } from '../server-options';
 
 import { SpaceService } from './space';
 import { timeSpanRange } from './time';
@@ -36,19 +37,23 @@ export interface AccessCausalityFeatureForecast {
 
 @injectableConstructor({
   spaceService: SpaceService,
+  modelUri: ModelUri,
   logger: Logger
 })
 @singleton()
 export class AccessCausalityService {
   private readonly _spaceService: SpaceService;
+  private readonly _modelUri: ModelUri;
   private readonly _logger: Logger;
 
   public constructor(deps: {
     readonly spaceService: SpaceService;
+    readonly modelUri: ModelUri;
     readonly logger: Logger;
   }) {
     ({
       spaceService: this._spaceService,
+      modelUri: this._modelUri,
       logger: this._logger
     } = deps);
   }
@@ -60,7 +65,7 @@ export class AccessCausalityService {
     readonly forecastWindowSize: number;
     readonly timeStepMs: number;
   }> {
-    const res = await fetch('http://localhost:5000/access-causality/settings');
+    const res = await fetch(`${this._modelUri}/access-causality/settings`);
     if (!res.ok) {
       res.json()
         .then((data) => {

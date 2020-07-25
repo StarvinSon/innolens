@@ -28,7 +28,7 @@ output_path = Path(args.output)
 
 engine = create_engine(
   start_time=datetime(year=2020, month=1, day=1, tzinfo=hk_timezone),
-  end_time=datetime(year=2020, month=6, day=1, tzinfo=hk_timezone),
+  end_time=datetime(year=2020, month=9, day=1, tzinfo=hk_timezone),
   time_step=timedelta(minutes=10)
 )
 

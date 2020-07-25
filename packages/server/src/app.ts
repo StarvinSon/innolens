@@ -1,7 +1,7 @@
 import {
   decorate, singleton, name,
   injectableFactory
-} from '@innolens/resolver/node';
+} from '@innolens/resolver/lib-node';
 import { INTERNAL_SERVER_ERROR, getStatusText } from 'http-status-codes';
 import Koa, { Middleware as KoaMiddleware, DefaultContext, DefaultState } from 'koa';
 import compress from 'koa-compress';

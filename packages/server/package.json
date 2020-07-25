@@ -16,14 +16,16 @@
     "generate:glue:watch": "nodemon --watch ../api/spec --watch ./tools --ext js,yaml ./tools/glue-generator.js",
     "build:server": "tsc --build ./tsconfig-server.json",
     "build:server:watch": "tsc --build ./tsconfig-server.json --watch",
-    "start": "cross-env NODE_ENV=\"development\" node ./out/index.js start --config ./server.config.js",
-    "start:watch": "cross-env NODE_ENV=\"development\" nodemon --config ./nodemon.json ./out/index.js -- start --config ./server.config.js",
+    "start": "node ./out/index.js start",
+    "start:dev": "cross-env NODE_ENV=\"development\" node ./out/index.js start",
+    "start:watch": "cross-env NODE_ENV=\"development\" nodemon --config ./nodemon.json ./out/index.js -- start",
     "deploy": "pm2 start ./ecosystem.config.js"
   },
   "dependencies": {
-    "@innolens/api": "*",
+    "@innolens/api-legacy": "*",
+    "@innolens/api-runtime": "*",
     "@innolens/resolver": "*",
-    "@koa/router": "^9.0.0",
+    "@koa/router": "^9.0.1",
     "@types/node-fetch": "^2.5.6",
     "ajv": "^6.11.0",
     "bcrypt": "^4.0.1",
@@ -46,6 +48,7 @@
     "yargs": "^15.3.1"
   },
   "devDependencies": {
+    "@innolens/api-devtools": "*",
     "@innolens/eslint-config": "*",
     "@types/bcrypt": "^3.0.0",
     "@types/co-body": "^0.0.3",

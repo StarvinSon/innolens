@@ -1,8 +1,8 @@
-import * as Api from '@innolens/api/legacy/web';
+import * as Api from '@innolens/api-legacy/lib-web';
 import {
   injectableConstructor, singleton,
   map
-} from '@innolens/resolver/web';
+} from '@innolens/resolver/lib-web';
 
 import { DashboardOptions } from '../dashboard-options';
 import { mergeObject } from '../utils/immutable/object';

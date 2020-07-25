@@ -1,14 +1,18 @@
+import { resolve } from 'path';
+import { promisify } from 'util';
+
 import 'reflect-metadata';
 import {
   createResolver, decorate, singleton,
   name, injectableFactory
-} from '@innolens/resolver/node';
+} from '@innolens/resolver/lib-node';
 import { ObjectId } from 'mongodb';
 import yargs from 'yargs';
 
 import { App } from './app';
+import { DbClient } from './db/db-client';
 import { Logger } from './logger';
-import { ServerOptions } from './server-options';
+import { ServerOptions, ModelUri, UploadDirPath } from './server-options';
 import { ClientService, ClientType } from './services/client';
 import { UserService } from './services/user';
 
@@ -22,9 +26,21 @@ const start = async (options: ServerOptions): Promise<void> => {
       singleton(),
       () => options
     ));
+    resolver.register(ModelUri, decorate(
+      name('getModelsUri'),
+      injectableFactory(),
+      singleton(),
+      () => options.modelsUri
+    ));
+    resolver.register(UploadDirPath, decorate(
+      name('getUploadDirPath'),
+      injectableFactory(),
+      singleton(),
+      () => options.uploadDirPath
+    ));
 
-    const [clientService, userService, app, logger] =
-      await resolver.resolve([ClientService, UserService, App, Logger] as const);
+    const [dbClient, clientService, userService, app, logger] =
+      await resolver.resolve([DbClient, ClientService, UserService, App, Logger] as const);
 
     const defaultClient = await clientService.findByPublicId('default');
     if (defaultClient === null) {
@@ -52,6 +68,28 @@ const start = async (options: ServerOptions): Promise<void> => {
       logger.info('Server is listening: %O', server.address());
     });
 
+    const close = async (signal: NodeJS.Signals): Promise<void> => {
+      logger.info(`Received ${signal}`);
+
+      logger.info('Closing server');
+      try {
+        await promisify(server.close).call(server);
+        logger.info('Server closed');
+      } catch (err) {
+        logger.error('Error during closing server, %O', err);
+      }
+
+      logger.info('Closing DB Client');
+      try {
+        await dbClient.close();
+        logger.info('DB Client closed');
+      } catch (err) {
+        logger.error('Error during closing DB Client, %O', err);
+      }
+    };
+    process.on('SIGTERM', close);
+    process.on('SIGINT', close);
+
   } catch (err) {
     console.error(err);
     process.exit(process.exitCode ?? 1);
@@ -67,6 +105,18 @@ const main = (): void => {
       /* eslint-disable-next-line no-shadow */
       (yargs) => yargs
         .options({
+          dbConnectionUri: {
+            type: 'string',
+            requiresArg: true,
+            default: 'mongodb://db:27017/innolens',
+            description: 'The MongoDB connection string URI, must contains db name'
+          },
+          modelsUri: {
+            type: 'string',
+            requiresArg: true,
+            default: 'http://localhost:5000',
+            description: 'The models server URI'
+          },
           port: {
             type: 'number',
             requiresArg: true,
@@ -76,20 +126,23 @@ const main = (): void => {
             type: 'string',
             requiresArg: true,
             normalize: true,
-            default: 'public'
+            default: resolve(__dirname, '../../dashboard/out')
           },
-          dbConnectionUri: {
+          uploadDir: {
             type: 'string',
             requiresArg: true,
-            default: 'mongodb://localhost:27017/innolens',
-            description: 'The MongoDB connection string URI, must contains db name'
+            normalize: true,
+            default: resolve(__dirname, '../uploads'),
+            description: 'The path to the directory storing the upload files'
           }
         })
         .config(),
       (argv) => Promise.resolve().then(() => start({
+        dbConnectionUri: argv.dbConnectionUri,
+        modelsUri: argv.modelsUri,
         port: argv.port,
-        staticRoot: argv.staticRoot,
-        dbConnectionUri: argv.dbConnectionUri
+        staticRootPath: argv.staticRoot,
+        uploadDirPath: argv.uploadDir
       }))
     )
     .demandCommand(1)

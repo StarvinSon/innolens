@@ -1,21 +1,26 @@
-import { singleton, injectableConstructor } from '@innolens/resolver/node';
+import { singleton, injectableConstructor } from '@innolens/resolver/lib-node';
 import { subWeeks, addDays } from 'date-fns';
 import fetch from 'node-fetch';
 
 import { Logger } from '../logger';
+import { ModelUri } from '../server-options';
 
 
 @injectableConstructor({
+  modelsUri: ModelUri,
   logger: Logger
 })
 @singleton()
 export class HistoryForecastService {
+  private readonly _modelsUri: ModelUri;
   private readonly _logger: Logger;
 
   public constructor(deps: {
+    readonly modelsUri: ModelUri;
     readonly logger: Logger;
   }) {
     ({
+      modelsUri: this._modelsUri,
       logger: this._logger
     } = deps);
   }
@@ -35,7 +40,7 @@ export class HistoryForecastService {
   public async predict(
     historyValueBatch: ReadonlyArray<ReadonlyArray<number>>
   ): Promise<ReadonlyArray<ReadonlyArray<number>>> {
-    const res = await fetch('http://localhost:5000/forecast', {
+    const res = await fetch(`${this._modelsUri}/forecast`, {
       method: 'post',
       headers: {
         'Content-Type': 'application/json'

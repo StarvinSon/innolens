@@ -1,4 +1,4 @@
-import { injectableConstructor } from '@innolens/resolver/node';
+import { injectableConstructor } from '@innolens/resolver/lib-node';
 import createHttpError from 'http-errors';
 import { BAD_REQUEST } from 'http-status-codes';
 

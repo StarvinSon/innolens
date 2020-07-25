@@ -132,7 +132,7 @@ class COMP1117Classmate(UserMixin, Component):
     super()._on_next_tick()
     current_time = self.engine.clock.current_time
 
-    if self.__member.membership_start_time <= current_time:
+    if self.__member.membership_start_time <= current_time < self.__member.membership_end_time:
       if self.__current_state == 'idle':
         if (
           time_equals(current_time, weekday=self.__subclass_weekdays[0], hour=10, minute=0)

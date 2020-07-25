@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+
+  db:
+    image: mongo:4.2.8-bionic
+
+  server:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.server
+    ports:
+      - '80:3000'
+    command: [
+      '--port', '3000',
+      '--static-root', '/code/packages/dashboard/out',
+      '--db-connection-uri', 'mongodb://db:27017/innolens',
+      '--models-uri', 'http://models:5000'
+    ]
+
+  models:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.models
+    command: [
+      '--port', '5000'
+    ]

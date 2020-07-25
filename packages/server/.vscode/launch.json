@@ -23,9 +23,7 @@
       ],
       "args": [
         "--",
-        "start",
-        "--config",
-        "server.config.js"
+        "start"
       ],
       "restart": true,
       "console": "integratedTerminal",

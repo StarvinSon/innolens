@@ -12,7 +12,9 @@
   },
   "private": true,
   "workspaces": [
-    "packages/api",
+    "packages/api-devtools",
+    "packages/api-legacy",
+    "packages/api-runtime",
     "packages/dashboard",
     "packages/eslint-config",
     "packages/resolver",

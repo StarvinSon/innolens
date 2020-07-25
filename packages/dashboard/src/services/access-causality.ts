@@ -1,4 +1,4 @@
-import { injectableConstructor, singleton } from '@innolens/resolver/web';
+import { injectableConstructor, singleton } from '@innolens/resolver/lib-web';
 
 import { stringTag } from '../utils/class';
 import { Debouncer } from '../utils/debouncer';

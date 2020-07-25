@@ -1,0 +1,9 @@
+/*
+
+!/docker-entrypoint-models.sh
+
+!/packages/models/requirements.txt
+!/packages/models/checkpoints/access_causality
+!/packages/models/checkpoints/history_forecast
+!/packages/models/innolens_models/
+/packages/models/innolens_models/**/__pycache__/
