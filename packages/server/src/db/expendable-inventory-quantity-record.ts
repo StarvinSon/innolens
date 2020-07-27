@@ -2,7 +2,7 @@ import {
   decorate, singleton, name,
   injectableFactory
 } from '@innolens/resolver/lib-node';
-import { ObjectId, Collection } from 'mongodb';
+import { ObjectId, Collection, Long } from 'mongodb';
 
 import { Db } from './db';
 
@@ -15,6 +15,7 @@ interface ExpendableInventoryQuantityRecordBase {
   readonly typeId: string;
   readonly time: Date;
   readonly quantity: number;
+  readonly versionId: Long;
 }
 
 // eslint-disable-next-line max-len
@@ -44,7 +45,8 @@ export const ExpendableInventoryQuantityRecordCollection = decorate(
         '_id',
         'typeId',
         'time',
-        'quantity'
+        'quantity',
+        'versionId'
       ],
       additionalProperties: false,
       properties: {
@@ -59,6 +61,9 @@ export const ExpendableInventoryQuantityRecordCollection = decorate(
         },
         quantity: {
           bsonType: 'int'
+        },
+        versionId: {
+          bsonType: 'long'
         }
       }
     };
@@ -103,7 +108,8 @@ export const ExpendableInventoryQuantityRecordCollection = decorate(
       },
       indexes: [
         {
-          key: { typeId: 1, time: 1, _id: 1 }
+          key: { typeId: 1, time: 1, versionId: 1 },
+          unique: true
         }
       ]
     });

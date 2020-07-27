@@ -2,7 +2,7 @@ import {
   decorate, singleton, name,
   injectableFactory
 } from '@innolens/resolver/lib-node';
-import { ObjectId, Collection } from 'mongodb';
+import { ObjectId, Collection, Long } from 'mongodb';
 
 import { Db } from './db';
 
@@ -15,6 +15,7 @@ export interface MachineMemberRecord {
   readonly action: 'acquire' | 'release';
   readonly actionMemberId: string;
   readonly memberIds: ReadonlyArray<string>;
+  readonly versionId: Long;
 }
 
 
@@ -38,7 +39,8 @@ export const MachineMemberRecordCollection = decorate(
             'time',
             'action',
             'actionMemberId',
-            'memberIds'
+            'memberIds',
+            'versionId'
           ],
           additionalProperties: false,
           properties: {
@@ -65,6 +67,9 @@ export const MachineMemberRecordCollection = decorate(
               items: {
                 type: 'string'
               }
+            },
+            versionId: {
+              bsonType: 'long'
             }
           }
         }
@@ -73,7 +78,7 @@ export const MachineMemberRecordCollection = decorate(
         {
           key: {
             time: 1,
-            _id: 1
+            versionId: 1
           }
         },
         {
@@ -81,8 +86,9 @@ export const MachineMemberRecordCollection = decorate(
             typeId: 1,
             instanceId: 1,
             time: 1,
-            _id: 1
-          }
+            versionId: 1
+          },
+          unique: true
         }
       ]
     })

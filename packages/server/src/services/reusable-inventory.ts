@@ -1,12 +1,13 @@
 import { singleton, injectableConstructor } from '@innolens/resolver/lib-node';
 import { addDays } from 'date-fns';
-import { ObjectId } from 'mongodb';
+import { Long } from 'mongodb';
 
 import { MemberCollection } from '../db/member';
 import { ReusableInventoryInstanceCollection, ReusableInventoryInstance } from '../db/reusable-inventory-instance';
 import { ReusableInventoryMemberRecord, ReusableInventoryMemberRecordCollection } from '../db/reusable-inventory-member-record';
 import { ReusableInventoryType, ReusableInventoryTypeCollection } from '../db/reusable-inventory-type';
 import { ReadonlyMap2, Map2 } from '../utils/map2';
+import { Writable } from '../utils/object';
 
 import { CorrelationService, CorrelationResult } from './correlation';
 import { HistoryForecastService } from './history-forecast';
@@ -166,6 +167,18 @@ export class ReusableInventoryService {
     return count >= 1;
   }
 
+  private async _getInstance(
+    typeId: string,
+    instanceId: string
+  ): Promise<ReusableInventoryInstance | null> {
+    const instance = await this._instanceCollection
+      .findOne({ typeId, instanceId });
+    if (instance !== null && typeof instance.versionId === 'number') {
+      (instance as Writable<typeof instance>).versionId = Long.fromInt(instance.versionId);
+    }
+    return instance;
+  }
+
   private async _hasAllInstances(
     typeId: string,
     instanceIds: ReadonlyArray<string>
@@ -199,8 +212,10 @@ export class ReusableInventoryService {
             },
             update: {
               $set: {
-                instanceName: instance.instanceName,
-                versionId: new ObjectId()
+                instanceName: instance.instanceName
+              },
+              $inc: {
+                versionId: Long.ONE
               },
               $setOnInsert: {
                 currentMemberIds: []
@@ -219,7 +234,8 @@ export class ReusableInventoryService {
     deleteFromTime: Date | null,
     importRecords: ReadonlyArray<ReusableInventoryImportInstanceAccessRecord>
   ): Promise<void> {
-    if (!await this._hasInstance(typeId, instanceId)) {
+    const instance = await this._getInstance(typeId, instanceId);
+    if (instance === null) {
       throw new ReusableInventoryInstanceNotFoundError(typeId, [instanceId]);
     }
 
@@ -233,17 +249,21 @@ export class ReusableInventoryService {
       }
     });
 
-    const latestMemberRecord = await this._memberRecordCollection.findOne({
-      typeId,
-      instanceId
-    }, {
-      sort: {
-        time: -1,
-        _id: -1
+    const latestMemberRecord = await this._memberRecordCollection.findOne(
+      {
+        typeId,
+        instanceId
+      },
+      {
+        sort: {
+          time: -1,
+          versionId: -1
+        }
       }
-    });
+    );
 
     let latestMemberIds = latestMemberRecord === null ? [] : latestMemberRecord.memberIds;
+    let latestVersionId = instance.versionId;
     const memberRecords: Array<Omit<ReusableInventoryMemberRecord, '_id'>> = [];
 
     for (const importRecord of importRecords) {
@@ -265,13 +285,15 @@ export class ReusableInventoryService {
         }
       }
 
+      latestVersionId = latestVersionId.add(Long.ONE);
       memberRecords.push({
         typeId,
         instanceId,
         time: importRecord.time,
         action: importRecord.action,
         actionMemberId: importRecord.memberId,
-        memberIds: latestMemberIds
+        memberIds: latestMemberIds,
+        versionId: latestVersionId
       });
     }
 
@@ -282,7 +304,7 @@ export class ReusableInventoryService {
     }, {
       $set: {
         currentMemberIds: latestMemberIds,
-        versionId: new ObjectId()
+        versionId: latestVersionId
       }
     }));
     if (memberRecords.length > 0) {
@@ -365,7 +387,7 @@ export class ReusableInventoryService {
           }, {
             sort: {
               time: 1,
-              _id: 1
+              versionId: 1
             }
           }
         )
@@ -395,7 +417,7 @@ export class ReusableInventoryService {
                 typeId: -1,
                 instanceId: -1,
                 time: -1,
-                _id: -1
+                versionId: -1
               }
             },
             {

@@ -1,12 +1,13 @@
 import { singleton, injectableConstructor } from '@innolens/resolver/lib-node';
 import { addDays } from 'date-fns';
-import { ObjectId } from 'mongodb';
+import { Long } from 'mongodb';
 
 import { MachineInstanceCollection, MachineInstance } from '../db/machine-instance';
 import { MachineMemberRecord, MachineMemberRecordCollection } from '../db/machine-member-record';
 import { MachineType, MachineTypeCollection } from '../db/machine-type';
 import { MemberCollection } from '../db/member';
 import { ReadonlyMap2, Map2 } from '../utils/map2';
+import { Writable } from '../utils/object';
 
 import { CorrelationService, CorrelationResult } from './correlation';
 import { HistoryForecastService } from './history-forecast';
@@ -164,6 +165,15 @@ export class MachineService {
     return count >= 1;
   }
 
+  private async _getInstance(typeId: string, instanceId: string): Promise<MachineInstance | null> {
+    const instance = await this._instanceCollection
+      .findOne({ typeId, instanceId });
+    if (instance !== null && typeof instance.versionId === 'number') {
+      (instance as Writable<typeof instance>).versionId = Long.fromInt(instance.versionId);
+    }
+    return instance;
+  }
+
   private async _hasAllInstances(
     typeId: string,
     instanceIds: ReadonlyArray<string>
@@ -197,8 +207,10 @@ export class MachineService {
             },
             update: {
               $set: {
-                instanceName: instance.instanceName,
-                versionId: new ObjectId()
+                instanceName: instance.instanceName
+              },
+              $inc: {
+                versionId: Long.ONE
               },
               $setOnInsert: {
                 currentMemberIds: []
@@ -217,7 +229,8 @@ export class MachineService {
     deleteFromTime: Date | null,
     importRecords: ReadonlyArray<MachineImportInstanceAccessRecord>
   ): Promise<void> {
-    if (!await this._hasInstance(typeId, instanceId)) {
+    const instance = await this._getInstance(typeId, instanceId);
+    if (instance === null) {
       throw new MachineInstanceNotFoundError(typeId, [instanceId]);
     }
 
@@ -231,17 +244,21 @@ export class MachineService {
       }
     });
 
-    const latestMemberRecord = await this._memberRecordCollection.findOne({
-      typeId,
-      instanceId
-    }, {
-      sort: {
-        time: -1,
-        _id: -1
+    const latestMemberRecord = await this._memberRecordCollection.findOne(
+      {
+        typeId,
+        instanceId
+      },
+      {
+        sort: {
+          time: -1,
+          versionId: -1
+        }
       }
-    });
+    );
 
     let latestMemberIds = latestMemberRecord === null ? [] : latestMemberRecord.memberIds;
+    let latestVersionId = instance.versionId;
     const memberRecords: Array<Omit<MachineMemberRecord, '_id'>> = [];
 
     for (const importRecord of importRecords) {
@@ -263,26 +280,31 @@ export class MachineService {
         }
       }
 
+      latestVersionId = latestVersionId.add(Long.ONE);
       memberRecords.push({
         typeId,
         instanceId,
         time: importRecord.time,
         action: importRecord.action,
         actionMemberId: importRecord.memberId,
-        memberIds: latestMemberIds
+        memberIds: latestMemberIds,
+        versionId: latestVersionId
       });
     }
 
     const promises: Array<Promise<unknown>> = [];
-    promises.push(this._instanceCollection.updateOne({
-      typeId,
-      instanceId
-    }, {
-      $set: {
-        currentMemberIds: latestMemberIds,
-        versionId: new ObjectId()
+    promises.push(this._instanceCollection.updateOne(
+      {
+        typeId,
+        instanceId
+      },
+      {
+        $set: {
+          currentMemberIds: latestMemberIds,
+          versionId: latestVersionId
+        }
       }
-    }));
+    ));
     if (memberRecords.length > 0) {
       promises.push(this._memberRecordCollection.insertMany(memberRecords));
     }
@@ -359,7 +381,7 @@ export class MachineService {
           }, {
             sort: {
               time: 1,
-              _id: 1
+              versionId: 1
             }
           }
         )
@@ -389,7 +411,7 @@ export class MachineService {
                 typeId: -1,
                 instanceId: -1,
                 time: -1,
-                _id: -1
+                versionId: -1
               }
             },
             {

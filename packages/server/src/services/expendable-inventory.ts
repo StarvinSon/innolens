@@ -1,6 +1,6 @@
 import { singleton, injectableConstructor } from '@innolens/resolver/lib-node';
 import { addMilliseconds, subMilliseconds } from 'date-fns';
-import { ObjectId } from 'mongodb';
+import { Long } from 'mongodb';
 
 import {
   ExpendableInventoryQuantityRecord, ExpendableInventoryQuantityRecordCollection,
@@ -8,6 +8,7 @@ import {
 } from '../db/expendable-inventory-quantity-record';
 import { ExpendableInventoryType, ExpendableInventoryTypeCollection } from '../db/expendable-inventory-type';
 import { MemberCollection } from '../db/member';
+import { Writable } from '../utils/object';
 
 import { HistoryForecastService } from './history-forecast';
 import { timeSpanRangeLegacy, timeSpanRepeat } from './time';
@@ -113,8 +114,10 @@ export class ExpendableInventoryService {
             update: {
               $set: {
                 typeName: type.typeName,
-                typeCapacity: type.typeCapacity,
-                versionId: new ObjectId()
+                typeCapacity: type.typeCapacity
+              },
+              $inc: {
+                versionId: Long.ONE
               },
               $setOnInsert: {
                 currentQuantity: 0
@@ -137,6 +140,15 @@ export class ExpendableInventoryService {
     return count >= 1;
   }
 
+  private async _getType(typeId: string): Promise<ExpendableInventoryType | null> {
+    const type = await this._typeCollection
+      .findOne({ typeId });
+    if (type !== null && typeof type.versionId === 'number') {
+      (type as Writable<typeof type>).versionId = Long.fromInt(type.versionId);
+    }
+    return type;
+  }
+
   private async _hasAllTypes(typeIds: ReadonlyArray<string>): Promise<ReadonlyArray<string>> {
     const matchedTypes = await this._typeCollection.find({
       typeId: {
@@ -153,7 +165,8 @@ export class ExpendableInventoryService {
     deleteFromTime: Date | null,
     importRecords: ReadonlyArray<ExpendableInventoryImportInstanceAccessRecord>
   ): Promise<void> {
-    if (!await this._hasType(typeId)) {
+    const type = await this._getType(typeId);
+    if (type === null) {
       throw new ExpendableInventoryTypeNotFoundError([typeId]);
     }
 
@@ -166,19 +179,25 @@ export class ExpendableInventoryService {
       }
     });
 
-    const latestQuantityRecord = await this._quantityRecordCollection.findOne({
-      typeId
-    }, {
-      sort: {
-        time: -1,
-        _id: -1
+    const latestQuantityRecord = await this._quantityRecordCollection.findOne(
+      {
+        typeId
+      },
+      {
+        sort: {
+          time: -1,
+          versionId: -1
+        }
       }
-    });
+    );
 
     let latestQuantity = latestQuantityRecord === null ? 0 : latestQuantityRecord.quantity;
+    let latestVersionId = type.versionId;
     const quantityRecords: Array<Omit<ExpendableInventoryQuantitySetRecord, '_id'> | Omit<ExpendableInventoryQuantityTakeRecord, '_id'>> = [];
 
     for (const importRecord of importRecords) {
+      latestVersionId = latestVersionId.add(Long.ONE);
+
       switch (importRecord.action) {
         case 'set': {
           latestQuantity = importRecord.quantity;
@@ -186,7 +205,8 @@ export class ExpendableInventoryService {
             action: 'set',
             time: importRecord.time,
             typeId,
-            quantity: importRecord.quantity
+            quantity: importRecord.quantity,
+            versionId: latestVersionId
           });
           break;
         }
@@ -198,7 +218,8 @@ export class ExpendableInventoryService {
             typeId,
             memberId: importRecord.memberId,
             quantity: latestQuantity,
-            takeQuantity: importRecord.takeQuantity
+            takeQuantity: importRecord.takeQuantity,
+            versionId: latestVersionId
           });
           break;
         }
@@ -214,7 +235,7 @@ export class ExpendableInventoryService {
     }, {
       $set: {
         currentQuantity: latestQuantity,
-        versionId: new ObjectId()
+        versionId: latestVersionId
       }
     }));
     if (quantityRecords.length > 0) {
@@ -234,6 +255,7 @@ export class ExpendableInventoryService {
       }
       return filterTypeIds;
     }
+
     const types = await this.getTypes();
     return types.map((type) => type.typeId);
   }
@@ -266,7 +288,7 @@ export class ExpendableInventoryService {
           $sort: {
             typeId: -1,
             time: -1,
-            _id: -1
+            versionId: -1
           }
         },
         {
@@ -345,10 +367,11 @@ export class ExpendableInventoryService {
               $gte: fromTime,
               $lt: toTime
             }
-          }, {
+          },
+          {
             sort: {
               time: 1,
-              _id: 1
+              versionId: 1
             }
           }
         )

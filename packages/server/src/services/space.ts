@@ -1,10 +1,11 @@
 import { singleton, injectableConstructor } from '@innolens/resolver/lib-node';
 import { addDays } from 'date-fns';
-import { ObjectId } from 'mongodb';
+import { Long } from 'mongodb';
 
 import { MemberCollection } from '../db/member';
 import { Space, SpaceCollection } from '../db/space';
 import { SpaceMemberRecordCollection, SpaceMemberRecord } from '../db/space-member-record';
+import { Writable } from '../utils/object';
 
 import { CorrelationService, CorrelationResult } from './correlation';
 import { HistoryForecastService } from './history-forecast';
@@ -109,6 +110,15 @@ export class SpaceService {
     return count >= 1;
   }
 
+  private async _getSpace(spaceId: string): Promise<Space | null> {
+    const space = await this._spaceCollection
+      .findOne({ spaceId });
+    if (space !== null && typeof space.versionId === 'number') {
+      (space as Writable<typeof space>).versionId = Long.fromInt(space.versionId);
+    }
+    return space;
+  }
+
   private async _hasAllSpaces(spaceIds: ReadonlyArray<string>): Promise<ReadonlyArray<string>> {
     const matchedSpace = await this._spaceCollection.find({
       spaceId: {
@@ -129,8 +139,10 @@ export class SpaceService {
             update: {
               $set: {
                 spaceName: space.spaceName,
-                spaceCapacity: space.spaceCapacity,
-                versionId: new ObjectId()
+                spaceCapacity: space.spaceCapacity
+              },
+              $inc: {
+                versionId: Long.ONE
               },
               $setOnInsert: {
                 currentMemberIds: []
@@ -149,7 +161,8 @@ export class SpaceService {
     deleteFromTime: Date | null,
     importRecords: ReadonlyArray<SpaceImportAccessRecord>
   ): Promise<void> {
-    if (!await this._hasSpace(spaceId)) {
+    const space = await this._getSpace(spaceId);
+    if (space === null) {
       throw new SpaceNotFoundError([spaceId]);
     }
 
@@ -162,16 +175,20 @@ export class SpaceService {
       }
     });
 
-    const latestMemberRecord = await this._memberRecordCollection.findOne({
-      spaceId
-    }, {
-      sort: {
-        time: -1,
-        _id: -1
+    const latestMemberRecord = await this._memberRecordCollection.findOne(
+      {
+        spaceId
+      },
+      {
+        sort: {
+          time: -1,
+          versionId: -1
+        }
       }
-    });
+    );
 
     let latestMemberIds = latestMemberRecord === null ? [] : latestMemberRecord.memberIds;
+    let latestVersionId = space.versionId;
     const memberRecords: Array<Omit<SpaceMemberRecord, '_id'>> = [];
 
     for (const importRecord of importRecords) {
@@ -193,24 +210,29 @@ export class SpaceService {
         }
       }
 
+      latestVersionId = latestVersionId.add(Long.ONE);
       memberRecords.push({
         spaceId,
         time: importRecord.time,
         action: importRecord.action,
         actionMemberId: importRecord.memberId,
-        memberIds: latestMemberIds
+        memberIds: latestMemberIds,
+        versionId: latestVersionId
       });
     }
 
     const promises: Array<Promise<unknown>> = [];
-    promises.push(this._spaceCollection.updateOne({
-      spaceId
-    }, {
-      $set: {
-        currentMemberIds: latestMemberIds,
-        versionId: new ObjectId()
+    promises.push(this._spaceCollection.updateOne(
+      {
+        spaceId
+      },
+      {
+        $set: {
+          currentMemberIds: latestMemberIds,
+          versionId: latestVersionId
+        }
       }
-    }));
+    ));
     if (memberRecords.length > 0) {
       promises.push(this._memberRecordCollection.insertMany(memberRecords));
     }
@@ -263,7 +285,7 @@ export class SpaceService {
           }, {
             sort: {
               time: 1,
-              _id: 1
+              versionId: 1
             }
           }
         )
@@ -287,7 +309,7 @@ export class SpaceService {
               $sort: {
                 spaceId: -1,
                 time: -1,
-                _id: -1
+                versionId: -1
               }
             },
             {

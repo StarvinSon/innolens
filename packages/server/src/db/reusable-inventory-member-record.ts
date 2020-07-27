@@ -2,7 +2,7 @@ import {
   decorate, singleton, name,
   injectableFactory
 } from '@innolens/resolver/lib-node';
-import { ObjectId, Collection } from 'mongodb';
+import { ObjectId, Collection, Long } from 'mongodb';
 
 import { Db } from './db';
 
@@ -15,6 +15,7 @@ export interface ReusableInventoryMemberRecord {
   readonly action: 'acquire' | 'release';
   readonly actionMemberId: string;
   readonly memberIds: ReadonlyArray<string>;
+  readonly versionId: Long;
 }
 
 
@@ -40,7 +41,8 @@ export const ReusableInventoryMemberRecordCollection = decorate(
             'time',
             'action',
             'actionMemberId',
-            'memberIds'
+            'memberIds',
+            'versionId'
           ],
           properties: {
             _id: {
@@ -66,6 +68,9 @@ export const ReusableInventoryMemberRecordCollection = decorate(
               items: {
                 type: 'string'
               }
+            },
+            versionId: {
+              bsonType: 'long'
             }
           }
         }
@@ -74,7 +79,7 @@ export const ReusableInventoryMemberRecordCollection = decorate(
         {
           key: {
             time: 1,
-            _id: 1
+            versionId: 1
           }
         },
         {
@@ -82,8 +87,9 @@ export const ReusableInventoryMemberRecordCollection = decorate(
             typeId: 1,
             instanceId: 1,
             time: 1,
-            _id: 1
-          }
+            versionId: 1
+          },
+          unique: true
         }
       ]
     })

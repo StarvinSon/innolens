@@ -2,7 +2,7 @@ import {
   decorate, singleton, name,
   injectableFactory
 } from '@innolens/resolver/lib-node';
-import { ObjectId, Collection } from 'mongodb';
+import { ObjectId, Collection, Long } from 'mongodb';
 
 import { Db } from './db';
 
@@ -13,7 +13,7 @@ export interface ReusableInventoryInstance {
   readonly instanceId: string;
   readonly instanceName: string;
   readonly currentMemberIds: ReadonlyArray<string>;
-  readonly versionId: ObjectId;
+  readonly versionId: Long;
 }
 
 
@@ -60,7 +60,7 @@ export const ReusableInventoryInstanceCollection = decorate(
               }
             },
             versionId: {
-              bsonType: 'objectId'
+              bsonType: 'long'
             }
           }
         }

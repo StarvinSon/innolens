@@ -2,7 +2,7 @@ import {
   decorate, singleton, name,
   injectableFactory
 } from '@innolens/resolver/lib-node';
-import { ObjectId, Collection } from 'mongodb';
+import { ObjectId, Collection, Long } from 'mongodb';
 
 import { Db } from './db';
 
@@ -14,6 +14,7 @@ export interface SpaceMemberRecord {
   readonly action: 'enter' | 'exit';
   readonly actionMemberId: string;
   readonly memberIds: ReadonlyArray<string>;
+  readonly versionId: Long;
 }
 
 
@@ -36,7 +37,8 @@ export const SpaceMemberRecordCollection = decorate(
             'time',
             'action',
             'actionMemberId',
-            'memberIds'
+            'memberIds',
+            'versionId'
           ],
           additionalProperties: false,
           properties: {
@@ -60,6 +62,9 @@ export const SpaceMemberRecordCollection = decorate(
               items: {
                 type: 'string'
               }
+            },
+            versionId: {
+              bsonType: 'long'
             }
           }
         }
@@ -68,15 +73,16 @@ export const SpaceMemberRecordCollection = decorate(
         {
           key: {
             time: 1,
-            _id: 1
+            versionId: 1
           }
         },
         {
           key: {
             spaceId: 1,
             time: 1,
-            _id: 1
-          }
+            versionId: 1
+          },
+          unique: true
         }
       ]
     })

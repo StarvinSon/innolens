@@ -2,7 +2,7 @@ import {
   decorate, singleton, name,
   injectableFactory
 } from '@innolens/resolver/lib-node';
-import { ObjectId, Collection } from 'mongodb';
+import { ObjectId, Collection, Long } from 'mongodb';
 
 import { Db } from './db';
 
@@ -13,7 +13,7 @@ export interface ExpendableInventoryType {
   readonly typeName: string;
   readonly typeCapacity: number;
   readonly currentQuantity: number;
-  readonly versionId: ObjectId;
+  readonly versionId: Long;
 }
 
 export interface ExpendableInventoryTypeCollection extends Collection<ExpendableInventoryType> {}
@@ -55,7 +55,7 @@ export const ExpendableInventoryTypeCollection = decorate(
               bsonType: 'int'
             },
             versionId: {
-              bsonType: 'objectId'
+              bsonType: 'long'
             }
           }
         }

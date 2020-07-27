@@ -202,3 +202,4 @@ class ELEC2346Classmate(UserMixin, Component):
 
     if self.__member.membership_end_time <= current_time:
       self._exit_all()
+      self.__current_state = 'idle'
