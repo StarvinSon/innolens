@@ -7,7 +7,7 @@ ARG GID=1000
 ARG WORKDIR=/code
 
 RUN addgroup --gid ${GID} ${GROUP} \
-    && adduser --uid ${UID} --gid ${GID} ${USER} \
+    && adduser --uid ${UID} --gid ${GID} --disabled-password --gecos '' ${USER} \
     && mkdir ${WORKDIR} \
     && chown ${USER}:${GROUP} ${WORKDIR}
 

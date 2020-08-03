@@ -53,8 +53,8 @@ RUN set -o pipefail \
     && chmod +x /usr/local/bin/docker-compose \
     #
     # Add sudo
-    && echo "node ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/node \
-    && chmod 0440 /etc/sudoers.d/node
+    && echo "${USER} ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/${USER} \
+    && chmod 0440 /etc/sudoers.d/${USER}
 
 WORKDIR /home/${USER}
 USER ${USER}:${GROUP}
