@@ -6,21 +6,21 @@ ARG GROUP=python
 ARG GID=1000
 ARG WORKDIR=/code
 
-RUN addgroup --gid ${GID} ${GROUP} \
-    && adduser --uid ${UID} --gid ${GID} --disabled-password --gecos '' ${USER} \
-    && mkdir ${WORKDIR} \
-    && chown ${USER}:${GROUP} ${WORKDIR}
+RUN addgroup --gid "${GID}" "${GROUP}" \
+    && adduser --uid "${UID}" --gid "${GID}" --disabled-password --gecos '' "${USER}" \
+    && mkdir "${WORKDIR}" \
+    && chown "${USER}:${GROUP}" "${WORKDIR}"
 
-WORKDIR ${WORKDIR}
-USER ${USER}:${GROUP}
+WORKDIR "${WORKDIR}"
+USER "${USER}:${GROUP}"
 
-COPY --chown=${USER}:${GROUP} ./packages/models/requirements.txt ./packages/models/
-ENV PATH=/home/${USER}/.local/bin:${PATH}
+COPY --chown="${USER}:${GROUP}" ./packages/models/requirements.txt ./packages/models/
+ENV PATH="/home/${USER}/.local/bin:${PATH}"
 RUN pip install --no-cache-dir --user --requirement ./packages/models/requirements.txt
 
-COPY --chown=${USER}:${GROUP} ./ ./
+COPY --chown="${USER}:${GROUP}" ./ ./
 
-ENV PYTHONPATH=${WORKDIR}/packages/models:${PYTHONPATH}
+ENV PYTHONPATH="${WORKDIR}/packages/models:${PYTHONPATH}"
 STOPSIGNAL SIGINT
 EXPOSE 5000
 ENTRYPOINT [ "./docker-entrypoint-models.sh" ]

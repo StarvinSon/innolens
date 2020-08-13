@@ -45,20 +45,20 @@ RUN set -o pipefail \
     && rm -rf /var/lib/apt/lists/* \
     #
     # Install docker compose
-    && COMPOSE_URL=$( \
+    && COMPOSE_URL="$( \
         curl -fsSL https://api.github.com/repos/docker/compose/releases/latest \
         | jq --raw-output '[.assets[] | select(.name == "docker-compose-Linux-x86_64")][0].browser_download_url' \
-    ) \
+    )" \
     && curl -fsSL "${COMPOSE_URL}" -o /usr/local/bin/docker-compose \
     && chmod +x /usr/local/bin/docker-compose \
     #
     # Add sudo
-    && echo "${USER} ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/${USER} \
-    && chmod 0440 /etc/sudoers.d/${USER}
+    && echo "${USER} ALL=(root) NOPASSWD:ALL" > "/etc/sudoers.d/${USER}" \
+    && chmod 0440 "/etc/sudoers.d/${USER}"
 
-WORKDIR /home/${USER}
-USER ${USER}:${GROUP}
+WORKDIR "/home/${USER}"
+USER "${USER}:${GROUP}"
 
-COPY --chown=${USER}:${GROUP} ./docker-entrypoint.sh ./docker-entrypoint.sh
-ENV PATH=/home/${USER}/.local/bin:/home/${USER}/.yarn/bin:${PATH}
+COPY --chown="${USER}:${GROUP}" ./docker-entrypoint.sh ./
+ENV PATH="/home/${USER}/.local/bin:/home/${USER}/.yarn/bin:${PATH}"
 ENTRYPOINT [ "./docker-entrypoint.sh" ]
